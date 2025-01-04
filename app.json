@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "HelloWorld",
-    "slug": "expo-template-default",
+    "name": "my-app-andrew",
+    "slug": "my-app-andrew",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,13 +9,15 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.andrewandersonorg.myappandrew"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.andrewandersonorg.myappandrew"
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +38,18 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0c173ea1-0ac4-495f-928a-3455f795bfcd"
+      }
+    },
+    "owner": "andrewanderson-org",
+    "updates": {
+      "url": "https://u.expo.dev/0c173ea1-0ac4-495f-928a-3455f795bfcd"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
