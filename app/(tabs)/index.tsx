@@ -1,74 +1,60 @@
-import { Image, StyleSheet, Platform } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import moment from 'moment';
+import MonthsCarousel from "@/components/MonthsCarousel";
+import Calendar from "@/components/Calendar";
+import Card from "@/components/Card";
+import Footer from "@/components/Footer";
+import FooterContentIcons from "@/components/FooterContentIcons";
+import {data} from "@remix-run/router";
+import {IconButton} from "@/components/IconButton";
+import {ListIcon, TableCellsIcon} from "@/components/icons/Icons";
+import {TextButton} from "@/components/TextButton"; // Импортируем Footer
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+    const [selectedYear, setSelectedYear] = useState<number>(moment().year());
+    const [selectedMonth, setSelectedMonth] = useState<number>(moment().month() + 1);
+    const [selectedDay, setSelectedDay] = useState<number>(moment().date());
+
+    const handleMonthChange = (year: number, month: number) => {
+        setSelectedYear(year);
+        setSelectedMonth(month);
+        if (year !== moment().year() || month !== moment().month() + 1) {
+            setSelectedDay(1);
+        } else {
+            setSelectedDay(moment().date());
+        }
+    };
+    return (
+        <View style={styles.container}>
+            <View style={styles.content}>
+                <View style={styles.containerMonthsCarousel}>
+                    <MonthsCarousel onMonthChange={handleMonthChange}/>
+                </View>
+                <Calendar year={selectedYear} month={selectedMonth} day={selectedDay}/>
+                <View style={{ width: '100%', paddingHorizontal: 12 }}>
+                    <Card title={'Пункт назначения'} colorStyle={'#30DA88'} time={'09:50 - 10:00'} />
+                </View>
+            </View>
+            <Footer>
+                <FooterContentIcons />
+            </Footer>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+    container: {
+        flex: 1, // Занимает весь экран
+        backgroundColor: '#fff',
+    },
+    content: {
+        flex: 1, // Занимает всё доступное пространство, кроме футера
+    },
+    containerMonthsCarousel: {
+        marginBottom: 20,
+        paddingHorizontal: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E3E3E3',
+    },
 });

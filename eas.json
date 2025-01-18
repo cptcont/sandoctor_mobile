@@ -8,11 +8,15 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "image": "latest"
+        "buildType": "apk"
+
       },
       "ios": {
         "image": "latest"
       }
+
+
+
     },
     "development-simulator": {
       "extends": "development",
