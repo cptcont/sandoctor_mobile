@@ -6,8 +6,9 @@ import Footer from "@/components/Footer";
 import { TextButton } from "@/components/TextButton";
 import ContactCard from "@/components/ContactCard";
 import ActorsCard from "@/components/ActorsCard";
-import ServiceCard from "@/components/ServiceCard";
 import ServiceCardContainer from "@/components/ServiceCardContainer";
+import TaskCard from "@/components/TaskCard";
+import ReportCard from "@/components/ReportCard";
 
 const DetailsScreen = () => {
     const [activeTab, setActiveTab] = useState('tab1');
@@ -53,14 +54,26 @@ const DetailsScreen = () => {
                 );
             case 'tab3':
                 return (
-                    <View style={styles.content}>
-                        <Text style={styles.contentText}>Контент для закладки 3</Text>
+                    <View style={styles.tab3Container}>
+                        <View style={{marginBottom: 10}}>
+                            <TaskCard title={'Сантехнический осмотр объекта'} status={'completed'} />
+                        </View>
+                        <View style={{marginBottom: 10}}>
+                            <TaskCard title={'Визуальный осмотр вредителей'} status={'completed'} />
+                        </View>
+                        <View style={{marginBottom: 10}}>
+                            <TaskCard title={'Осмотр точек контроля'} status={'completed'} />
+                        </View>
                     </View>
                 );
             case 'tab4':
                 return (
-                    <View style={styles.content}>
-                        <Text style={styles.contentText}>Контент для закладки 4</Text>
+                    <View style={styles.tab4Container}>
+                        <ReportCard image={require('@/assets/images/example1.png')}
+                                    workingTime={'10:20 — 11:45'}
+                                    time={'11:45'}
+                                    executorComment={'Клиент не был готов к обработке'}
+                                    customerComment={'Нужно обязательно звонить перед выездом'}/>
                     </View>
                 );
             default:
@@ -71,7 +84,6 @@ const DetailsScreen = () => {
     return (
         <View style={styles.container}>
             <CustomHeaderScreen text={'Задание №125478'} marginBottom={0} />
-            {/* Верхняя панель с закладками */}
             <View style={styles.tabsContainer}>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'tab1' && styles.activeTab]}
@@ -156,6 +168,13 @@ const styles = StyleSheet.create({
     tab1Container: {
         flex: 1,
         justifyContent: 'space-between', // Распределяет пространство между контентом и футером
+    },
+    tab3Container: {
+        paddingHorizontal: 10,
+        paddingTop: 20
+    },
+    tab4Container: {
+        padding: 0
     },
     scrollContent: {
         paddingTop: 14,

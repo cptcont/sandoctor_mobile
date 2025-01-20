@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "my-app-andrew",
-    "slug": "my-app-andrew",
-    "version": "1.0.0",
+    "name": "sandoctor",
+    "slug": "sandoctor",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -13,6 +13,8 @@
       "bundleIdentifier": "com.andrewandersonorg.myappandrew"
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -40,17 +42,20 @@
     "experiments": {
       "typedRoutes": true
     },
-    "extra": {
-      "eas": {
-        "projectId": "0c173ea1-0ac4-495f-928a-3455f795bfcd"
-      }
-    },
     "owner": "andrewanderson-org",
     "updates": {
       "url": "https://u.expo.dev/0c173ea1-0ac4-495f-928a-3455f795bfcd"
     },
     "runtimeVersion": {
       "policy": "appVersion"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "0ec8419e-5e62-4697-81a1-a4214a4485dc"
+      }
     }
   }
 }

@@ -10,7 +10,6 @@ import {usePopup} from "@/context/PopupContext";
 const LoginScreen = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
     const { login } = useAuth();
     const { showPopup } = usePopup();
 
@@ -65,9 +64,6 @@ const LoginScreen = () => {
                     <Text style={styles.forgotPasswordLink}>Восстановить</Text>
                 </Text>
             </Pressable>
-
-            {error && <Text style={styles.error}>{error}</Text>}
-
         </View>
     );
 };
