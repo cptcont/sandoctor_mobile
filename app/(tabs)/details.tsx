@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
 import ArrivalCard from "@/components/ArrivalCard";
 import Footer from "@/components/Footer";
@@ -9,6 +9,7 @@ import ActorsCard from "@/components/ActorsCard";
 import ServiceCardContainer from "@/components/ServiceCardContainer";
 import TaskCard from "@/components/TaskCard";
 import ReportCard from "@/components/ReportCard";
+import Tab from "@/components/Tab"; // Импортируем новый компонент
 
 const DetailsScreen = () => {
     const [activeTab, setActiveTab] = useState('tab1');
@@ -47,20 +48,19 @@ const DetailsScreen = () => {
             case 'tab2':
                 return (
                     <View style={styles.content}>
-                        <ServiceCardContainer title={'Услуга'}
-                        />
+                        <ServiceCardContainer title={'Услуга'} />
                     </View>
                 );
             case 'tab3':
                 return (
                     <View style={styles.tab3Container}>
-                        <View style={{marginBottom: 10}}>
+                        <View style={{ marginBottom: 10 }}>
                             <TaskCard title={'Сантехнический осмотр объекта'} status={'completed'} />
                         </View>
-                        <View style={{marginBottom: 10}}>
+                        <View style={{ marginBottom: 10 }}>
                             <TaskCard title={'Визуальный осмотр вредителей'} status={'completed'} />
                         </View>
-                        <View style={{marginBottom: 10}}>
+                        <View style={{ marginBottom: 10 }}>
                             <TaskCard title={'Осмотр точек контроля'} status={'completed'} />
                         </View>
                     </View>
@@ -68,11 +68,13 @@ const DetailsScreen = () => {
             case 'tab4':
                 return (
                     <View style={styles.tab4Container}>
-                        <ReportCard image={require('@/assets/images/example1.png')}
-                                    workingTime={'10:20 — 11:45'}
-                                    time={'11:45'}
-                                    executorComment={'Клиент не был готов к обработке'}
-                                    customerComment={'Нужно обязательно звонить перед выездом'}/>
+                        <ReportCard
+                            image={require('@/assets/images/example1.png')}
+                            workingTime={'10:20 — 11:45'}
+                            time={'11:45'}
+                            executorComment={'Клиент не был готов к обработке'}
+                            customerComment={'Нужно обязательно звонить перед выездом'}
+                        />
                     </View>
                 );
             default:
@@ -84,30 +86,27 @@ const DetailsScreen = () => {
         <View style={styles.container}>
             <CustomHeaderScreen text={'Задание №125478'} marginBottom={0} />
             <View style={styles.tabsContainer}>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'tab1' && styles.activeTab]}
+                <Tab
+                    label="Детали"
+                    isActive={activeTab === 'tab1'}
                     onPress={() => setActiveTab('tab1')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'tab1' && styles.activeTabText]}>Детали</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'tab2' && styles.activeTab]}
+                />
+                <Tab
+                    label="Услуги"
+                    isActive={activeTab === 'tab2'}
                     onPress={() => setActiveTab('tab2')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'tab2' && styles.activeTabText]}>Услуги</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'tab3' && styles.activeTab]}
+                />
+                <Tab
+                    label="Чек-лист"
+                    isActive={activeTab === 'tab3'}
                     onPress={() => setActiveTab('tab3')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'tab3' && styles.activeTabText]}>Чек-лист</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'tab4' && styles.activeTab, styles.lastTab]}
+                />
+                <Tab
+                    label="Отчет"
+                    isActive={activeTab === 'tab4'}
                     onPress={() => setActiveTab('tab4')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'tab4' && styles.activeTabText]}>Отчет</Text>
-                </TouchableOpacity>
+                    isLast // Указываем, что это последняя вкладка
+                />
             </View>
 
             <View style={styles.contentContainer}>
@@ -129,37 +128,6 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#ECECEC',
     },
-    tab: {
-        justifyContent: 'center',
-        width: 71,
-        height: 30,
-        borderStyle: 'solid',
-        borderWidth: 1,
-        borderColor: '#ECECEC',
-        borderBottomWidth: 1,
-        borderBottomColor: '#ECECEC',
-        borderRightWidth: 0,
-        backgroundColor: '#fff',
-        marginRight: 0,
-    },
-    activeTab: {
-        borderBottomWidth: 0,
-        height: 31,
-        marginBottom: -1,
-        backgroundColor: '#fff',
-    },
-    lastTab: {
-        borderRightWidth: 1,
-    },
-    tabText: {
-        textAlign: 'center',
-        fontSize: 10,
-        fontWeight: '500',
-        color: '#939393',
-    },
-    activeTabText: {
-        color: '#000',
-    },
     contentContainer: {
         flex: 1,
     },
@@ -169,10 +137,10 @@ const styles = StyleSheet.create({
     },
     tab3Container: {
         paddingHorizontal: 10,
-        paddingTop: 20
+        paddingTop: 20,
     },
     tab4Container: {
-        padding: 0
+        padding: 0,
     },
     scrollContent: {
         paddingTop: 14,
@@ -182,10 +150,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'flex-start',
         paddingHorizontal: 10,
-    },
-    contentText: {
-        fontSize: 18,
-        color: '#1541C7',
     },
 });
 
