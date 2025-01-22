@@ -6,13 +6,17 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { PopupProvider } from '@/context/PopupContext';
 import { SafeAreaView, Platform, StyleSheet } from 'react-native';
-import * as NavigationBar from 'expo-navigation-bar'; // Импортируем модуль для управления навигационной панелью
+import * as NavigationBar from 'expo-navigation-bar';
+import { ModalProvider, useModal } from '@/context/ModalContext';
+import { CustomModal } from '@/components/CustomModal';
 
 export default function RootLayout() {
     return (
         <AuthProvider>
             <PopupProvider>
-                <RootLayoutNav />
+                <ModalProvider>
+                    <RootLayoutNav />
+                </ModalProvider>
             </PopupProvider>
         </AuthProvider>
     );
@@ -20,11 +24,10 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
     const { isAuthenticated } = useAuth();
-
-    // Скрываем навигационную панель при загрузке компонента
+    const { isModalVisible, modalContent, hideModal } = useModal();
     useEffect(() => {
         if (Platform.OS === 'android') {
-            NavigationBar.setVisibilityAsync("hidden"); // Скрываем навигационную панель
+            NavigationBar.setVisibilityAsync("hidden");
         }
     }, []);
 
@@ -38,10 +41,8 @@ function RootLayoutNav() {
 
     return (
         <>
-            {/* Скрываем StatusBar */}
             <StatusBar hidden />
 
-            {/* Используем SafeAreaView для предотвращения перекрытия контента */}
             <SafeAreaView style={styles.container}>
                 {!isAuthenticated && (
                     <Stack>
@@ -62,6 +63,10 @@ function RootLayoutNav() {
                         <Stack.Screen name="+not-found" />
                     </Stack>
                 )}
+
+                <CustomModal visible={isModalVisible} onClose={hideModal}>
+                    {modalContent}
+                </CustomModal>
             </SafeAreaView>
         </>
     );
@@ -70,6 +75,5 @@ function RootLayoutNav() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-//        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // Учитываем высоту статус-бара на Android
     },
 });

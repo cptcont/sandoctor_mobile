@@ -41,7 +41,6 @@ const styles = StyleSheet.create({
     },
     containerMonthsCarousel: {
         marginBottom: 20,
-        paddingHorizontal: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#E3E3E3',
     },

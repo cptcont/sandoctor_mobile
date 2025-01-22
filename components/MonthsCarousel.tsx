@@ -1,22 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import moment from 'moment';
-import 'moment/locale/ru'; // Для русской локализации
-
-moment.locale('ru');
+import {
+    getYear,
+    getMonth,
+    isSameMonth,
+    eachMonthOfInterval,
+    startOfYear,
+    endOfYear,
+} from 'date-fns';
+//import { ru } from 'date-fns/locale';
 
 interface MonthsCarouselProps {
-    year?: number; // Год (например, 2023)
-    month?: number; // Месяц (1-12)
-    onMonthChange?: (year: number, month: number) => void; // Callback для передачи данных
+    year?: number;
+    month?: number;
+    onMonthChange?: (year: number, month: number) => void;
 }
 
 const MonthsCarousel: React.FC<MonthsCarouselProps> = ({
-                                                           year = moment().year(),
-                                                           month = moment().month() + 1,
-                                                           onMonthChange
+                                                           year = new Date().getFullYear(),
+                                                           month = new Date().getMonth() + 1,
+                                                           onMonthChange,
                                                        }) => {
-    const [selectedDate, setSelectedDate] = useState(moment().year(year).month(month - 1)); // Устанавливаем выбранную дату
+    const [selectedDate, setSelectedDate] = useState(new Date(year, month - 1)); // Устанавливаем выбранную дату
     const scrollViewRef = useRef<ScrollView>(null);
 
     const customMonthNames = [
@@ -35,7 +40,10 @@ const MonthsCarousel: React.FC<MonthsCarouselProps> = ({
     ];
 
     // Генерация месяцев для указанного года
-    const months = Array.from({ length: 12 }, (_, i) => moment().year(year).month(i));
+    const months = eachMonthOfInterval({
+        start: startOfYear(new Date(year, 0, 1)),
+        end: endOfYear(new Date(year, 11, 31)),
+    });
 
     // Добавляем пустые элементы в начало и конец списка месяцев
     const paddedMonths = [null, null, ...months, null, null];
@@ -50,7 +58,7 @@ const MonthsCarousel: React.FC<MonthsCarouselProps> = ({
     const otherMonthWidth = (screenWidth - selectedMonthWidth) / 2;
 
     // Функция для центрирования выбранного месяца
-    const handleMonthPress = (date: null | moment.Moment, index: number) => {
+    const handleMonthPress = (date: Date | null, index: number) => {
         if (!date) return; // Игнорируем пустые элементы
         setSelectedDate(date);
         const offset = index * otherMonthWidth - screenWidth / 2 + selectedMonthWidth / 2; // Центрируем выбранный месяц
@@ -58,14 +66,14 @@ const MonthsCarousel: React.FC<MonthsCarouselProps> = ({
 
         // Вызываем callback с выбранным годом и месяцем
         if (onMonthChange) {
-            onMonthChange(date.year(), date.month() + 1); // Передаем год и месяц (месяц + 1, так как moment считает месяцы с 0)
+            onMonthChange(getYear(date), getMonth(date) + 1); // Передаем год и месяц (месяц + 1, так как getMonth возвращает 0-11)
         }
     };
 
     // Эффект для прокрутки к выбранному месяцу при монтировании компонента
     useEffect(() => {
         const selectedIndex = paddedMonths.findIndex((date) =>
-            date && date.isSame(selectedDate, 'month')
+            date && isSameMonth(date, selectedDate)
         );
         if (selectedIndex !== -1) {
             const offset = selectedIndex * otherMonthWidth - screenWidth / 2 + selectedMonthWidth / 2;
@@ -89,7 +97,7 @@ const MonthsCarousel: React.FC<MonthsCarouselProps> = ({
                         style={[
                             styles.monthItem,
                             {
-                                width: date && date.isSame(selectedDate, 'month') ? selectedMonthWidth : otherMonthWidth,
+                                width: date && isSameMonth(date, selectedDate) ? selectedMonthWidth : otherMonthWidth,
                             },
                         ]}
                         onPress={() => handleMonthPress(date, index)}
@@ -98,12 +106,12 @@ const MonthsCarousel: React.FC<MonthsCarouselProps> = ({
                             <Text
                                 style={[
                                     styles.monthText,
-                                    date.isSame(selectedDate, 'month') && styles.selectedMonthText,
+                                    isSameMonth(date, selectedDate) && styles.selectedMonthText,
                                 ]}
                             >
-                                {date.isSame(selectedDate, 'month')
-                                    ? `${customMonthNames[date.month()]} ${date.year()}` // Месяц и год для выбранного месяца
-                                    : customMonthNames[date.month()]}
+                                {isSameMonth(date, selectedDate)
+                                    ? `${customMonthNames[getMonth(date)]} ${getYear(date)}` // Месяц и год для выбранного месяца
+                                    : customMonthNames[getMonth(date)]}
                             </Text>
                         ) : (
                             <Text style={styles.monthText}></Text> // Пустой текст для пустых элементов

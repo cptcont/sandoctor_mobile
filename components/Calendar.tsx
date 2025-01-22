@@ -1,7 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import moment from 'moment';
 import { useRouter } from 'expo-router'; // Импортируем useRouter из Expo Router
+import {
+    getYear,
+    getMonth,
+    getDate,
+    startOfMonth,
+    endOfMonth,
+    getISODay,
+    subMonths,
+    addDays,
+    format,
+    isSameDay,
+    isSameMonth,
+} from 'date-fns';
 
 interface CalendarProps {
     day?: number;
@@ -11,16 +23,16 @@ interface CalendarProps {
 
 const Calendar: React.FC<CalendarProps> = ({ day, month, year }) => {
     const router = useRouter(); // Хук для навигации
-    const currentDate = moment();
+    const currentDate = new Date(); // Текущая дата
 
     // Устанавливаем год, месяц и день на основе входных данных
-    const selectedYear = year || currentDate.year(); // Если год не задан, используем текущий год
-    const selectedMonth = month || currentDate.month() + 1; // Если месяц не задан, используем текущий месяц
+    const selectedYear = year || getYear(currentDate); // Если год не задан, используем текущий год
+    const selectedMonth = month || getMonth(currentDate) + 1; // Если месяц не задан, используем текущий месяц
 
     // Устанавливаем день:
     // - Если день задан, используем его.
     // - Если день не задан, используем текущий день.
-    const initialDay = day !== undefined ? day : currentDate.date();
+    const initialDay = day !== undefined ? day : getDate(currentDate);
 
     const [selectedDay, setSelectedDay] = useState(initialDay); // Устанавливаем начальный день
     const lastClickTime = useRef(0); // Время последнего клика
@@ -30,27 +42,27 @@ const Calendar: React.FC<CalendarProps> = ({ day, month, year }) => {
         if (day !== undefined) {
             setSelectedDay(day); // Если день передан, обновляем selectedDay
         } else {
-            setSelectedDay(currentDate.date()); // Если день не передан, используем текущий день
+            setSelectedDay(getDate(currentDate)); // Если день не передан, используем текущий день
         }
     }, [day, month, year]); // Зависимости от day, month, year
 
-    const firstDayOfMonth = moment(`${selectedYear}-${selectedMonth}-01`, 'YYYY-MM-DD');
-    const lastDayOfMonth = moment(firstDayOfMonth).endOf('month');
-    const startWeekday = firstDayOfMonth.isoWeekday();
+    const firstDayOfMonth = startOfMonth(new Date(selectedYear, selectedMonth - 1, 1));
+    const lastDayOfMonth = endOfMonth(firstDayOfMonth);
+    const startWeekday = getISODay(firstDayOfMonth);
 
     const daysFromPrevMonth = startWeekday - 1;
-    const prevMonthLastDay = moment(firstDayOfMonth).subtract(1, 'month').endOf('month');
+    const prevMonthLastDay = endOfMonth(subMonths(firstDayOfMonth, 1));
     const prevMonthDays = Array.from({ length: daysFromPrevMonth }, (_, i) =>
-        prevMonthLastDay.date() - daysFromPrevMonth + i + 1
+        getDate(addDays(prevMonthLastDay, i - daysFromPrevMonth + 1))
     );
 
-    const totalDays = prevMonthDays.length + lastDayOfMonth.date();
+    const totalDays = prevMonthDays.length + getDate(lastDayOfMonth);
     const daysFromNextMonth = 7 - (totalDays % 7 || 7);
     const nextMonthDays = Array.from({ length: daysFromNextMonth }, (_, i) => i + 1);
 
     const allDays = [
         ...prevMonthDays.map((day) => ({ day, isCurrentMonth: false })),
-        ...Array.from({ length: lastDayOfMonth.date() }, (_, i) => ({
+        ...Array.from({ length: getDate(lastDayOfMonth) }, (_, i) => ({
             day: i + 1,
             isCurrentMonth: true,
         })),
@@ -98,9 +110,7 @@ const Calendar: React.FC<CalendarProps> = ({ day, month, year }) => {
                         // Проверяем, является ли день текущим днем
                         const isCurrentDay =
                             isCurrentMonth &&
-                            day === currentDate.date() &&
-                            selectedMonth === currentDate.month() + 1 &&
-                            selectedYear === currentDate.year();
+                            isSameDay(new Date(selectedYear, selectedMonth - 1, day), currentDate);
 
                         // Проверяем, является ли день выбранным
                         const isSelectedDay = isCurrentMonth && day === selectedDay;

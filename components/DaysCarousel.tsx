@@ -1,9 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import moment from 'moment';
-import 'moment/locale/ru'; // Для русской локализации
-
-moment.locale('ru');
+import {
+    getYear,
+    getMonth,
+    getDate,
+    startOfMonth,
+    endOfMonth,
+    eachDayOfInterval,
+    format,
+    isSameDay,
+    getDay,
+} from 'date-fns';
+import { ru } from 'date-fns/locale'; // Русская локализация
 
 interface DaysCarouselProps {
     month?: number; // Месяц (1-12)
@@ -13,30 +21,33 @@ interface DaysCarouselProps {
 
 const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
     // Устанавливаем текущую дату по умолчанию, если входные данные не предоставлены
-    const currentDate = moment();
-    const initialDate = moment({
-        year: year || currentDate.year(),
-        month: (month ? month - 1 : currentDate.month()), // Месяц в moment начинается с 0
-        date: day || currentDate.date(),
-    });
+    const currentDate = new Date();
+    const initialDate = new Date(
+        year || getYear(currentDate),
+        month ? month - 1 : getMonth(currentDate), // Месяц в JavaScript начинается с 0
+        day || getDate(currentDate)
+    );
 
     const [selectedDate, setSelectedDate] = useState(initialDate); // Выбранная дата
     const scrollViewRef = useRef<ScrollView>(null);
 
     // Обновляем selectedDate при изменении входных данных
     useEffect(() => {
-        const newDate = moment({
-            year: year || currentDate.year(),
-            month: (month ? month - 1 : currentDate.month()),
-            date: day || currentDate.date(),
-        });
+        const newDate = new Date(
+            year || getYear(currentDate),
+            month ? month - 1 : getMonth(currentDate),
+            day || getDate(currentDate)
+        );
         setSelectedDate(newDate);
     }, [day, month, year]); // Зависимости от day, month и year
 
     // Генерация дней месяца
-    const daysInMonth = Array.from({ length: selectedDate.daysInMonth() }, (_, i) =>
-        moment(selectedDate).date(i + 1)
-    );
+    const startOfCurrentMonth = startOfMonth(selectedDate);
+    const endOfCurrentMonth = endOfMonth(selectedDate);
+    const daysInMonth = eachDayOfInterval({
+        start: startOfCurrentMonth,
+        end: endOfCurrentMonth,
+    });
 
     // Ширина экрана
     const screenWidth = Dimensions.get('window').width;
@@ -49,7 +60,7 @@ const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
     const paddedDays = [...paddingDays, ...daysInMonth, ...paddingDays];
 
     // Функция для центрирования выбранного дня
-    const handleDayPress = (date: null | moment.Moment, index: number) => {
+    const handleDayPress = (date: Date | null, index: number) => {
         if (!date) return; // Игнорируем пустые элементы
         setSelectedDate(date);
         const offset = index * dayWidth - screenWidth / 2 + dayWidth / 2; // Центрируем выбранный день
@@ -57,12 +68,12 @@ const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
     };
 
     // Получаем дни недели для указанного месяца
-    const weekDays = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+    const weekDays = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб']; // Воскресенье теперь на первом месте
 
     // Эффект для прокрутки к выбранному дню при монтировании компонента
     useEffect(() => {
         const selectedIndex = paddedDays.findIndex((date) =>
-            date && date.isSame(selectedDate, 'day')
+            date && isSameDay(date, selectedDate)
         );
         if (selectedIndex !== -1) {
             const offset = selectedIndex * dayWidth - screenWidth / 2 + dayWidth / 2;
@@ -88,7 +99,7 @@ const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
                             {
                                 width: dayWidth,
                             },
-                            date && date.isSame(selectedDate, 'day') && styles.selectedDayContainer, // Стиль для выделенного элемента
+                            date && isSameDay(date, selectedDate) && styles.selectedDayContainer, // Стиль для выделенного элемента
                         ]}
                         onPress={() => handleDayPress(date, index)}
                     >
@@ -97,18 +108,18 @@ const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
                                 <Text
                                     style={[
                                         styles.dayText,
-                                        date.isSame(selectedDate, 'day') && styles.selectedDayText,
+                                        isSameDay(date, selectedDate) && styles.selectedDayText,
                                     ]}
                                 >
-                                    {date.format('D')}
+                                    {format(date, 'd')}
                                 </Text>
                                 <Text
                                     style={[
                                         styles.weekDayText,
-                                        date.isSame(selectedDate, 'day') && styles.selectedWeekDayText,
+                                        isSameDay(date, selectedDate) && styles.selectedWeekDayText,
                                     ]}
                                 >
-                                    {weekDays[date.weekday() % 7]}
+                                    {weekDays[getDay(date)]}
                                 </Text>
                             </>
                         ) : (
@@ -130,11 +141,13 @@ const styles = StyleSheet.create({
     scrollViewContent: {
         alignItems: 'center',
         height: 63, // Увеличиваем высоту контента ScrollView
+        paddingHorizontal: 0, // Убираем горизонтальные отступы
     },
     dayContainer: {
         justifyContent: 'center',
         alignItems: 'center',
         height: 70, // Высота каждого элемента дня
+        width: Dimensions.get('window').width / 7, // Ширина дня равна 1/7 экрана
     },
     dayText: {
         fontSize: 18,

@@ -12,12 +12,12 @@ export const AvatarMenu: React.FC<AvatarMenuProps> = ({ onProfilePress, onLogout
     return (
         <View style={styles.menu}>
             <TouchableOpacity style={styles.menuItem} onPress={onProfilePress}>
-                <UserCircleIcon/>
-                <Text style={styles.menuText}>Мой профиль</Text>
+                <UserCircleIcon />
+                <Text style={styles.menuText}>{'Мой профиль'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItemEnd} onPress={onLogoutPress}>
-                <SignOutIcon/>
-                <Text style={styles.menuText}>Выйти</Text>
+                <SignOutIcon />
+                <Text style={styles.menuText}>{'Выйти'}</Text>
             </TouchableOpacity>
         </View>
     );
@@ -25,9 +25,6 @@ export const AvatarMenu: React.FC<AvatarMenuProps> = ({ onProfilePress, onLogout
 
 const styles = StyleSheet.create({
     menu: {
-        position: 'absolute',
-        top: 62,
-        right: 6,
         width: 142,
         backgroundColor: '#fff',
         padding: 11,

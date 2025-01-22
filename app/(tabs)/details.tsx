@@ -35,7 +35,6 @@ const DetailsScreen = () => {
                                 <ActorsCard name={'Смирнов Роман'} />
                             </View>
                         </ScrollView>
-                        {/* Футер только для tab1 */}
                         <Footer>
                             <TextButton
                                 text={'Продолжить заполнение отчёта'}
@@ -111,7 +110,6 @@ const DetailsScreen = () => {
                 </TouchableOpacity>
             </View>
 
-            {/* Контент для активной закладки */}
             <View style={styles.contentContainer}>
                 {renderContent()}
             </View>
@@ -128,35 +126,35 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'flex-start',
         backgroundColor: '#fff',
-        borderBottomWidth: 1, // Общий нижний бордер для всех табов
+        borderBottomWidth: 1,
         borderBottomColor: '#ECECEC',
     },
     tab: {
         justifyContent: 'center',
         width: 71,
-        height: 30, // Высота неактивного таба
+        height: 30,
         borderStyle: 'solid',
         borderWidth: 1,
         borderColor: '#ECECEC',
-        borderBottomWidth: 1, // Нижний бордер для неактивных табов
+        borderBottomWidth: 1,
         borderBottomColor: '#ECECEC',
-        borderRightWidth: 0, // Убираем правый бордер у всех табов
-        backgroundColor: '#fff', // Фон таба
-        marginRight: 0, // Отступ между табами
+        borderRightWidth: 0,
+        backgroundColor: '#fff',
+        marginRight: 0,
     },
     activeTab: {
-        borderBottomWidth: 0, // Убираем нижний бордер для активного таба
-        height: 31, // Увеличиваем высоту активного таба на 1px
-        marginBottom: -1, // Сдвигаем активный таб вниз, чтобы он перекрыл общий бордер
-        backgroundColor: '#fff', // Фон активного таба
+        borderBottomWidth: 0,
+        height: 31,
+        marginBottom: -1,
+        backgroundColor: '#fff',
     },
     lastTab: {
-        borderRightWidth: 1, // Добавляем правый бордер только для последнего таба
+        borderRightWidth: 1,
     },
     tabText: {
         textAlign: 'center',
         fontSize: 10,
-        fontWeight: '500', // Исправлено на правильное значение
+        fontWeight: '500',
         color: '#939393',
     },
     activeTabText: {
@@ -167,7 +165,7 @@ const styles = StyleSheet.create({
     },
     tab1Container: {
         flex: 1,
-        justifyContent: 'space-between', // Распределяет пространство между контентом и футером
+        justifyContent: 'space-between',
     },
     tab3Container: {
         paddingHorizontal: 10,
@@ -178,7 +176,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingTop: 14,
-        paddingBottom: 20, // Отступ снизу для контента
+        paddingBottom: 20,
     },
     content: {
         flex: 1,
