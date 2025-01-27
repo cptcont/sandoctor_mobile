@@ -5,14 +5,12 @@ import { router } from 'expo-router';
 interface TaskCardProps {
     title: string;
     status: 'active' | 'completed';
+    onPress: () => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ title, status  }) => {
-    const handleOnPress = () => {
-        router.push('/details');
-    };
+const TaskCard: React.FC<TaskCardProps> = ({ title, status, onPress  }) => {
     return (
-        <TouchableOpacity onPress={handleOnPress} style={styles.card}>
+        <TouchableOpacity onPress={onPress} style={styles.card}>
             <View style={styles.cardTitle}>
                 <Text style={styles.title}>{title}</Text>
             </View>

@@ -21,6 +21,12 @@ export default function RootLayout() {
                     }}
                 />
                 <Drawer.Screen
+                    name="checklist"
+                    options={{
+                        headerTitle: 'Checklist',
+                    }}
+                />
+                <Drawer.Screen
                     name="daydetails"
                     options={{
                         headerTitle: 'Day Details',

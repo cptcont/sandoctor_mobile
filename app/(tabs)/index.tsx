@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, {useEffect, useState} from 'react';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { getYear, getMonth, getDate } from 'date-fns';
 import MonthsCarousel from "@/components/MonthsCarousel";
 import Calendar from "@/components/Calendar";
 import Card from "@/components/Card";
 import Footer from "@/components/Footer";
 import FooterContentIcons from "@/components/FooterContentIcons";
+import { useTask } from '@/context/TaskContext';
+
 
 export default function HomeScreen() {
     const currentDate = new Date(); // Текущая дата
     const [selectedYear, setSelectedYear] = useState<number>(getYear(currentDate)); // Текущий год
     const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(currentDate) + 1); // Текущий месяц (getMonth возвращает 0-11)
     const [selectedDay, setSelectedDay] = useState<number>(getDate(currentDate)); // Текущий день
+    const { tasks, isLoading, error, fetchTasks } = useTask();
+
+    useEffect(() => {
+        fetchTasks();
+    }, [fetchTasks]);
 
     const handleMonthChange = (year: number, month: number) => {
         setSelectedYear(year);
@@ -31,9 +38,12 @@ export default function HomeScreen() {
                     <MonthsCarousel onMonthChange={handleMonthChange} />
                 </View>
                 <Calendar year={selectedYear} month={selectedMonth} day={selectedDay} />
-                <View style={{ width: '100%', paddingHorizontal: 12 }}>
-                    <Card title={'Пункт назначения'} colorStyle={'#30DA88'} time={'09:50 - 10:00'} />
-                </View>
+                <ScrollView style={{ width: '100%', paddingHorizontal: 12 }}>
+                    { tasks.responce.map((task, index) => (
+                        <Card key={index} title={task.point} colorStyle={task.condition.color} time={`${task.time_begin_work} - ${task.time_end_work}`} />
+                    ))
+                    }
+                </ScrollView>
             </View>
             <Footer>
                 <FooterContentIcons />

@@ -4,19 +4,15 @@ import { router } from 'expo-router'
 import { BackIcon } from "@/components/icons/Icons";
 
 type CustomHeaderScreenProps = {
+    onPress: () => void;
     text: string;
     marginBottom?: number;
 }
 
-export const CustomHeaderScreen: React.FC<CustomHeaderScreenProps> = ({ text, marginBottom = 0 }) => {
-
-    const handleBack = () => {
-        router.push('/');
-    };
-
+export const CustomHeaderScreen: React.FC<CustomHeaderScreenProps> = ({ text, marginBottom = 0, onPress }) => {
     return (
         <View style={{ marginBottom }}>
-        <TouchableOpacity style={styles.header} onPress={handleBack}>
+        <TouchableOpacity style={styles.header} onPress={onPress}>
             <View style={styles.logoContainer}>
                 <BackIcon />
             </View>

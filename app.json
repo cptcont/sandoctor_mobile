@@ -2,7 +2,7 @@
   "expo": {
     "name": "sandoctor",
     "slug": "sandoctor",
-    "version": "1.0.3",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -45,9 +45,7 @@
     "updates": {
       "url": "https://u.expo.dev/0c173ea1-0ac4-495f-928a-3455f795bfcd"
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.5",
     "extra": {
       "router": {
         "origin": false

@@ -28,7 +28,6 @@ const Tab: React.FC<TabProps> = ({ label, isActive, onPress, isLast = false }) =
 const styles = StyleSheet.create({
     tab: {
         justifyContent: 'center',
-        width: 71,
         height: 30,
         borderStyle: 'solid',
         borderWidth: 1,
@@ -37,6 +36,7 @@ const styles = StyleSheet.create({
         borderBottomColor: '#ECECEC',
         borderRightWidth: 0,
         backgroundColor: '#fff',
+        paddingHorizontal: 20,
         marginRight: 0,
     },
     activeTab: {

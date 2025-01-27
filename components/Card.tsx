@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 
 interface CardProps {
-    title: string;
+    title?: string;
     address?: string;
     objectName?: string;
     colorStyle: string;
@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
         marginBottom: 10, // Отступ сверху для адреса
     },
     text: {
+        width: '50%',
         fontSize: 16,
         fontWeight: 'bold',
     },

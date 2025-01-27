@@ -85,6 +85,10 @@ const ProfileScreen = () => {
         // Логика для изменения аватара
     };
 
+    const handleBack = async () => {
+        router.push('/');
+    }
+
     return (
         <KeyboardAwareScrollView
             style={styles.container}
@@ -92,7 +96,7 @@ const ProfileScreen = () => {
             extraScrollHeight={20}
             keyboardShouldPersistTaps="handled">
 
-            <CustomHeaderScreen text={'Редактировать профиль'} marginBottom={21} />
+            <CustomHeaderScreen text={'Редактировать профиль'} marginBottom={21} onPress={handleBack}/>
 
             <View style={styles.containerProfile}>
                 <View style={styles.avatarContainer}>
