@@ -12,6 +12,8 @@ type Task = {
     point?: string; // Опциональное поле для баллов
     time_begin_work?: string,
     time_end_work?: string,
+    date_begin_work?: string,
+    adress: string,
     condition: TaskCondition;
 
 };

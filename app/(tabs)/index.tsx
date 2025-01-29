@@ -1,6 +1,6 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { getYear, getMonth, getDate } from 'date-fns';
+import { getYear, getMonth, getDate, format } from 'date-fns';
 import MonthsCarousel from "@/components/MonthsCarousel";
 import Calendar from "@/components/Calendar";
 import Card from "@/components/Card";
@@ -8,12 +8,12 @@ import Footer from "@/components/Footer";
 import FooterContentIcons from "@/components/FooterContentIcons";
 import { useTask } from '@/context/TaskContext';
 
-
 export default function HomeScreen() {
     const currentDate = new Date(); // Текущая дата
     const [selectedYear, setSelectedYear] = useState<number>(getYear(currentDate)); // Текущий год
     const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(currentDate) + 1); // Текущий месяц (getMonth возвращает 0-11)
     const [selectedDay, setSelectedDay] = useState<number>(getDate(currentDate)); // Текущий день
+    const [selectedDate, setSelectedDate] = useState<string>(format(currentDate, 'yyyy-MM-dd')); // Выбранная дата в формате 'yyyy-MM-dd'
     const { tasks, isLoading, error, fetchTasks } = useTask();
 
     useEffect(() => {
@@ -31,18 +31,54 @@ export default function HomeScreen() {
         }
     };
 
+    // Обработчик выбора даты
+    const handleDaySelect = (day: number) => {
+        setSelectedDay(day);
+        const formattedDate = format(new Date(selectedYear, selectedMonth - 1, day), 'yyyy-MM-dd');
+        setSelectedDate(formattedDate);
+    };
+
+    // Преобразуем задачи в нужный формат для Calendar
+    const formattedTasks = tasks.responce.map(task => ({
+        id: task.id,
+        date_begin_work: task.date_begin_work,
+        color: task.condition.color,
+        point: task.point,
+        time_begin_work: task.time_begin_work,
+        time_end_work: task.time_end_work,
+        adress: task.adress,
+    }));
+
+    // Фильтруем задачи по выбранной дате
+    const filteredTasks = tasks.responce.filter(task => {
+        // Проверяем, что task.date_begin_work существует
+        if (!task.date_begin_work) return false; // Пропускаем задачи без даты
+        const taskDate = format(new Date(task.date_begin_work), 'yyyy-MM-dd');
+        return taskDate === selectedDate;
+    });
+
     return (
         <View style={styles.container}>
             <View style={styles.content}>
                 <View style={styles.containerMonthsCarousel}>
                     <MonthsCarousel onMonthChange={handleMonthChange} />
                 </View>
-                <Calendar year={selectedYear} month={selectedMonth} day={selectedDay} />
+                <Calendar
+                    year={selectedYear}
+                    month={selectedMonth}
+                    day={selectedDay}
+                    tasks={formattedTasks} // Передаем преобразованные задачи
+                    onDaySelect={handleDaySelect} // Передаем обработчик выбора дня
+                />
                 <ScrollView style={{ width: '100%', paddingHorizontal: 12 }}>
-                    { tasks.responce.map((task, index) => (
-                        <Card key={index} title={task.point} colorStyle={task.condition.color} time={`${task.time_begin_work} - ${task.time_end_work}`} />
-                    ))
-                    }
+                    {filteredTasks.map((task, index) => (
+                        <Card
+                            key={index}
+                            title={task.point}
+                            colorStyle={task.condition.color}
+                            time={`${task.time_begin_work} - ${task.time_end_work}`}
+                        />
+                    ))}
                 </ScrollView>
             </View>
             <Footer>

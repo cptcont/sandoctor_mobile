@@ -15,13 +15,24 @@ import {
     isSameMonth,
 } from 'date-fns';
 
+interface Task {
+    date_begin_work?: string;
+    color?: string;
+    point?: string;
+    time_begin_work?: string;
+    time_end_work?: string;
+    adress?: string;
+}
+
 interface CalendarProps {
     day?: number;
     month?: number;
     year?: number;
+    tasks?: Task[]; // Новый пропс для задач
+    onDaySelect: (day: number) => void; // Обработчик выбора дня
 }
 
-const Calendar: React.FC<CalendarProps> = ({ day, month, year }) => {
+const Calendar: React.FC<CalendarProps> = ({ day, month, year, tasks = [], onDaySelect }) => {
     const router = useRouter(); // Хук для навигации
     const currentDate = new Date(); // Текущая дата
 
@@ -82,15 +93,48 @@ const Calendar: React.FC<CalendarProps> = ({ day, month, year }) => {
         const delta = currentTime - lastClickTime.current;
 
         if (delta < 300) { // Если разница между кликами меньше 300 мс
-            // Переход на страницу details с передачей данных
-            router.push({
-                pathname: '/daydetails',
-                params: { day, month: selectedMonth, year: selectedYear },
-            });
+            // Форматируем выбранную дату
+            const selectedDate = format(new Date(selectedYear, selectedMonth - 1, day), 'yyyy-MM-dd');
+
+            // Находим задачу для выбранной даты
+            const taskForSelectedDate = tasks.find(task => task.date_begin_work === selectedDate);
+            //console.log('address', taskForSelectedDate.adress)
+            // Если задача найдена, передаем её данные
+            if (taskForSelectedDate) {
+                router.push({
+                    pathname: '/daydetails',
+                    params: {
+                        day,
+                        month: selectedMonth,
+                        year: selectedYear,
+                        color: taskForSelectedDate.color,
+                        point: taskForSelectedDate.point,
+                        time_begin_work: taskForSelectedDate.time_begin_work,
+                        time_end_work: taskForSelectedDate.time_end_work,
+                        address: taskForSelectedDate.adress,
+                    },
+                });
+            }
         }
 
         lastClickTime.current = currentTime; // Обновляем время последнего клика
         setSelectedDay(day);
+        onDaySelect(day); // Вызываем обработчик выбора дня
+    };
+
+    // Функция для получения кружков по дате
+    const getCirclesForDate = (date: Date) => {
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        const circles = tasks
+            .filter(task => task.date_begin_work === formattedDate)
+            .slice(0, 3) // Ограничиваем количество кружков до 3
+            .map((task, index) => (
+                <View
+                    key={index}
+                    style={[styles.circle, { backgroundColor: task.color }]}
+                />
+            ));
+        return circles;
     };
 
     return (
@@ -115,23 +159,34 @@ const Calendar: React.FC<CalendarProps> = ({ day, month, year }) => {
                         // Проверяем, является ли день выбранным
                         const isSelectedDay = isCurrentMonth && day === selectedDay;
 
+                        // Получаем кружки для текущей даты
+                        const circles = isCurrentMonth
+                            ? getCirclesForDate(new Date(selectedYear, selectedMonth - 1, day))
+                            : null;
+
                         return (
                             <TouchableOpacity
                                 key={dayIndex}
-                                style={styles.dayContainer}
+                                style={[
+                                    styles.dayContainer,
+                                    isSelectedDay && styles.selectedDayContainer, // Стиль для выбранного дня
+                                ]}
                                 onPress={() => handleDayPress(day, isCurrentMonth)}
                                 activeOpacity={0.7}
                             >
-                                <Text
-                                    style={[
-                                        styles.day,
-                                        !isCurrentMonth && styles.otherMonthDay,
-                                        isCurrentDay && styles.currentDay, // Стиль для текущего дня
-                                        isSelectedDay && styles.selectedDay, // Стиль для выбранного дня
-                                    ]}
-                                >
-                                    {day}
-                                </Text>
+                                <View style={styles.dayContent}>
+                                    <Text
+                                        style={[
+                                            styles.day,
+                                            !isCurrentMonth && styles.otherMonthDay,
+                                            isCurrentDay && styles.currentDay, // Стиль для текущего дня
+                                            isSelectedDay && styles.selectedDayText, // Стиль для выбранного дня
+                                        ]}
+                                    >
+                                        {day}
+                                    </Text>
+                                    {circles && <View style={styles.circlesContainer}>{circles}</View>}
+                                </View>
                             </TouchableOpacity>
                         );
                     })}
@@ -166,7 +221,16 @@ const styles = StyleSheet.create({
     },
     dayContainer: {
         width: daySize,
-        aspectRatio: 1,
+        height: daySize, // Фиксированная высота для всех дней
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    selectedDayContainer: {
+        backgroundColor: '#F0F5FF', // Фон для выбранного дня
+        borderRadius: 50, // Скругление углов
+    },
+    dayContent: {
+        position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -182,14 +246,20 @@ const styles = StyleSheet.create({
     currentDay: {
         color: '#1541C7', // Цвет шрифта текущего дня
     },
-    selectedDay: {
-        backgroundColor: '#F0F5FF',
-        color: '#1541C7',
-        borderRadius: 50,
-        width: 35,
-        height: 35,
-        textAlign: 'center',
-        lineHeight: 33,
+    selectedDayText: {
+        color: '#1541C7', // Цвет текста для выбранного дня
+    },
+    circlesContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        position: 'absolute', // Абсолютное позиционирование
+        bottom: -7, // Располагаем кружки внизу контейнера
+    },
+    circle: {
+        width: 7,
+        height: 7,
+        borderRadius: 3.5,
+        marginHorizontal: 1,
     },
 });
 

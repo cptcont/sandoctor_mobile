@@ -7,7 +7,7 @@ import FooterContentIcons from "@/components/FooterContentIcons";
 
 export default function DayDetailsScreen() {
     const params = useLocalSearchParams();
-    const { day, month, year } = params;
+    const { day, month, year, color, point, time_begin_work, time_end_work, address } = params;
     return (
         <View style={styles.container}>
             <View style={styles.content}>
@@ -16,11 +16,10 @@ export default function DayDetailsScreen() {
                 </View>
                 <View style={{ width: '100%', paddingHorizontal: 12 }}>
                     <Card
-                        title={'Пункт назначения'}
-                        colorStyle={'#30DA88'}
-                        time={'09:50 - 10:00'}
-                        address={'Москва. Академика Королева 120'}
-                        objectName={'Столовая Опера'}
+                        title={`${point}`}
+                        colorStyle={`${color}`}
+                        time={`${time_begin_work} - ${time_end_work}`}
+                        address={`${address}`}
                     />
                 </View>
             </View>
