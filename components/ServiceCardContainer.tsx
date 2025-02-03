@@ -2,38 +2,40 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ServiceCard from "@/components/ServiceCard";
 
-type ServiceCardContainerProps = {
-    title: string;
+interface Status {
+    name: string;
+    color: string;
+
 }
 
-const ServiceCardContainer = ({ title  } : ServiceCardContainerProps) => {
+interface Service {
+    id: string;
+    service_name: string;
+    package: string;
+    status: Status;
+    unit: Status;
+}
+
+type ServiceCardContainerProps = {
+    title: string;
+    task: Service[];
+
+}
+
+const ServiceCardContainer = ({ title, task  } : ServiceCardContainerProps) => {
     return (
         <View>
             <Text style={styles.title}>{title}</Text>
-            <ServiceCard
-                title={'Уничтожение тараканов'}
-                value={'50 кв.м'}
-                check={true}
-                description={true}
-            />
-            <ServiceCard
-                title={'Уничтожение тараканов'}
-                value={'50 кв.м'}
-                check={false}
-                description={false}
-            />
-            <ServiceCard
-                title={'Уничтожение тараканов'}
-                value={'50 кв.м'}
-                check={true}
-                description={false}
-            />
-            <ServiceCard
-                title={'Уничтожение тараканов'}
-                value={'50 кв.м'}
-                check={true}
-                description={false}
-            />
+                {task.map((service: Service, index: number) => (
+                    <ServiceCard
+                        key={index}
+                        title={service.service_name}
+                        value={service.package}
+                        unit={service.unit.name}
+                        status={service.status.name}
+                        color={service.status.color}
+                    />
+                ))}
         </View>
     )
 };

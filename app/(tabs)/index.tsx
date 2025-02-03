@@ -7,6 +7,8 @@ import Card from "@/components/Card";
 import Footer from "@/components/Footer";
 import FooterContentIcons from "@/components/FooterContentIcons";
 import { useTask } from '@/context/TaskContext';
+import {router} from "expo-router";
+import { stringify, parse } from 'flatted';
 
 export default function HomeScreen() {
     const currentDate = new Date(); // Текущая дата
@@ -57,6 +59,16 @@ export default function HomeScreen() {
         return taskDate === selectedDate;
     });
 
+    const handleOnPressCard = (task: any) => {
+        router.push({
+            pathname: '/details',
+            params: {
+                task: stringify(task),
+            },
+        });
+
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.content}>
@@ -77,6 +89,7 @@ export default function HomeScreen() {
                             title={task.point}
                             colorStyle={task.condition.color}
                             time={`${task.time_begin_work} - ${task.time_end_work}`}
+                            onPress={() => handleOnPressCard(task)}
                         />
                     ))}
                 </ScrollView>

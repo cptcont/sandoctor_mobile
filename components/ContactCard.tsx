@@ -4,10 +4,11 @@ import { View, Text, StyleSheet } from 'react-native';
 type ContactCardProps = {
     name: string;
     post: string;
-    tel: string;
+    tel1: string;
+    tel2?: string;
 }
 
-const ContactCard = ({ name, post, tel } : ContactCardProps) => {
+const ContactCard = ({ name, post, tel1, tel2 } : ContactCardProps) => {
     return (
         <View style={styles.card}>
             <Text style={styles.title}>{'Контактные лица'}</Text>
@@ -17,8 +18,8 @@ const ContactCard = ({ name, post, tel } : ContactCardProps) => {
                     <Text style={styles.post}>{post}</Text>
                 </View>
                 <View style={{width: '50%'}}>
-                    <Text style={styles.tel}>{tel}</Text>
-                    <Text style={styles.tel}>{tel}</Text>
+                    <Text style={styles.tel}>{tel1}</Text>
+                    <Text style={styles.tel}>{tel2}</Text>
                 </View>
             </View>
         </View>

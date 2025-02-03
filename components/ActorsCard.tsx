@@ -3,19 +3,20 @@ import { View, Text, StyleSheet } from 'react-native';
 import {TextButton} from "@/components/TextButton";
 
 type ActorsCardProps = {
-    name: string;
+    name_1: string;
+    name_2?: string;
 }
 
-const ActorsCard = ({ name } : ActorsCardProps) => {
+const ActorsCard = ({ name_1, name_2 } : ActorsCardProps) => {
     return (
         <View style={styles.card}>
             <Text style={styles.title}>{'Исполнители'}</Text>
             <View style={styles.container}>
                 <View style={{width: '50%'}}>
-                    <Text style={styles.name}>{name}</Text>
+                    <Text style={styles.name}>{name_1}</Text>
                 </View>
                 <View style={{width: '50%'}}>
-                    <Text style={styles.tel}>{name}</Text>
+                    <Text style={styles.tel}>{name_2}</Text>
                 </View>
             </View>
                 <View style={{flexDirection: 'row', justifyContent: 'center'}}>

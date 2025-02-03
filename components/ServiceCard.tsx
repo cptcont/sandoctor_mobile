@@ -4,18 +4,20 @@ import {TextButton} from "@/components/TextButton";
 import { CheckSolid, XMarkSolid, Document } from "@/components/icons/Icons"
 
 type ServiceCardProps = {
-    title: string;
-    value: string;
-    check: boolean;
-    description: boolean;
+    title?: string;
+    value?: string;
+    status?: string;
+    unit?: string;
+    color?: string;
+    description?: boolean;
 }
 
-const ServiceCard = ({ title, value, check, description  } : ServiceCardProps) => {
+const ServiceCard = ({ title, value, unit, status, color, description  } : ServiceCardProps) => {
     return (
         <View style={styles.card}>
             <View>
             <Text style={styles.title}>{title}</Text>
-            <Text style={styles.title}>{value}</Text>
+            <Text style={styles.title}>{`${value} ${unit}`}</Text>
             </View>
             <View style={styles.container}>
                 {description &&
@@ -24,7 +26,12 @@ const ServiceCard = ({ title, value, check, description  } : ServiceCardProps) =
                     </View>
                 }
                 <View style={styles.check}>
-                    {check ? <CheckSolid /> : <XMarkSolid />}
+                    {status === "Новая" && (
+                        <CheckSolid color={color}/>
+                    )}
+                    {status === "выполнена" && (
+                        <XMarkSolid />
+                    )}
                 </View>
             </View>
         </View>

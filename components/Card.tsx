@@ -8,15 +8,13 @@ interface CardProps {
     objectName?: string;
     colorStyle: string;
     time: string;
-
+    onPress?: () => void;
 }
 
-const Card: React.FC<CardProps> = ({ title, colorStyle, address = '', objectName = '', time,  }) => {
-    const handleOnPress = () => {
-        router.push('/details');
-    };
+const Card: React.FC<CardProps> = ({ title, colorStyle, address = '', objectName = '', time, onPress }) => {
+
     return (
-        <TouchableOpacity onPress={handleOnPress} style={[styles.card, { borderColor: colorStyle }]}>
+        <TouchableOpacity onPress={onPress} style={[styles.card, { borderColor: colorStyle }]}>
             <View style={styles.cardHeader}>
                 <Text style={[styles.text, { color: colorStyle }]}>{title}</Text>
                 <Text style={[styles.time, { color: colorStyle }]}>{time}</Text>

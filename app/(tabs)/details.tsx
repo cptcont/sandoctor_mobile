@@ -10,10 +10,24 @@ import ActorsCard from "@/components/ActorsCard";
 import ServiceCardContainer from "@/components/ServiceCardContainer";
 import TaskCard from "@/components/TaskCard";
 import ReportCard from "@/components/ReportCard";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import Tab from "@/components/Tab";
+import { stringify, parse } from 'flatted';
+
+interface Status {
+    name: string;
+}
+
+interface Service {
+    id: string;
+    service_name: string;
+    status: Status;
+}
 
 const DetailsScreen = () => {
+    const params = useLocalSearchParams();
+    const task = parse(params.task as string);
+    const taskServicesArray = Array.isArray(task.services) ? task.services : [task.services];
     const [index, setIndex] = useState(0);
     const [routes] = useState([
         { key: 'tab1', title: 'Детали' },
@@ -47,6 +61,13 @@ const DetailsScreen = () => {
         });
     };
 
+    const handleServiceOnPress = (service: Service) => {
+        router.push({
+            pathname: '/checklist',
+            params: { id: service.id, title: service.service_name },
+        });
+    };
+
     const handleFinish = () => {
         router.push('/');
     };
@@ -63,18 +84,18 @@ const DetailsScreen = () => {
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={{ marginBottom: 25 }}>
                         <ArrivalCard
-                            destination={'Ресторан на Ленинском'}
-                            address={'Москва, Ленинский пр-т, д.38'}
-                            route={'Из метро налево, потом направо'}
-                            arrivalDate={'20.05.2024'}
-                            arrivalTime={'с 10:00 до 12:00'}
+                            destination={`${task.point}`}
+                            address={`${task.adress}`}
+                            route={`${task.comment}`}
+                            arrivalDate={`${task.date_begin_work.split('-').reverse().join('.')}`}
+                            arrivalTime={`с ${task.time_begin_work} до ${task.time_end_work}`}
                         />
                     </View>
-                    <View style={{ marginBottom: 35 }}>
-                        <ContactCard name={'Смирнов Роман'} post={'управляющий'} tel={'+7 912 88 73 421'} />
+                    <View style={{ marginBottom: 25 }}>
+                        <ContactCard name={`${task.contacts[0].fio}`} post={`${task.contacts[0].position}`} tel1={`${task.contacts[0].phone_1}`} />
                     </View>
                     <View>
-                        <ActorsCard name={'Смирнов Роман'} />
+                        <ActorsCard name_1={`${task.executors[0].user}`} />
                     </View>
                 </ScrollView>
                 <Footer>
@@ -88,7 +109,10 @@ const DetailsScreen = () => {
         ),
         tab2: () => (
             <View style={styles.content}>
-                <ServiceCardContainer title={'Услуга'} />
+                <ServiceCardContainer
+                    title={'Услуга'}
+                    task={taskServicesArray}
+                />
             </View>
         ),
         tab3: () => (
@@ -165,7 +189,7 @@ const DetailsScreen = () => {
 
     return (
         <View style={styles.container}>
-            <CustomHeaderScreen text={'Задание №125478'} marginBottom={0} onPress={handleFinish} />
+            <CustomHeaderScreen text={`Задание №${task.id}`} marginBottom={0} onPress={handleFinish} />
 
             <TabView
                 navigationState={{ index, routes }}
