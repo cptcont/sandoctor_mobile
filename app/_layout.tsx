@@ -9,16 +9,16 @@ import { SafeAreaView, Platform, StyleSheet } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
 import { ModalProvider, useModal } from '@/context/ModalContext';
 import { CustomModal } from '@/components/CustomModal';
-import {TaskProvider} from "@/context/TaskContext";
+import {ApiProvider} from "@/context/ApiContext";
 
 export default function RootLayout() {
     return (
         <AuthProvider>
             <PopupProvider>
                 <ModalProvider>
-                    <TaskProvider>
+                    <ApiProvider>
                         <RootLayoutNav />
-                    </TaskProvider>
+                    </ApiProvider>
                 </ModalProvider>
             </PopupProvider>
         </AuthProvider>

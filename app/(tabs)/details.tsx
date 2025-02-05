@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, useWindowDimensions } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, ScrollView, StyleSheet, Dimensions, useWindowDimensions, Text } from 'react-native';
 import { TabView, SceneMap, NavigationState, SceneRendererProps, Route } from 'react-native-tab-view';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
 import ArrivalCard from "@/components/ArrivalCard";
@@ -12,22 +12,14 @@ import TaskCard from "@/components/TaskCard";
 import ReportCard from "@/components/ReportCard";
 import { router, useLocalSearchParams } from "expo-router";
 import Tab from "@/components/Tab";
-import { stringify, parse } from 'flatted';
-
-interface Status {
-    name: string;
-}
-
-interface Service {
-    id: string;
-    service_name: string;
-    status: Status;
-}
+import { parse } from 'flatted';
+import { useApi } from '@/context/ApiContext';
+import type { Checklist } from '@/types/Checklist';
+import type { Task } from '@/types/Task';
 
 const DetailsScreen = () => {
     const params = useLocalSearchParams();
-    const task = parse(params.task as string);
-    const taskServicesArray = Array.isArray(task.services) ? task.services : [task.services];
+    const taskId = params.taskId as string;
     const [index, setIndex] = useState(0);
     const [routes] = useState([
         { key: 'tab1', title: 'Детали' },
@@ -36,35 +28,39 @@ const DetailsScreen = () => {
         { key: 'tab4', title: 'Отчет' },
     ]);
 
+    const { checklists, tasks, isLoading, error, fetchData } = useApi();
+
+    useEffect(() => {
+        const loadChecklist = async () => {
+            await fetchData<Checklist>(`checklist/${taskId}/`, 'checklists'); // Указываем только endpoint
+        };
+        const loadTasks = async () => {
+            await fetchData<Task[]>(`task/`, 'tasks');
+        }
+        loadChecklist();
+        loadTasks();
+
+    }, [fetchData]);
+
+    const taskFiltered = (tasks || []).filter((task: Task) => {
+        return task.id === taskId;
+    });
+    const task = taskFiltered[0];
+    //console.log('Tasks', task);
+
+    const checkList = checklists || []; // Убедимся, что checkList всегда массив
     const { width: screenWidth } = useWindowDimensions(); // Динамическая ширина экрана
     const tabsContainerRef = useRef<View>(null);
     const [tabsWidth, setTabsWidth] = useState(0); // Ширина контейнера табов
 
-    const handleSanTechOnPress = () => {
+    const handleTaskOnPress = (idCheckList: string) => {
+        console.log('Нажата задача с id:', idCheckList);
         router.push({
             pathname: '/checklist',
-            params: { id: '1', title: title.sanTeh },
-        });
-    };
-
-    const handleVisualOnPress = () => {
-        router.push({
-            pathname: '/checklist',
-            params: { id: '2', title: title.visual },
-        });
-    };
-
-    const handlePointOnPress = () => {
-        router.push({
-            pathname: '/checklist',
-            params: { id: '3', title: title.point },
-        });
-    };
-
-    const handleServiceOnPress = (service: Service) => {
-        router.push({
-            pathname: '/checklist',
-            params: { id: service.id, title: service.service_name },
+            params: {
+                idTask: `${taskId}`,
+                idCheckList: idCheckList,
+            },
         });
     };
 
@@ -111,21 +107,29 @@ const DetailsScreen = () => {
             <View style={styles.content}>
                 <ServiceCardContainer
                     title={'Услуга'}
-                    task={taskServicesArray}
+                    task={task.services}
                 />
             </View>
         ),
         tab3: () => (
             <View style={styles.tab3Container}>
-                <View style={{ marginBottom: 10 }}>
-                    <TaskCard onPress={handleSanTechOnPress} title={title.sanTeh} status={'completed'} />
-                </View>
-                <View style={{ marginBottom: 10 }}>
-                    <TaskCard onPress={handleVisualOnPress} title={title.visual} status={'completed'} />
-                </View>
-                <View style={{ marginBottom: 10 }}>
-                    <TaskCard onPress={handlePointOnPress} title={title.point} status={'completed'} />
-                </View>
+                {isLoading ? (
+                    <Text>Загрузка...</Text>
+                ) : error ? (
+                    <Text>Ошибка: {error}</Text>
+                ) : checkList.length > 0 ? (
+                    checkList.map((data, index) => (
+                        <View key={index} style={{ marginBottom: 10 }}>
+                            <TaskCard
+                                onPress={() => handleTaskOnPress(data.id)}
+                                title={data.name}
+                                status={'completed'}
+                            />
+                        </View>
+                    ))
+                ) : (
+                    <Text>Нет данных для отображения</Text>
+                )}
             </View>
         ),
         tab4: () => (

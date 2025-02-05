@@ -7,7 +7,7 @@ import FooterContentIcons from "@/components/FooterContentIcons";
 
 export default function DayDetailsScreen() {
     const params = useLocalSearchParams();
-    const { day, month, year, color, point, time_begin_work, time_end_work, address } = params;
+    const { day, month, year, color, point, time_begin_work, time_end_work, address } = params
     return (
         <View style={styles.container}>
             <View style={styles.content}>
