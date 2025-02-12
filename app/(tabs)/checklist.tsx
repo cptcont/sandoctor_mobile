@@ -1,207 +1,83 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, useWindowDimensions, Text, Image } from 'react-native';
+import { View, ScrollView, StyleSheet, useWindowDimensions,} from 'react-native';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
-import Footer from "@/components/Footer";
-import { TextButton } from "@/components/TextButton";
 import { router, useLocalSearchParams } from "expo-router";
 import { NavigationState, Route, SceneMap, SceneRendererProps, TabView } from "react-native-tab-view";
 import Tab from "@/components/Tab";
-import Dropdown from "@/components/Dropdown";
-import CustomTable from "@/components/CustomTable";
-import CustomTableB from "@/components/CustomTableB";
+import {useApi} from "@/context/ApiContext";
+import type {Checklist, Zone} from "@/types/Checklist";
+import Tab1Content from "@/components/Tab1Content";
+import Tab2Content from "@/components/Tab2Content";
 
-const initialLayout = { width: Dimensions.get('window').width };
+interface TabContent {
+    key: string;
+    title: string;
+    content: React.ReactNode;
+}
 
 const ChecklistScreen = () => {
+    const { checklists, fetchData } = useApi();
     const params = useLocalSearchParams();
-    const { id, title } = params;
+    const { id, idTask, idCheckList, typeCheckList} = params;
 
     // Состояние для управления текущим tabId
     const [tabId, setTabId] = useState(0);
 
     // Устанавливаем начальное значение tabId при монтировании компонента
     useEffect(() => {
+        const loadChecklist = async () => {
+            if (!checkList) {
+                await fetchData<Checklist>(`checklist/${idCheckList}/`, 'checklists'); // Указываем только endpoint
+            }
+        };
         const initialTabId = parseInt(Array.isArray(id) ? id[0] : id, 10);
         setTabId(initialTabId);
-    }, [id]); // Зависимость от id, чтобы обновить tabId при изменении id
+        loadChecklist();
+    }, [id, fetchData]); // Зависимость от id, чтобы обновить tabId при изменении id
 
-    // Обработчик для кнопки "Далее"
-    const handleNext = () => {
-        if (tabId < 3) {
-            setTabId(tabId + 1);
-        }
-    };
-
-    // Обработчик для кнопки "Назад"
-    const handleBack = () => {
-        if (tabId > 1) {
-            setTabId(tabId - 1);
-        }
-    };
+    const checkList = (checklists || []).filter((checklist: Checklist) => {
+        return checklist.id === idCheckList;
+    }).flat()[0];
 
     const handleFinish = () => {
-        router.push('/details');
+        router.push({
+            pathname: '/details',
+            params: {
+                taskId: idTask,
+            }
+        });
     };
 
-    const items = [
-        { label: 'Осмотр Водопровода', value: 'viewW' },
-        { label: 'Осмотр Канализации', value: 'viewC' },
-    ];
-    const items1 = [
-        { label: 'Древесный точильщик', value: 'viewW' },
-        { label: 'Муравьи', value: 'viewC' },
-        { label: 'Тараканы', value: 'viewV' },
-    ];
-    const items2 = [
-        { label: '12 Приманочный ящик с клеевой пластиной', value: 'viewW' },
-    ];
+    const itemsTabContent =
+        checkList.zones.map((zone : Zone) =>
+            zone
+        );
 
-    const [index, setIndex] = useState(0);
-    const [routes] = useState([
-        { key: 'tab1', title: 'Кухня' },
-        { key: 'tab2', title: 'Столовая' },
-        { key: 'tab3', title: 'Спортивный зал' },
-        { key: 'tab4', title: 'Душевая' },
-        { key: 'tab5', title: 'Спальня' },
-    ]);
+    const tabsData: TabContent[] = checkList.zones.map((data: Checklist, index: number) => {
+        let tabContent = null;
+        if (typeCheckList === '1' || typeCheckList === '2') {
+            tabContent = <Tab1Content itemsTabContent={itemsTabContent} index={index} />;
+        } else if (typeCheckList === '3') {
+            tabContent = <Tab2Content />;
+        }
 
-    const imageCount = 4;
-
-    const renderScene = SceneMap({
-        tab1: () => (
-            <View style={styles.tab1Container}>
-                {tabId === 1 && (
-                    <>
-                        <View style={styles.text}>
-                            <Text style={styles.title}>{'Параметр'}</Text>
-                        </View>
-                        <View style={{ marginBottom: 23 }}>
-                            <Dropdown items={items} defaultValue={'viewW'} onSelect={() => { }} />
-                        </View>
-                        <View style={[styles.text, { marginBottom: 17 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Наличие проблемы'}</Text>
-                            <Text style={[styles.title, { color: '#FD1F9B' }]}>{'Да'}</Text>
-                        </View>
-                        <View style={[styles.text, { marginBottom: 20 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Описание проблемы'}</Text>
-                            <Text style={[styles.title, { color: '#939393', fontSize: 10 }]}>{'Здесь текстовое поле комментария как пример'}</Text>
-                        </View>
-                        <View>
-                            <Text style={[styles.title, { marginBottom: 10 }]}>{'Фото'}</Text>
-                        </View>
-                        <View style={styles.imageContainer}>
-                            {[...Array(imageCount)].map((_, index) => (
-                                <Image
-                                    key={index}
-                                    source={require('@/assets/images/example1.png')}
-                                    style={[
-                                        styles.image,
-                                        index !== imageCount - 1 && styles.imageMargin, // marginRight для всех, кроме последнего
-                                    ]}
-                                />
-                            ))}
-                        </View>
-                    </>
-                )}
-                {tabId === 2 && (
-                    <>
-                        <View style={styles.text}>
-                            <Text style={styles.title}>{'Вредитель'}</Text>
-                        </View>
-                        <View style={{ marginBottom: 23 }}>
-                            <Dropdown items={items1} defaultValue={'viewW'} onSelect={() => { }} />
-                        </View>
-                        <View style={[styles.text, { marginBottom: 17 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Наличие проблемы'}</Text>
-                            <Text style={[styles.title, { color: '#FD1F9B' }]}>{'Да'}</Text>
-                        </View>
-                        <View style={[styles.text, { marginBottom: 20 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Путь проникновения'}</Text>
-                            <Text style={[styles.title, { color: '#939393', fontSize: 10 }]}>{'Здесь текстовое поле описание пути проникновения'}</Text>
-                        </View>
-                        <View style={[styles.text, { marginBottom: 17 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Наличие следов'}</Text>
-                            <Text style={[styles.title, { color: '#FD1F9B' }]}>{'Да'}</Text>
-                        </View>
-                        <View style={[styles.text, { marginBottom: 17 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Наличие со слов персонала'}</Text>
-                            <Text style={[styles.title, { color: '#FD1F9B' }]}>{'Да'}</Text>
-                        </View>
-                        <View style={[styles.text, { marginBottom: 20 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Очаг вредителя'}</Text>
-                            <Text style={[styles.title, { color: '#939393', fontSize: 10 }]}>{'Здесь текстовое поле описание пути проникновения'}</Text>
-                        </View>
-                    </>
-                )}
-                {tabId === 3 && (
-                    <>
-                        <View style={styles.text}>
-                            <Text style={styles.title}>{'Точка контроля'}</Text>
-                        </View>
-                        <View style={{ marginBottom: 23 }}>
-                            <Dropdown items={items2} defaultValue={'viewW'} onSelect={() => { }} />
-                        </View>
-                        <View style={[styles.text, { marginBottom: 17 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Доступ'}</Text>
-                            <Text style={[styles.title, { color: '#30DA88' }]}>{'Есть'}</Text>
-                        </View>
-                        <View style={[styles.text, { marginBottom: 13 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Состояние'}</Text>
-                            <Text style={[styles.title, { color: '#F7AA16'}]}>{'Нормальное'}</Text>
-                        </View>
-                        <View style={[styles.text, { marginBottom: 16 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Состояние крепления'}</Text>
-                            <Text style={[styles.title, { color: '#F7AA16'}]}>{'Нормальное'}</Text>
-                        </View>
-                        <View style={[styles.text, { marginBottom: 19 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Наличие препаратов в ТК'}</Text>
-                            <CustomTable />
-                        </View>
-                        <View style={[styles.text, { marginBottom: 20 }]}>
-                            <Text style={[styles.title, { marginBottom: 5 }]}>{'Вредители'}</Text>
-                            <CustomTableB />
-                        </View>
-                    </>
-                )}
-
-                <View style={{flex: 1, width: '100%'}}>
-                    <Text></Text>
-                </View>
-                <Footer>
-                    <View style={{paddingHorizontal: 12, width: '100%',flexDirection: 'row', justifyContent: 'space-between'}}>
-                        <TextButton
-                            text={'Назад'}
-                            type={'secondary'}
-                            size={125}
-                            onPress={handleBack} // Обработчик для кнопки "Назад"
-                        />
-                        <TextButton
-                            text={'Далее'}
-                            type={'primary'}
-                            size={125}
-                            onPress={handleNext} // Обработчик для кнопки "Далее"
-                        />
-                    </View>
-                </Footer>
-            </View>
-        ),
-        tab2: () => (
-            <View style={styles.content}>
-            </View>
-        ),
-        tab3: () => (
-            <View style={styles.tab3Container}>
-            </View>
-        ),
-        tab4: () => (
-            <View style={styles.tab4Container}>
-            </View>
-        ),
-        tab5: () => (
-            <View style={styles.tab4Container}>
-            </View>
-        ),
+        return {
+            key: `tab${index}`,
+            title: data.name,
+            content: tabContent,
+        };
     });
+    const [index, setIndex] = useState(0);
+    const [routes] = useState(
+        tabsData.map(tab => ({ key: tab.key, title: tab.title }))
+    );
+
+    const renderScene = SceneMap(
+        tabsData.reduce((acc, tab) => {
+            acc[tab.key] = () => tab.content; // tab.content — это React.ReactNode
+            return acc;
+        }, {} as { [key: string]: () => React.ReactNode }) // Используем React.ReactNode
+    );
 
     const tabsContainerRef = useRef<View>(null);
     const [tabsWidth, setTabsWidth] = useState(0); // Ширина контейнера табов
@@ -255,7 +131,7 @@ const ChecklistScreen = () => {
 
     return (
         <View style={styles.container}>
-            <CustomHeaderScreen text={`${title}`} marginBottom={0} onPress={handleFinish} />
+            <CustomHeaderScreen text={`${checkList.name}`} marginBottom={0} onPress={handleFinish} />
             <TabView
                 navigationState={{ index, routes }}
                 renderScene={renderScene}
@@ -263,6 +139,7 @@ const ChecklistScreen = () => {
                 initialLayout={{ width: screenWidth }}
                 renderTabBar={renderTabBar}
             />
+
         </View>
     );
 };
@@ -329,6 +206,12 @@ const styles = StyleSheet.create({
         borderBottomColor: '#ECECEC',
         borderLeftColor: '#ECECEC',
         borderLeftWidth: 1,
+    },
+    footerContainer: {
+        paddingHorizontal: 18,
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
     },
 });
 

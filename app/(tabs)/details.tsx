@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, useWindowDimensions, Text } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import { View, ScrollView, StyleSheet, useWindowDimensions, Text } from 'react-native';
 import { TabView, SceneMap, NavigationState, SceneRendererProps, Route } from 'react-native-tab-view';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
 import ArrivalCard from "@/components/ArrivalCard";
@@ -12,10 +12,10 @@ import TaskCard from "@/components/TaskCard";
 import ReportCard from "@/components/ReportCard";
 import { router, useLocalSearchParams } from "expo-router";
 import Tab from "@/components/Tab";
-import { parse } from 'flatted';
 import { useApi } from '@/context/ApiContext';
 import type { Checklist } from '@/types/Checklist';
 import type { Task } from '@/types/Task';
+import { useFocusEffect } from '@react-navigation/native';
 
 const DetailsScreen = () => {
     const params = useLocalSearchParams();
@@ -30,17 +30,23 @@ const DetailsScreen = () => {
 
     const { checklists, tasks, isLoading, error, fetchData } = useApi();
 
-    useEffect(() => {
-        const loadChecklist = async () => {
-            await fetchData<Checklist>(`checklist/${taskId}/`, 'checklists'); // Указываем только endpoint
-        };
-        const loadTasks = async () => {
-            await fetchData<Task[]>(`task/`, 'tasks');
-        }
-        loadChecklist();
-        loadTasks();
+    useFocusEffect(
+        useCallback(() => {
+            const loadChecklist = async () => {
+                await fetchData<Checklist>(`checklist/${taskId}/`, 'checklists');
+            };
+            const loadTasks = async () => {
+                await fetchData<Task[]>(`task/`, 'tasks');
+            };
 
-    }, [fetchData]);
+            loadChecklist();
+            loadTasks();
+
+            return () => {
+                // Опционально: выполнить очистку, если необходимо
+            };
+        }, [fetchData, taskId])
+    );
 
     const taskFiltered = (tasks || []).filter((task: Task) => {
         return task.id === taskId;
@@ -53,13 +59,15 @@ const DetailsScreen = () => {
     const tabsContainerRef = useRef<View>(null);
     const [tabsWidth, setTabsWidth] = useState(0); // Ширина контейнера табов
 
-    const handleTaskOnPress = (idCheckList: string) => {
-        console.log('Нажата задача с id:', idCheckList);
+    const handleTaskOnPress = (idCheckList: string, typeCheckList: string) => {
+        console.log('Нажата задача с id:', idCheckList, 'и типом:', typeCheckList);
         router.push({
             pathname: '/checklist',
             params: {
+                id: `${idCheckList}`,
                 idTask: `${taskId}`,
                 idCheckList: idCheckList,
+                typeCheckList: typeCheckList
             },
         });
     };
@@ -121,7 +129,7 @@ const DetailsScreen = () => {
                     checkList.map((data, index) => (
                         <View key={index} style={{ marginBottom: 10 }}>
                             <TaskCard
-                                onPress={() => handleTaskOnPress(data.id)}
+                                onPress={() => handleTaskOnPress(data.id, data.type)}
                                 title={data.name}
                                 status={'completed'}
                             />

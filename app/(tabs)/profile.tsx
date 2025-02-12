@@ -6,8 +6,8 @@ import { CustomTextInput } from '@/components/CustomTextInput';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
 import { useAuth } from '@/context/AuthContext';
 import { usePopup } from '@/context/PopupContext';
-import { router } from 'expo-router'
-import {TextButton} from "@/components/TextButton";
+import { router } from 'expo-router';
+import { TextButton } from "@/components/TextButton";
 
 const ProfileScreen = () => {
     const { userData, setUserDataStorage, getUserDataStorage, updateUserDataOnServer } = useAuth();
@@ -90,13 +90,17 @@ const ProfileScreen = () => {
     }
 
     return (
+<>
+        <CustomHeaderScreen text={'Редактировать профиль'} onPress={handleBack} />
+
+
         <KeyboardAwareScrollView
             style={styles.container}
             enableOnAndroid={true}
-            extraScrollHeight={20}
-            keyboardShouldPersistTaps="handled">
-
-            <CustomHeaderScreen text={'Редактировать профиль'} marginBottom={21} onPress={handleBack}/>
+            extraScrollHeight={100} // Добавьте дополнительный отступ для клавиатуры
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ flexGrow: 1 }} // Растягиваем контент на весь экран
+        >
 
             <View style={styles.containerProfile}>
                 <View style={styles.avatarContainer}>
@@ -167,6 +171,7 @@ const ProfileScreen = () => {
                 </View>
             </View>
         </KeyboardAwareScrollView>
+</>
     );
 };
 
@@ -202,6 +207,7 @@ const styles = StyleSheet.create({
     buttonContainer: {
         alignItems: 'center',
         marginTop: 20,
+        marginBottom: 40, // Добавьте отступ снизу для кнопки
     },
     button: {
         width: 201,

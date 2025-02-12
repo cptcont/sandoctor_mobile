@@ -9,7 +9,9 @@ import { SafeAreaView, Platform, StyleSheet } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
 import { ModalProvider, useModal } from '@/context/ModalContext';
 import { CustomModal } from '@/components/CustomModal';
-import {ApiProvider} from "@/context/ApiContext";
+import { ApiProvider } from "@/context/ApiContext";
+import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function RootLayout() {
     return (
@@ -17,7 +19,11 @@ export default function RootLayout() {
             <PopupProvider>
                 <ModalProvider>
                     <ApiProvider>
-                        <RootLayoutNav />
+
+                            <GestureHandlerRootView style={{ flex: 1 }}>
+                                <RootLayoutNav />
+                            </GestureHandlerRootView>
+
                     </ApiProvider>
                 </ModalProvider>
             </PopupProvider>
@@ -28,6 +34,7 @@ export default function RootLayout() {
 function RootLayoutNav() {
     const { isAuthenticated } = useAuth();
     const { isModalVisible, modalContent, hideModal } = useModal();
+
     useEffect(() => {
         if (Platform.OS === 'android') {
             NavigationBar.setVisibilityAsync("hidden");
@@ -45,7 +52,6 @@ function RootLayoutNav() {
     return (
         <>
             <StatusBar hidden />
-
             <SafeAreaView style={styles.container}>
                 {!isAuthenticated && (
                     <Stack>

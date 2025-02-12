@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { View, TextInput, StyleSheet, Text } from 'react-native';
 
 type CustomTextInputProps = {
@@ -8,55 +8,56 @@ type CustomTextInputProps = {
     placeholderTextColor?: string;
     value: string;
     onChangeText: (text: string) => void;
+    onFocus?: () => void;  // 🔥 Добавили onFocus
     secureTextEntry?: boolean;
     marginBottom?: number;
 };
 
-export const CustomTextInput = ({
-                                    icon,
-                                    text = '',
-                                    placeholder,
-                                    placeholderTextColor = '#999',
-                                    value,
-                                    onChangeText,
-                                    secureTextEntry = false,
-                                    marginBottom = 0,
-                                }: CustomTextInputProps) => {
-    return (
-        <View style={{ marginBottom }}>
-
-            {text.trim() !== '' && (
-                <Text style={styles.text}>
-                    {text}
-                </Text>
-            )}
-            <View style={styles.inputWrapper}>
-                <View style={styles.iconContainer}>
-                    {icon}
+export const CustomTextInput = forwardRef<TextInput, CustomTextInputProps>(
+    (
+        {
+            icon,
+            text = '',
+            placeholder,
+            placeholderTextColor = '#999',
+            value,
+            onChangeText,
+            onFocus, // 👈 Передаем onFocus
+            secureTextEntry = false,
+            marginBottom = 0,
+        },
+        ref
+    ) => {
+        return (
+            <View style={{ marginBottom }}>
+                {text.trim() !== '' && <Text style={styles.text}>{text}</Text>}
+                <View style={styles.inputWrapper}>
+                    <View style={styles.iconContainer}>{icon}</View>
+                    <TextInput
+                        ref={ref}
+                        style={styles.input}
+                        placeholder={placeholder}
+                        placeholderTextColor={placeholderTextColor}
+                        value={value}
+                        onChangeText={onChangeText}
+                        onFocus={onFocus} // 🔥 Добавили onFocus внутрь TextInput
+                        secureTextEntry={secureTextEntry}
+                    />
                 </View>
-                <TextInput
-                    style={styles.input}
-                    placeholder={placeholder}
-                    placeholderTextColor={placeholderTextColor}
-                    value={value}
-                    onChangeText={onChangeText}
-                    secureTextEntry={secureTextEntry}
-                />
             </View>
-        </View>
-    );
-};
+        );
+    }
+);
 
 const styles = StyleSheet.create({
     text: {
         marginBottom: 5,
         fontSize: 14,
-        fontWeight: 'medium',
+        fontWeight: '500',
         color: '#333',
     },
     inputWrapper: {
         position: 'relative',
-
     },
     iconContainer: {
         position: 'absolute',

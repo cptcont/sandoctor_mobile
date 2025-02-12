@@ -30,6 +30,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         width: '100%',
+        backgroundColor: '#fff',
         borderBottomColor: '#DADADA',
         borderStyle: 'solid',
         borderBottomWidth: 1,
@@ -39,6 +40,7 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
     text: {
+        width: '80%',
         color: '#1B2B65',
         fontSize: 14,
         fontWeight: 700,
