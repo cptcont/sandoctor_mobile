@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, useWindowDimensions, Text } from 'react-native';
 import { TabView, SceneMap, NavigationState, SceneRendererProps, Route } from 'react-native-tab-view';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
@@ -58,6 +58,16 @@ const DetailsScreen = () => {
     const { width: screenWidth } = useWindowDimensions(); // Динамическая ширина экрана
     const tabsContainerRef = useRef<View>(null);
     const [tabsWidth, setTabsWidth] = useState(0); // Ширина контейнера табов
+    const [statusEnabled, setStatusEnabled] = useState<boolean>(true);
+
+    // Используем useEffect для обновления состояния statusEnabled
+    useEffect(() => {
+        if (task.condition.id === '3') {
+            setStatusEnabled(false);
+        } else {
+            setStatusEnabled(true);
+        }
+    }, [task]); // Зависимость от task
 
     const handleTaskOnPress = (idCheckList: string, typeCheckList: string) => {
         console.log('Нажата задача с id:', idCheckList, 'и типом:', typeCheckList);
@@ -76,17 +86,11 @@ const DetailsScreen = () => {
         router.push('/');
     };
 
-    const title = {
-        sanTeh: 'Сантехнический осмотр объекта',
-        visual: 'Визуальный осмотр вредителей',
-        point: 'Осмотр точек контроля',
-    };
-
     const renderScene = SceneMap({
         tab1: () => (
             <View style={styles.tab1Container}>
                 <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <View style={{ marginBottom: 25 }}>
+                    <View style={{ marginBottom: 15 }}>
                         <ArrivalCard
                             destination={`${task.point}`}
                             address={`${task.adress}`}
@@ -95,11 +99,25 @@ const DetailsScreen = () => {
                             arrivalTime={`с ${task.time_begin_work} до ${task.time_end_work}`}
                         />
                     </View>
-                    <View style={{ marginBottom: 25 }}>
+                    <View style={{ marginBottom: 15 }}>
                         <ContactCard name={`${task.contacts[0].fio}`} post={`${task.contacts[0].position}`} tel1={`${task.contacts[0].phone_1}`} />
                     </View>
                     <View>
                         <ActorsCard name_1={`${task.executors[0].user}`} />
+                    </View>
+                    <View style={{flexDirection: 'row', justifyContent: 'center'}}>
+                        <View style={{marginRight: 13}}>
+                            <TextButton text={'Отменить задание'}
+                                        type={'danger'}
+                                        size={170}
+                                        enabled={statusEnabled}
+                            />
+                        </View>
+                        <TextButton text={'Приступить к выполнению'}
+                                    type={'success'}
+                                    size={170}
+                                    enabled={statusEnabled}
+                        />
                     </View>
                 </ScrollView>
                 <Footer>
@@ -107,6 +125,7 @@ const DetailsScreen = () => {
                         text={'Продолжить заполнение отчёта'}
                         type={'primary'}
                         size={302}
+                        enabled={statusEnabled}
                     />
                 </Footer>
             </View>
@@ -201,7 +220,13 @@ const DetailsScreen = () => {
 
     return (
         <View style={styles.container}>
-            <CustomHeaderScreen text={`Задание №${task.id}`} marginBottom={0} onPress={handleFinish} />
+            <CustomHeaderScreen text={`Задание №${task.id}`}
+                                status={{
+                                    text:task.condition.name,
+                                    color:task.condition.color,
+                                    bgColor: task.condition.bgcolor }}
+                                marginBottom={0}
+                                onPress={handleFinish} />
 
             <TabView
                 navigationState={{ index, routes }}

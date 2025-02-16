@@ -9,6 +9,7 @@ type ButtonHeaderProps = {
     onPress?: () => void;
     marginLeft?: number;
     marginRight?: number;
+    enabled?: boolean;
 };
 
 export function TextButton({
@@ -18,6 +19,7 @@ export function TextButton({
                                onPress,
                                marginLeft = 0,
                                marginRight = 0,
+                               enabled = true,
                            }: ButtonHeaderProps) {
 
     const buttonStyles = {
@@ -63,13 +65,17 @@ export function TextButton({
     const selectedStyle = buttonStyles[type];
 
     return (
-        <TouchableOpacity onPress={onPress} style={[styles.Button, { marginLeft, marginRight }]}>
+        <TouchableOpacity
+            onPress={onPress}
+            disabled={!enabled}
+            style={[styles.Button, { marginLeft, marginRight, opacity: enabled ? 1 : 0.6 }]}
+        >
             <View
                 style={[styles.buttonContainer, {
-                        width: size,
-                        height: selectedStyle.height,
-                        backgroundColor: selectedStyle.backgroundColor,
-                    },
+                    width: size,
+                    height: selectedStyle.height,
+                    backgroundColor: selectedStyle.backgroundColor,
+                },
                 ]}
             >
                 <Text style={{ color: selectedStyle.color, fontSize: selectedStyle.textSize, fontWeight: 'bold' }}>

@@ -19,18 +19,7 @@ const ActorsCard = ({ name_1, name_2 } : ActorsCardProps) => {
                     <Text style={styles.tel}>{name_2}</Text>
                 </View>
             </View>
-                <View style={{flexDirection: 'row', justifyContent: 'center'}}>
-                    <View style={{marginRight: 13}}>
-                    <TextButton text={'Отменить задание'}
-                                type={'danger'}
-                                size={170}
-                    />
-                    </View>
-                    <TextButton text={'Приступить к выполнению'}
-                                type={'success'}
-                                size={170}
-                    />
-                </View>
+
         </View>
     )
 };
@@ -42,7 +31,7 @@ const styles = StyleSheet.create({
     },
     title: {
         paddingHorizontal: 10,
-        marginBottom: 26,
+        marginBottom: 15,
         fontSize: 14,
         fontWeight: '500',
         color: '#1B2B65',
@@ -54,7 +43,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         paddingHorizontal: 13,
         justifyContent: 'flex-start',
-        marginBottom: 28,
+        marginBottom: 15,
     },
     name: {
         fontSize: 12,
