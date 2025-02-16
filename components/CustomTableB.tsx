@@ -1,7 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import {Pest, TMCField} from "@/types/Checklist";
 
-const CustomTableB = () => {
+type CustomTableBType = {
+    pests?: Pest[];
+};
+
+const CustomTableB = ({pests = []}: CustomTableBType) => {
     return (
         <View style={styles.container}>
             {/* Шапка таблицы */}
@@ -13,23 +18,17 @@ const CustomTableB = () => {
             {/* Разделитель */}
             <View style={styles.separator} />
 
-            {/* Первая строка данных */}
-            <View style={styles.dataRow}>
-                <Text style={[styles.cellStart]}>Блохи</Text>
-                <Text style={[styles.cell, { marginRight: 25}]}>1</Text>
+            {pests?.map((data,index) =>(
+            <>
+            <View key={index} style={styles.dataRow}>
+                <Text style={[styles.cellStart]}>{`${data.name}`}</Text>
+                <Text style={[styles.cell, { marginRight: 25}]}>{`${data.field.value}`}</Text>
             </View>
 
             {/* Разделитель */}
             <View style={styles.separator} />
-
-            {/* Вторая строка данных */}
-            <View style={styles.dataRow}>
-                <Text style={[styles.cellStart ]}>Древесный точильщик</Text>
-                <Text style={[styles.cell, { marginRight: 25}]}>4</Text>
-            </View>
-
-            {/* Разделитель */}
-            <View style={styles.separator} />
+            </>
+    ))}
         </View>
     );
 };

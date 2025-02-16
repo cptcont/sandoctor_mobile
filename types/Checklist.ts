@@ -3,7 +3,7 @@ export type Checklist = {
     type: string;
     name: string;
     zones: Zone[];
-}
+};
 
 // Тип для поля options в radio-кнопках
 export type RadioOptions = {
@@ -19,7 +19,14 @@ export type Field = {
     value?: string; // Опционально, только для типа 'text'
     name: string;
     checked?: boolean;
+    color?: string;
+    selected?: boolean;
+    access: Access[];
 };
+
+export type Access = {
+    options: [];
+}
 
 // Тип для элемента param (параметры зоны)
 export type Param = {
@@ -38,5 +45,64 @@ export type Zone = {
     param_arr: { id: string; name: string }[]; // Список параметров
     param: Param[]; // Детали параметров
     fields: Field[];
-
+    control_points: Point[];
 };
+
+export interface Option {
+    value: string;
+    color: string;
+    bgcolor?: string;
+    selected: boolean;
+}
+
+export interface Fields {
+    id: string;
+    label: string;
+    name: string;
+    type: string;
+    options?: Option[] | { [key: string]: Option };
+}
+
+export interface TMCValue {
+    p: number;
+    n: string;
+    u: string;
+    v: string;
+}
+
+export interface TMCField {
+    name: string;
+    value: TMCValue;
+    fields: {
+        p: { name: string; value: number };
+        n: { name: string; value: string };
+        u: { name: string; value: string };
+        v: { name: string; value: string };
+    };
+}
+
+export interface PestField {
+    type: string;
+    name: string;
+    value: string;
+}
+
+export interface Pest {
+    name: string;
+    id: number;
+    field: PestField;
+}
+
+export interface Point {
+    name: string;
+    point_name: string;
+    id: string;
+    fields: {
+        access: Fields;
+        point_status: Fields;
+        mount_condition: Fields;
+    };
+    tmc: TMCField[];
+    pests: Pest[];
+}
+

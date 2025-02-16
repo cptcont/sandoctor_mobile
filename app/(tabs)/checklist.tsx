@@ -8,6 +8,7 @@ import {useApi} from "@/context/ApiContext";
 import type {Checklist, Zone} from "@/types/Checklist";
 import Tab1Content from "@/components/Tab1Content";
 import Tab2Content from "@/components/Tab2Content";
+import Tab3Content from "@/components/Tab3Content";
 
 interface TabContent {
     key: string;
@@ -55,10 +56,12 @@ const ChecklistScreen = () => {
 
     const tabsData: TabContent[] = checkList.zones.map((data: Checklist, index: number) => {
         let tabContent = null;
-        if (typeCheckList === '1' || typeCheckList === '2') {
+        if (typeCheckList === '1') {
             tabContent = <Tab1Content itemsTabContent={itemsTabContent} index={index} />;
-        } else if (typeCheckList === '3') {
-            tabContent = <Tab2Content />;
+        } else if (typeCheckList === '2') {
+            tabContent = <Tab2Content itemsTabContent={itemsTabContent} index={index} />;
+        }else if (typeCheckList === '3') {
+            tabContent = <Tab3Content itemsTabContent={itemsTabContent} index={index} />;
         }
 
         return {

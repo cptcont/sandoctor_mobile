@@ -1,7 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import {TMCField} from "@/types/Checklist";
 
-const CustomTable = () => {
+type CustomTableType = {
+    tmc?: TMCField[];
+};
+
+const CustomTable = ({tmc = []}:CustomTableType) => {
+    console.log('CustomTableTMC', tmc);
     return (
         <View style={styles.container}>
             {/* Шапка таблицы */}
@@ -16,9 +22,10 @@ const CustomTable = () => {
             {/* Разделитель */}
             <View style={styles.separator} />
 
-            {/* Первая строка данных */}
-            <View style={styles.dataRow}>
-                <Text style={[styles.cellStart]}>Абактерил</Text>
+            {tmc?.map((data,index) =>(
+           <>
+                <View key={index} style={styles.dataRow}>
+                <Text style={[styles.cellStart]}>{`${data.name}`}</Text>
                 <Text style={[styles.cell, { marginRight: 40}]}>10</Text>
                 <Text style={[styles.cell, { marginRight: 55}]}>5</Text>
                 <Text style={[styles.cell, { marginRight: 50}]}>0</Text>
@@ -27,18 +34,8 @@ const CustomTable = () => {
 
             {/* Разделитель */}
             <View style={styles.separator} />
-
-            {/* Вторая строка данных */}
-            <View style={styles.dataRow}>
-                <Text style={[styles.cellStart ]}>Аквелон</Text>
-                <Text style={[styles.cell, { marginRight: 40}]}>10</Text>
-                <Text style={[styles.cell, { marginRight: 55}]}>5</Text>
-                <Text style={[styles.cell, { marginRight: 50}]}>0</Text>
-                <Text style={[styles.cell, { marginRight: 12}]}>0</Text>
-            </View>
-
-            {/* Разделитель */}
-            <View style={styles.separator} />
+           </>
+    ))}
         </View>
     );
 };

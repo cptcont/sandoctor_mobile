@@ -16,7 +16,7 @@ const Dropdown: React.FC<DropdownProps> = ({
                                                defaultValue = null,
                                                placeholder = 'Select an item',
                                                onSelect,
-                                               zIndex = 1000,
+                                               zIndex = 2000,
                                                zIndexInverse = 1000,
                                            }) => {
     const [open, setOpen] = useState(false);
@@ -51,6 +51,7 @@ const Dropdown: React.FC<DropdownProps> = ({
 const styles = StyleSheet.create({
     container: {
         marginVertical:0,
+        zIndex: 2000,
     },
     dropdown: {
         height: 40,
