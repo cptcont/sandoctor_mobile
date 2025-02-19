@@ -9,8 +9,24 @@ const FooterContentIcons = () => {
         <View style={styles.container}>
             <IconButton icon={<ListIcon/>} size={35} marginLeft={20} onPress={() => {}}/>
             <IconButton icon={<TableCellsIcon/>} size={35} marginLeft={8} onPress={() => {}}/>
-            <TextButton text={'Сегодня'} type={'secondaryLight'} size={112} marginLeft={40} onPress={() => {}}/>
-            <TextButton text={'Завтра'} type={'secondaryLight'} size={96} marginLeft={10} onPress={() => {}}/>
+            <TextButton
+                text={'Сегодня'}
+                width={112}
+                height={35}
+                textSize={14}
+                textColor={'#5D6377'}
+                backgroundColor={'#F5F7FB'}
+                marginLeft={40}
+                onPress={() => {}}/>
+            <TextButton
+                text={'Завтра'}
+                width={112}
+                height={35}
+                textSize={14}
+                textColor={'#5D6377'}
+                backgroundColor={'#F5F7FB'}
+                marginLeft={10}
+                onPress={() => {}}/>
         </View>
 );
 };

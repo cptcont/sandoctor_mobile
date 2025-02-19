@@ -30,8 +30,11 @@ const ForgotPasswordScreen = () => {
             <View style={styles.buttonContainer}>
                 <TextButton
                     text={'Войти'}
-                    type={'primaryBig'}
-                    size={201}
+                    width={201}
+                    height={45}
+                    textSize={18}
+                    textColor={'#FFFFFF'}
+                    backgroundColor={'#017EFA'}
                     onPress={handleLogin}
                 />
             </View>

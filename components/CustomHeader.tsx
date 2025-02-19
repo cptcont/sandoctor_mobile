@@ -13,7 +13,7 @@ import { AvatarMenu } from '@/components/AvatarMenu';
 export function CustomHeader() {
     const { logout } = useAuth();
     const navigation = useNavigation();
-    const { showModal,hideModal } = useModal(); // Используем контекст
+    const { showModal, hideModal, isModalVisible, modalContent, overlayStyle, overlayBackgroundStyle, modalContentStyle } = useModal(); // Используем контекст
 
     const openMenu = () => {
         navigation.dispatch(DrawerActions.toggleDrawer());
@@ -36,7 +36,11 @@ export function CustomHeader() {
                 onClose={() => {}}
                 onProfilePress={handleProfilePress}
                 onLogoutPress={handleLogoutPress}
-            />
+            />, {
+                overlay: { alignItems: 'flex-end' },
+                overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0)' },
+                modalContent: { paddingTop: 60, paddingRight: 10 },
+            }
         );
     };
 

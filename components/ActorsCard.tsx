@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import {TextButton} from "@/components/TextButton";
 
 type ActorsCardProps = {
     name_1: string;

@@ -4,7 +4,8 @@ import CustomDrawerContent from '@/components/CustomDrawerContent';
 import { CustomHeader } from '@/components/CustomHeader';
 
 export default function TabsLayout() {
-    return (
+    return (<>
+
         <Drawer
             drawerContent={(props) => <CustomDrawerContent {...props} />}
             screenOptions={{
@@ -31,9 +32,6 @@ export default function TabsLayout() {
             />
             <Drawer.Screen
                 name="details"
-                options={{
-                    headerTitle: 'Details',
-                }}
             />
             <Drawer.Screen
                 name="objects"
@@ -61,5 +59,6 @@ export default function TabsLayout() {
                 }}
             />
         </Drawer>
+        </>
     );
 }

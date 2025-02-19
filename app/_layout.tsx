@@ -10,7 +10,6 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { ModalProvider, useModal } from '@/context/ModalContext';
 import { CustomModal } from '@/components/CustomModal';
 import { ApiProvider } from "@/context/ApiContext";
-import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function RootLayout() {
@@ -19,11 +18,9 @@ export default function RootLayout() {
             <PopupProvider>
                 <ModalProvider>
                     <ApiProvider>
-
                             <GestureHandlerRootView style={{ flex: 1 }}>
                                 <RootLayoutNav />
                             </GestureHandlerRootView>
-
                     </ApiProvider>
                 </ModalProvider>
             </PopupProvider>
@@ -33,7 +30,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
     const { isAuthenticated } = useAuth();
-    const { isModalVisible, modalContent, hideModal } = useModal();
+    const { hideModal, isModalVisible, modalContent, overlayStyle, overlayBackgroundStyle, modalContentStyle } = useModal();
 
     useEffect(() => {
         if (Platform.OS === 'android') {
@@ -50,9 +47,8 @@ function RootLayoutNav() {
     }, [isAuthenticated]);
 
     return (
-        <>
-            <StatusBar hidden />
             <SafeAreaView style={styles.container}>
+                <StatusBar hidden={true}/>
                 {!isAuthenticated && (
                     <Stack>
                         <Stack.Screen
@@ -65,19 +61,20 @@ function RootLayoutNav() {
                         />
                     </Stack>
                 )}
-
                 {isAuthenticated && (
                     <Stack>
                         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                         <Stack.Screen name="+not-found" />
                     </Stack>
                 )}
-
-                <CustomModal visible={isModalVisible} onClose={hideModal}>
+                <CustomModal visible={isModalVisible}
+                             onClose={hideModal}
+                             overlay={overlayStyle}
+                             overlayBackground={overlayBackgroundStyle}
+                             modalContent={modalContentStyle}>
                     {modalContent}
                 </CustomModal>
             </SafeAreaView>
-        </>
     );
 }
 

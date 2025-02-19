@@ -131,14 +131,20 @@ const Tab2Content = ({ itemsTabContent = [], index }: Tab2ContentType) => {
                 <View style={styles.footerContainer}>
                     <TextButton
                         text={'Назад'}
-                        type={'secondary'}
-                        size={125}
+                        width={125}
+                        height={40}
+                        textSize={14}
+                        textColor={'#FFFFFF'}
+                        backgroundColor={'#5D6377'}
                         onPress={() => {}}
                     />
                     <TextButton
                         text={'Далее'}
-                        type={'primary'}
-                        size={125}
+                        width={125}
+                        height={40}
+                        textSize={14}
+                        textColor={'#FFFFFF'}
+                        backgroundColor={'#017EFA'}
                         onPress={() => {}}
                     />
                 </View>

@@ -16,22 +16,27 @@ type CustomHeaderScreenProps = {
 export const CustomHeaderScreen: React.FC<CustomHeaderScreenProps> = ({ text, status, marginBottom = 0, onPress }) => {
     return (
         <View style={{ marginBottom }}>
-        <TouchableOpacity style={styles.header} onPress={onPress}>
-            <View style={styles.headerContainer}>
-            <View style={styles.logoContainer}>
-                <BackIcon />
-            </View>
-            <Text style={styles.text}>
-                {text}
-            </Text>
-            </View>
-            <View style={styles.statusContainer}>
-            <Text style={[styles.statusText, {color: status?.color}]}>{status?.text}</Text>
-            <View style={[styles.checkSolid, {backgroundColor: status?.bgColor}]}>
-                <CheckSolid color={status?.color} />
-            </View>
-            </View>
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.header} onPress={onPress}>
+                <View style={styles.headerContainer}>
+                    <View style={styles.logoContainer}>
+                        <BackIcon />
+                    </View>
+                    <Text style={[styles.text, !status && { width: '90%' }]}>
+                        {text}
+                    </Text>
+                </View>
+
+                {status && (
+                    <View style={styles.statusContainer}>
+                        <Text style={[styles.statusText, { color: status.color }]}>
+                            {status.text}
+                        </Text>
+                        <View style={[styles.checkSolid, { backgroundColor: status.bgColor }]}>
+                            <CheckSolid color={status.color} />
+                        </View>
+                    </View>
+                )}
+            </TouchableOpacity>
         </View>
     );
 }

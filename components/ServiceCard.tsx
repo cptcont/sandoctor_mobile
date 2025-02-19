@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import {TextButton} from "@/components/TextButton";
 import { CheckSolid, XMarkSolid, Document } from "@/components/icons/Icons"
 
 type ServiceCardProps = {

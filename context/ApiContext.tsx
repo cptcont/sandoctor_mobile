@@ -12,6 +12,7 @@ type ApiContextType = {
     checklists: any[]; // Данные чек-листов
     isLoading: boolean;
     error: string | null;
+    postData: <T>(endpoint: string, body: any) => Promise<ApiResponse<T>>;
     fetchData: <T>(endpoint: string, type: 'tasks' | 'checklists') => Promise<ApiResponse<T>>;
     saveDataToStorage: (key: string, data: any) => Promise<void>;
     getDataFromStorage: <T>(key: string) => Promise<T[]>;
@@ -22,6 +23,7 @@ const ApiContext = createContext<ApiContextType>({
     checklists: [],
     isLoading: false,
     error: null,
+    postData: async () => ({ data: [] }),
     fetchData: async () => ({ data: [] }),
     saveDataToStorage: async () => {},
     getDataFromStorage: async () => [],
@@ -75,6 +77,37 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [getToken]);
 
+    // Универсальная функция для POST запросов
+    const postData = useCallback(async <T,>(endpoint: string, body: any): Promise<ApiResponse<T>> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const token = await getToken();
+            if (!token) throw new Error('Токен не найден');
+
+            const response = await fetch(`https://sandoctor.ru/api/v1/${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': token,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) throw new Error('Ошибка при отправке данных');
+
+            const responseData = await response.json();
+            return { data: responseData.data };
+        } catch (error) {
+            setError(error instanceof Error ? error.message : 'Неизвестная ошибка');
+            console.error('Ошибка:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [getToken]);
+
     // Остальные функции
     const saveDataToStorage = async (key: string, data: any) => {
         try {
@@ -100,6 +133,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             checklists,
             isLoading,
             error,
+            postData,
             fetchData,
             saveDataToStorage,
             getDataFromStorage,

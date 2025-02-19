@@ -3,9 +3,11 @@ import { TouchableOpacity, View, StyleSheet, Text } from 'react-native';
 
 type ButtonHeaderProps = {
     text: string;
-    type?: 'primaryBig' | 'primary' | 'secondary' | 'danger' | 'secondaryLight' | 'success';
-    size?: number;
-    containerSize?: number;
+    width?: number;
+    height?: number;
+    textColor?: string;
+    textSize?: number;
+    backgroundColor?: string;
     onPress?: () => void;
     marginLeft?: number;
     marginRight?: number;
@@ -14,55 +16,17 @@ type ButtonHeaderProps = {
 
 export function TextButton({
                                text,
-                               type = 'primary',
-                               size = 134,
+                               width = 134,
+                               height = 45,
+                               textColor = 'white',
+                               textSize = 16,
+                               backgroundColor = 'white',
                                onPress,
                                marginLeft = 0,
                                marginRight = 0,
                                enabled = true,
                            }: ButtonHeaderProps) {
 
-    const buttonStyles = {
-        primaryBig: {
-            backgroundColor: '#017EFA',
-            color: 'white',
-            textSize: 18,
-            height: 45,
-        },
-
-        primary: {
-            backgroundColor: '#017EFA',
-            color: 'white',
-            textSize: 16,
-            height: 40,
-        },
-        secondary: {
-            backgroundColor: '#5D6377',
-            color: 'white',
-            textSize: 16,
-            height: 40,
-        },
-        danger: {
-            backgroundColor: '#FFEAF6',
-            color: '#FD1F9B',
-            textSize: 14,
-            height: 52,
-        },
-        success: {
-            backgroundColor: '#EAFBF3',
-            color: '#30DA88',
-            textSize: 14,
-            height: 52,
-        },
-        secondaryLight: {
-            backgroundColor: '#F5F7FB',
-            color: '#5D6377',
-            textSize: 14,
-            height: 35,
-        }
-    };
-
-    const selectedStyle = buttonStyles[type];
 
     return (
         <TouchableOpacity
@@ -72,13 +36,13 @@ export function TextButton({
         >
             <View
                 style={[styles.buttonContainer, {
-                    width: size,
-                    height: selectedStyle.height,
-                    backgroundColor: selectedStyle.backgroundColor,
+                    width: width,
+                    height: height,
+                    backgroundColor: backgroundColor,
                 },
                 ]}
             >
-                <Text style={{ color: selectedStyle.color, fontSize: selectedStyle.textSize, fontWeight: 'bold' }}>
+                <Text style={{ color: textColor, fontSize: textSize, fontWeight: 'bold' }}>
                     {text}
                 </Text>
             </View>

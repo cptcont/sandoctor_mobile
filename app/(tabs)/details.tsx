@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, useWindowDimensions, Text } from 'react-native';
+import {View, ScrollView, StyleSheet, useWindowDimensions, Text} from 'react-native';
 import { TabView, SceneMap, NavigationState, SceneRendererProps, Route } from 'react-native-tab-view';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
 import ArrivalCard from "@/components/ArrivalCard";
@@ -16,6 +16,10 @@ import { useApi } from '@/context/ApiContext';
 import type { Checklist } from '@/types/Checklist';
 import type { Task } from '@/types/Task';
 import { useFocusEffect } from '@react-navigation/native';
+import {useModal} from "@/context/ModalContext";
+import CancelTaskModal from "@/components/CancelTaskModal";
+import StartTaskModal from "@/components/StartTaskModal";
+
 
 const DetailsScreen = () => {
     const params = useLocalSearchParams();
@@ -27,8 +31,18 @@ const DetailsScreen = () => {
         { key: 'tab3', title: 'Чек-лист' },
         { key: 'tab4', title: 'Отчет' },
     ]);
-
     const { checklists, tasks, isLoading, error, fetchData } = useApi();
+    const { showModal, isModalVisible, hideModal } = useModal();
+    const checkList = checklists || []; // Убедимся, что checkList всегда массив
+    const { width: screenWidth } = useWindowDimensions(); // Динамическая ширина экрана
+    const tabsContainerRef = useRef<View>(null);
+    const [tabsWidth, setTabsWidth] = useState(0); // Ширина контейнера табов
+    const [statusEnabled, setStatusEnabled] = useState<boolean>(true);
+
+    const taskFiltered = (tasks || []).filter((task: Task) => {
+        return task.id === taskId;
+    });
+    const task = taskFiltered[0];
 
     useFocusEffect(
         useCallback(() => {
@@ -47,19 +61,6 @@ const DetailsScreen = () => {
             };
         }, [fetchData, taskId])
     );
-
-    const taskFiltered = (tasks || []).filter((task: Task) => {
-        return task.id === taskId;
-    });
-    const task = taskFiltered[0];
-    //console.log('Tasks', task);
-
-    const checkList = checklists || []; // Убедимся, что checkList всегда массив
-    const { width: screenWidth } = useWindowDimensions(); // Динамическая ширина экрана
-    const tabsContainerRef = useRef<View>(null);
-    const [tabsWidth, setTabsWidth] = useState(0); // Ширина контейнера табов
-    const [statusEnabled, setStatusEnabled] = useState<boolean>(true);
-
     // Используем useEffect для обновления состояния statusEnabled
     useEffect(() => {
         if (task.condition.id === '3') {
@@ -68,6 +69,14 @@ const DetailsScreen = () => {
             setStatusEnabled(true);
         }
     }, [task]); // Зависимость от task
+
+    const handleSubmit = (type: string, reason: string, comment: string) => {
+        console.log('Тип отмены:', type);
+        console.log('Причина:', reason);
+        console.log('Комментарий:', comment);
+        hideModal()
+
+    };
 
     const handleTaskOnPress = (idCheckList: string, typeCheckList: string) => {
         console.log('Нажата задача с id:', idCheckList, 'и типом:', typeCheckList);
@@ -108,24 +117,36 @@ const DetailsScreen = () => {
                     <View style={{flexDirection: 'row', justifyContent: 'center'}}>
                         <View style={{marginRight: 13}}>
                             <TextButton text={'Отменить задание'}
-                                        type={'danger'}
-                                        size={170}
+                                        width={170}
+                                        height={52}
+                                        textSize={14}
+                                        textColor={'#FD1F9B'}
+                                        backgroundColor={'#FFEAF6'}
                                         enabled={statusEnabled}
+                                        onPress={toggleCancelTaskModal}
                             />
                         </View>
                         <TextButton text={'Приступить к выполнению'}
-                                    type={'success'}
-                                    size={170}
+                                    width={170}
+                                    height={52}
+                                    textSize={14}
+                                    textColor={'#30DA88'}
+                                    backgroundColor={'#EAFBF3'}
                                     enabled={statusEnabled}
+                                    onPress={toggleStartTaskModal}
                         />
                     </View>
                 </ScrollView>
                 <Footer>
                     <TextButton
                         text={'Продолжить заполнение отчёта'}
-                        type={'primary'}
-                        size={302}
+                        width={302}
+                        height={39}
+                        textSize={16}
+                        textColor={'#FFFFFF'}
+                        backgroundColor={'#017EFA'}
                         enabled={statusEnabled}
+                        onPress={() => {}}
                     />
                 </Footer>
             </View>
@@ -176,7 +197,6 @@ const DetailsScreen = () => {
         props: SceneRendererProps & { navigationState: NavigationState<Route> }
     ) => {
         const needsEmptyTab = tabsWidth < screenWidth; // Нужен ли пустой таб
-
         return (
             <View style={styles.tabBarOuterContainer}>
                 <ScrollView
@@ -218,6 +238,36 @@ const DetailsScreen = () => {
         );
     };
 
+    const toggleStartTaskModal = () => {
+        showModal(
+            <StartTaskModal
+                visible={isModalVisible}
+                onClose={hideModal}
+                onSubmit={handleSubmit}
+            />, {
+                overlay: { alignItems: 'center', justifyContent: 'center' },
+                overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                modalContent: { paddingTop: 0, paddingRight: 0 },
+            }
+        );
+
+    }
+
+    const toggleCancelTaskModal = () => {
+        // Показываем модальное окно с содержимым AvatarMenu
+        showModal(
+            <CancelTaskModal
+                visible={isModalVisible}
+                onClose={hideModal}
+                onSubmit={handleSubmit}
+            />, {
+                overlay: { alignItems: 'center', justifyContent: 'center' },
+                overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                modalContent: { paddingTop: 0, paddingRight: 0 },
+            }
+        );
+    };
+
     return (
         <View style={styles.container}>
             <CustomHeaderScreen text={`Задание №${task.id}`}
@@ -227,7 +277,6 @@ const DetailsScreen = () => {
                                     bgColor: task.condition.bgcolor }}
                                 marginBottom={0}
                                 onPress={handleFinish} />
-
             <TabView
                 navigationState={{ index, routes }}
                 renderScene={renderScene}

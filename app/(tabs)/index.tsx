@@ -18,7 +18,7 @@ export default function HomeScreen() {
     const [selectedDate, setSelectedDate] = useState<string>(format(currentDate, 'yyyy-MM-dd')); // Выбранная дата в формате 'yyyy-MM-dd'
 
     // Используем новый контекст
-    const { tasks, isLoading, error, fetchData } = useApi();
+    const { tasks, fetchData } = useApi();
 
     const loadTasks = useCallback(async () => {
         try {
@@ -26,7 +26,6 @@ export default function HomeScreen() {
         } catch (error) {
             console.error('Ошибка загрузки задач:', error);
         }
-        //console.log('Tasks', tasks);
     }, [fetchData]);
 
     // Загружаем задачи при монтировании компонента
@@ -116,6 +115,7 @@ export default function HomeScreen() {
             <Footer>
                 <FooterContentIcons />
             </Footer>
+
         </View>
     );
 }

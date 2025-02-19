@@ -164,8 +164,11 @@ const ProfileScreen = () => {
                 <View style={styles.buttonContainer}>
                     <TextButton
                         text={'Cохранить'}
-                        type={'primary'}
-                        size={134}
+                        width={134}
+                        height={39}
+                        textSize={16}
+                        textColor={'#FFFFFF'}
+                        backgroundColor={'#017EFA'}
                         onPress={handleSave}
                     />
                 </View>
