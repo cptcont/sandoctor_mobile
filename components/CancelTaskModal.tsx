@@ -1,16 +1,36 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { TextButton } from "@/components/TextButton";
+import {usePopup} from "@/context/PopupContext";
 
 interface CancelTaskModalProps {
     visible: boolean;
     onClose: () => void;
-    onSubmit: (type: string, reason: string, comment: string) => void;
+    onSubmit: (type: string, conditionId: number, cancelReason: number, cancelComment: string) => void;
 }
 
 const CancelTaskModal: React.FC<CancelTaskModalProps> = React.memo(({ onClose, onSubmit }) => {
-    const [reason, setReason] = useState('');
-    const [comment, setComment] = useState('');
+    const type = 'cancel';
+    const [cancelComment, setCancelComment] = useState('');
+    const { showPopup } = usePopup();
+
+
+    const handleClientRejection = () => {
+        handleSubmit(4, 1, cancelComment);
+    };
+
+    const handleFalseDeparture = () => {
+        handleSubmit(4, 2, cancelComment);
+    };
+
+    const handleSubmit = (conditionId: number, cancelReason: number, cancelComment: string) => {
+        if (!cancelComment.trim()) {
+            showPopup('Поле "Комментарий исполнителя" должно быть заполненным', 'red', 2000);
+            return;
+        }
+        onSubmit(type, conditionId, cancelReason, cancelComment);
+        onClose();
+    }
 
     return (
             <View style={styles.modalContainer}>
@@ -28,6 +48,7 @@ const CancelTaskModal: React.FC<CancelTaskModalProps> = React.memo(({ onClose, o
                     editable
                     multiline
                     numberOfLines = {4}
+                    onChangeText={setCancelComment}
                     placeholder="Введите информацию"
                 />
                 </View>
@@ -39,10 +60,7 @@ const CancelTaskModal: React.FC<CancelTaskModalProps> = React.memo(({ onClose, o
                     textSize={14}
                     textColor={'#FD1F9B'}
                     backgroundColor={'#FFEAF6'}
-                    onPress={() => {
-                        onSubmit('Продолжить', reason, comment)
-                        onClose()
-                    }}
+                    onPress={handleClientRejection}
                 />
                 </View>
                 <TextButton
@@ -52,15 +70,11 @@ const CancelTaskModal: React.FC<CancelTaskModalProps> = React.memo(({ onClose, o
                     textSize={14}
                     textColor={'#FD1F9B'}
                     backgroundColor={'#FFEAF6'}
-                    onPress={() => {
-                        onSubmit('Продолжить', reason, comment)
-                        onClose()
-                    }}
+                    onPress={handleFalseDeparture}
                 />
             </View>
     );
 });
-
 
 const styles = StyleSheet.create({
     modalContainer: {

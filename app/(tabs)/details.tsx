@@ -31,13 +31,15 @@ const DetailsScreen = () => {
         { key: 'tab3', title: 'Чек-лист' },
         { key: 'tab4', title: 'Отчет' },
     ]);
-    const { checklists, tasks, isLoading, error, fetchData } = useApi();
+    const { checklists, tasks, isLoading, error, fetchData, postData } = useApi();
     const { showModal, isModalVisible, hideModal } = useModal();
     const checkList = checklists || []; // Убедимся, что checkList всегда массив
     const { width: screenWidth } = useWindowDimensions(); // Динамическая ширина экрана
     const tabsContainerRef = useRef<View>(null);
     const [tabsWidth, setTabsWidth] = useState(0); // Ширина контейнера табов
-    const [statusEnabled, setStatusEnabled] = useState<boolean>(true);
+    const [statusEnabledCancel, setStatusEnabledCancel] = useState<boolean>(true);
+    const [statusEnabledStart, setStatusEnabledStart] = useState<boolean>(true);
+    const [statusEnabledNext, setStatusEnabledNext] = useState<boolean>(true);
 
     const taskFiltered = (tasks || []).filter((task: Task) => {
         return task.id === taskId;
@@ -63,19 +65,40 @@ const DetailsScreen = () => {
     );
     // Используем useEffect для обновления состояния statusEnabled
     useEffect(() => {
-        if (task.condition.id === '3') {
-            setStatusEnabled(false);
-        } else {
-            setStatusEnabled(true);
+        if (task.condition.id === '3' || task.condition.id === '4') {
+            setStatusEnabledCancel(false);
+            setStatusEnabledStart(false);
+            setStatusEnabledNext(false);
         }
+        if (task.condition.id === '1') {
+            setStatusEnabledCancel(true);
+            setStatusEnabledStart(true);
+            setStatusEnabledNext(false);
+        }
+        if (task.condition.id === '2') {
+            setStatusEnabledCancel(false);
+            setStatusEnabledStart(false);
+            setStatusEnabledNext(true);
+        }
+
     }, [task]); // Зависимость от task
 
-    const handleSubmit = (type: string, reason: string, comment: string) => {
-        console.log('Тип отмены:', type);
-        console.log('Причина:', reason);
-        console.log('Комментарий:', comment);
-        hideModal()
+    const handleSubmit = async (type: string, conditionId: number, cancelReason: number, cancelComment: string) => {
+        console.log('type:', type);
+        console.log('conditionId:', conditionId);
+        console.log('cancelReason:', cancelReason);
+        console.log('cancelComment:', cancelComment);
+        console.log('taskId:', taskId);
+        if (type === 'cancel') {
+           const response = await postData(`task/${taskId}/`, {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment} );
+           console.log('response:', response.data);
+           router.push('/');
+        }
+        if (type === 'start') {
+            const response = await postData(`task/${taskId}/`, {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment} );
+            console.log('response:', response.data);
 
+        }
     };
 
     const handleTaskOnPress = (idCheckList: string, typeCheckList: string) => {
@@ -122,7 +145,7 @@ const DetailsScreen = () => {
                                         textSize={14}
                                         textColor={'#FD1F9B'}
                                         backgroundColor={'#FFEAF6'}
-                                        enabled={statusEnabled}
+                                        enabled={statusEnabledCancel}
                                         onPress={toggleCancelTaskModal}
                             />
                         </View>
@@ -132,7 +155,7 @@ const DetailsScreen = () => {
                                     textSize={14}
                                     textColor={'#30DA88'}
                                     backgroundColor={'#EAFBF3'}
-                                    enabled={statusEnabled}
+                                    enabled={statusEnabledStart}
                                     onPress={toggleStartTaskModal}
                         />
                     </View>
@@ -145,7 +168,7 @@ const DetailsScreen = () => {
                         textSize={16}
                         textColor={'#FFFFFF'}
                         backgroundColor={'#017EFA'}
-                        enabled={statusEnabled}
+                        enabled={statusEnabledNext}
                         onPress={() => {}}
                     />
                 </Footer>

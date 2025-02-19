@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { getYear, getMonth, getDate, format } from 'date-fns';
 import MonthsCarousel from "@/components/MonthsCarousel";
 import Calendar from "@/components/Calendar";
@@ -29,9 +30,11 @@ export default function HomeScreen() {
     }, [fetchData]);
 
     // Загружаем задачи при монтировании компонента
-    useEffect(() => {
-        loadTasks();
-    }, [loadTasks]);
+    useFocusEffect(
+        useCallback(() => {
+            loadTasks();
+        }, [loadTasks])
+    );
 
     const handleMonthChange = (year: number, month: number) => {
         setSelectedYear(year);

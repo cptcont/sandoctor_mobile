@@ -5,12 +5,11 @@ import { TextButton } from "@/components/TextButton";
 interface StartTaskModalProps {
     visible: boolean;
     onClose: () => void;
-    onSubmit: (type: string, reason: string, comment: string) => void;
+    onSubmit: (type: string, conditionId: number, cancelReason: number, cancelComment: string) => void;
 }
 
 const StartTaskModal: React.FC<StartTaskModalProps> = React.memo(({ onClose, onSubmit }) => {
-    const [reason, setReason] = useState('');
-    const [comment, setComment] = useState('');
+    const type = 'start';
 
     return (
         <View style={styles.modalContainer}>
@@ -31,7 +30,7 @@ const StartTaskModal: React.FC<StartTaskModalProps> = React.memo(({ onClose, onS
                     textColor={'#30DA88'}
                     backgroundColor={'#EAFBF3'}
                     onPress={() => {
-                        onSubmit('Продолжить', reason, comment)
+                        onSubmit(type, 2, 0, '')
                         onClose()
                     }}
                 />
