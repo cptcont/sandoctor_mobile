@@ -53,6 +53,9 @@ const StartTaskScreen = () => {
     };
 
     return (
+<>
+        <CustomHeaderScreen onPress={handleBack} text={ `Отчет по заданию №${taskId}`} />
+
         <KeyboardAwareScrollView
             style={styles.container}
             enableOnAndroid={true}
@@ -60,7 +63,6 @@ const StartTaskScreen = () => {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ flexGrow: 1 }} // Растягиваем контент на весь экран
         >
-            <CustomHeaderScreen onPress={handleBack} text={ `Отчет по заданию №${taskId}`} />
             <View style={styles.containerTitleCheckList}>
                 <Text style={styles.titleCheckList}>Чек-лист</Text>
             </View>
@@ -132,6 +134,7 @@ const StartTaskScreen = () => {
 
 
         </KeyboardAwareScrollView>
+</>
     )
 
 }
