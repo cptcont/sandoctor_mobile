@@ -4,11 +4,11 @@ import { router } from 'expo-router';
 
 interface TaskCardProps {
     title: string;
-    status: string;
+    status?: string;
     onPress: () => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ title, status, onPress  }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ title, status, onPress }) => {
     return (
         <TouchableOpacity onPress={onPress} style={styles.card}>
             <View style={styles.cardTitle}>
@@ -38,6 +38,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cardTitle: {
+
     },
     title: {
         fontSize: 12,

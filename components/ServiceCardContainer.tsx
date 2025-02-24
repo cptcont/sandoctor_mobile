@@ -17,15 +17,20 @@ interface Service {
 }
 
 type ServiceCardContainerProps = {
-    title: string;
     task: Service[];
+    visible?: string
 
 }
 
-const ServiceCardContainer = ({ title, task  } : ServiceCardContainerProps) => {
+const ServiceCardContainer = ({ task, visible = 'view'  } : ServiceCardContainerProps) => {
     return (
         <View>
-            <Text style={styles.title}>{title}</Text>
+            <View style={styles.titleContainer}>
+                <Text style={styles.title}>Услуга</Text>
+                {visible === 'edit' && (
+                <Text style={[styles.title, {marginRight:18}]}>Результат</Text>
+                )}
+            </View>
                 {task.map((service: Service, index: number) => (
                     <ServiceCard
                         key={index}
@@ -34,16 +39,25 @@ const ServiceCardContainer = ({ title, task  } : ServiceCardContainerProps) => {
                         unit={service.unit.name}
                         status={service.status.name}
                         color={service.status.color}
+                        visible={visible}
                     />
                 ))}
+
         </View>
     )
 };
 
 const styles = StyleSheet.create({
+    titleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+
+
+    },
     title: {
         paddingTop: 20,
-        paddingBottom: 15,
+        paddingLeft: 12,
+        paddingBottom: 12,
         fontSize: 10,
         fontWeight: '500',
         color: '#939393',

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, StyleSheet, useWindowDimensions,} from 'react-native';
+import React, {useState, useEffect, useRef, memo} from 'react';
+import { View, ScrollView, StyleSheet, useWindowDimensions, Text} from 'react-native';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
 import { router, useLocalSearchParams } from "expo-router";
 import { NavigationState, Route, SceneMap, SceneRendererProps, TabView } from "react-native-tab-view";
@@ -9,6 +9,7 @@ import type {Checklist, Zone} from "@/types/Checklist";
 import Tab1Content from "@/components/Tab1Content";
 import Tab2Content from "@/components/Tab2Content";
 import Tab3Content from "@/components/Tab3Content";
+import {useFocusEffect} from "@react-navigation/native";
 
 interface TabContent {
     key: string;
@@ -16,29 +17,35 @@ interface TabContent {
     content: React.ReactNode;
 }
 
-const ChecklistScreen = () => {
+const ChecklistScreen = memo(() => {
     const { checklists, fetchData } = useApi();
     const params = useLocalSearchParams();
     const { id, idTask, idCheckList, typeCheckList} = params;
 
     // Состояние для управления текущим tabId
-    const [tabId, setTabId] = useState(0);
-
+    //const [tabId, setTabId] = useState(0);
+    console.log('\n checklist');
     // Устанавливаем начальное значение tabId при монтировании компонента
-    useEffect(() => {
+    useEffect(
+        () => {
         const loadChecklist = async () => {
             if (!checkList) {
                 await fetchData<Checklist>(`checklist/${idCheckList}/`, 'checklists'); // Указываем только endpoint
             }
         };
-        const initialTabId = parseInt(Array.isArray(id) ? id[0] : id, 10);
-        setTabId(initialTabId);
+        //const initialTabId = parseInt(Array.isArray(id) ? id[0] : id, 10);
+        //setTabId(initialTabId);
         loadChecklist();
-    }, [id, fetchData]); // Зависимость от id, чтобы обновить tabId при изменении id
-
+    }, [id, idCheckList, fetchData]
+    );
     const checkList = (checklists || []).filter((checklist: Checklist) => {
         return checklist.id === idCheckList;
     }).flat()[0];
+    console.log('checklist', checkList);
+    console.log('id', id);
+    console.log('idTask', idTask);
+    console.log('idCheckList',idCheckList);
+    console.log('typeCheckList', typeCheckList);
 
     const handleFinish = () => {
         router.push({
@@ -53,14 +60,22 @@ const ChecklistScreen = () => {
         checkList.zones.map((zone : Zone) =>
             zone
         );
-
+    if (!checkList) {
+        return (
+            <View>
+                <Text>Загрузка...</Text>
+            </View>
+        );
+    }
     const tabsData: TabContent[] = checkList.zones.map((data: Checklist, index: number) => {
         let tabContent = null;
         if (typeCheckList === '1') {
             tabContent = <Tab1Content itemsTabContent={itemsTabContent} index={index} />;
-        } else if (typeCheckList === '2') {
+        }
+        if (typeCheckList === '2') {
             tabContent = <Tab2Content itemsTabContent={itemsTabContent} index={index} />;
-        }else if (typeCheckList === '3') {
+        }
+        if (typeCheckList === '3') {
             tabContent = <Tab3Content itemsTabContent={itemsTabContent} index={index} />;
         }
 
@@ -70,13 +85,23 @@ const ChecklistScreen = () => {
             content: tabContent,
         };
     });
+    const finalTabsData = tabsData.length > 0 ? tabsData : [
+        {
+            key: 'tab0',
+            title: 'Нет данных',
+            content: <View><Text>Нет данных для отображения</Text></View>,
+        },
+    ];
+    console.log('tabsData', tabsData);
+    console.log('finalTabsData', finalTabsData);
+
     const [index, setIndex] = useState(0);
     const [routes] = useState(
-        tabsData.map(tab => ({ key: tab.key, title: tab.title }))
+        finalTabsData.map(tab => ({ key: tab.key, title: tab.title }))
     );
 
     const renderScene = SceneMap(
-        tabsData.reduce((acc, tab) => {
+        finalTabsData.reduce((acc, tab) => {
             acc[tab.key] = () => tab.content; // tab.content — это React.ReactNode
             return acc;
         }, {} as { [key: string]: () => React.ReactNode }) // Используем React.ReactNode
@@ -145,7 +170,7 @@ const ChecklistScreen = () => {
 
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     container: {

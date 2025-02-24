@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.andrewandersonorg.myappandrew"
+      "bundleIdentifier": "com.andrewandersonorg.myappandrew",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Мы используем камеру для создания снимков.",
+        "NSPhotoLibraryUsageDescription": "Мы используем медиатеку для выбора изображений."
+      }
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
@@ -18,7 +22,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.andrewandersonorg.myappandrew"
+      "package": "com.andrewandersonorg.myappandrew",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
     },
     "web": {
       "bundler": "metro",

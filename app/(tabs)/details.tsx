@@ -97,6 +97,13 @@ const DetailsScreen = () => {
         if (type === 'start') {
             const response = await postData(`task/${taskId}/`, {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment} );
             console.log('response:', response.data);
+            router.push({
+                pathname:'/starttask',
+                params: {
+                    taskId: taskId,
+                }
+
+            });
 
         }
     };
@@ -117,6 +124,17 @@ const DetailsScreen = () => {
     const handleFinish = () => {
         router.push('/');
     };
+
+    const handleStart = () => {
+        router.push({
+            pathname:'/starttask',
+            params: {
+                taskId: taskId,
+            }
+
+        });
+    }
+    //postData(`task/${taskId}/`, {condition_id: 1 , cancel_reason: 0, cancel_comment: ''} );
 
     const renderScene = SceneMap({
         tab1: () => (
@@ -169,7 +187,7 @@ const DetailsScreen = () => {
                         textColor={'#FFFFFF'}
                         backgroundColor={'#017EFA'}
                         enabled={statusEnabledNext}
-                        onPress={() => {}}
+                        onPress={handleStart}
                     />
                 </Footer>
             </View>
@@ -177,7 +195,6 @@ const DetailsScreen = () => {
         tab2: () => (
             <View style={styles.content}>
                 <ServiceCardContainer
-                    title={'Услуга'}
                     task={task.services}
                 />
             </View>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,memo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import Dropdown from '@/components/Dropdown';
 import { Zone, Field, Param } from "@/types/Checklist";
@@ -10,13 +10,13 @@ type Tab1ContentType = {
     itemsTabContent?: Zone[];
 };
 
-const Tab1Content = ({ itemsTabContent = [], index }: Tab1ContentType) => {
+const Tab1Content = memo(({ itemsTabContent = [], index }: Tab1ContentType) => {
     const [selectedValue, setSelectedValue] = useState('tab0');
     const [field, setField] = useState<{ label: string; value: string | null; id?: string}[]>([]);
     const items = itemsTabContent[index].param.map((data: Param, index: any) => (
         { label: data.name.toString(), value: `tab${index}` }
     ));
-
+    console.log('Tab1Content');
     useEffect(() => {
         if (
             itemsTabContent[index].param.length > 0 ) {
@@ -68,14 +68,19 @@ const Tab1Content = ({ itemsTabContent = [], index }: Tab1ContentType) => {
         }
     };
 
-    const renderField = (field: { label: string; value: string | null; type?: string; options?: any; id?: string }) => {
+    const renderField = (field: { label: string; value: string | [] | null; type?: string; options?: any; id?: string }) => {
         if (field.type === 'foto') {
+            const arrayFoto = field.value || [];
+            if (!Array.isArray(arrayFoto)) {
+                return null; // or return some fallback UI
+            }
+
             return (
                 <View style={styles.imageContainer}>
-                    {[...Array(4)].map((_, index) => (
+                    {arrayFoto.map((foto: any, index: number) => (
                         <Image
                             key={index}
-                            source={require('@/assets/images/example1.png')}
+                            source={{ uri: foto.thumbUrl }}
                             style={[
                                 styles.image,
                                 index !== 3 && styles.imageMargin,
@@ -168,7 +173,7 @@ const Tab1Content = ({ itemsTabContent = [], index }: Tab1ContentType) => {
             </Footer>
         </>
     );
-};
+});
 
 const styles = StyleSheet.create({
     tab1Container: {

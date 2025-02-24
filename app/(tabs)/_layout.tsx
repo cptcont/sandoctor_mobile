@@ -58,6 +58,9 @@ export default function TabsLayout() {
                     headerShown: true,
                 }}
             />
+            <Drawer.Screen
+                name="starttask"
+            />
         </Drawer>
         </>
     );

@@ -10,8 +10,6 @@ web-build/
 expo-env.d.ts
 android/
 ios/
-
-#ide
 .idea/
 
 # Native
@@ -40,4 +38,4 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-app-example
+
