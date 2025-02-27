@@ -11,6 +11,7 @@ import { ModalProvider, useModal } from '@/context/ModalContext';
 import { CustomModal } from '@/components/CustomModal';
 import { ApiProvider } from "@/context/ApiContext";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import {PostProvider} from "@/context/PostApi";
 
 export default function RootLayout() {
     return (
@@ -18,9 +19,11 @@ export default function RootLayout() {
             <PopupProvider>
                 <ModalProvider>
                     <ApiProvider>
+                        <PostProvider>
                             <GestureHandlerRootView style={{ flex: 1 }}>
                                 <RootLayoutNav />
                             </GestureHandlerRootView>
+                        </PostProvider>
                     </ApiProvider>
                 </ModalProvider>
             </PopupProvider>

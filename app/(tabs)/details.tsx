@@ -47,7 +47,7 @@ const DetailsScreen = () => {
     const task = taskFiltered[0];
 
     useFocusEffect(
-        useCallback(() => {
+        useCallback (() => {
             const loadChecklist = async () => {
                 await fetchData<Checklist>(`checklist/${taskId}/`, 'checklists');
             };

@@ -12,8 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.andrewandersonorg.myappandrew",
       "infoPlist": {
-        "NSCameraUsageDescription": "Мы используем камеру для создания снимков.",
-        "NSPhotoLibraryUsageDescription": "Мы используем медиатеку для выбора изображений."
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -22,8 +21,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.andrewandersonorg.myappandrew",
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
+      "package": "com.andrewandersonorg.myappandrew"
     },
     "web": {
       "bundler": "metro",

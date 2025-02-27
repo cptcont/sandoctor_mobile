@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
-import { Ionicons } from '@expo/vector-icons';
-import {Camera, XMarkSolid} from "@/components/icons/Icons";
+import { Camera, XMarkSolid } from '@/components/icons/Icons';
+import { usePost } from '@/context/PostApi';
 
-const CameraComponent: React.FC = () => {
-    // Явно указываем тип для состояния selectedImages
+type ImagePickerWithCameraProps = {
+    taskId: string;
+}
+
+const ImagePickerWithCamera = ({ taskId }: ImagePickerWithCameraProps) => {
     const [selectedImages, setSelectedImages] = useState<string[]>([]);
+    const { uploadImage } = usePost();
 
     // Запрашиваем разрешение на доступ к камере и медиатеке
     const requestPermissions = async (): Promise<boolean> => {
@@ -54,22 +58,27 @@ const CameraComponent: React.FC = () => {
         }
     };
 
-    // Обработка выбранного изображения
-    const handleImageSelect = (uri: string): void => {
+    // Обработка выбранного изображения и отправка на сервер
+    const handleImageSelect = async (uri: string): Promise<void> => {
         if (!selectedImages.includes(uri)) {
             setSelectedImages((prevImages) => [...prevImages, uri]);
+
+            try {
+                // Отправляем изображение на сервер
+                const response = await uploadImage<{ url: string }>(`task/${taskId}`, uri);
+                console.log('Изображение успешно отправлено:', response.data);
+            } catch (error) {
+                console.error('Ошибка при отправке изображения:', error);
+                // Удаляем изображение из списка, если отправка не удалась
+                setSelectedImages((prevImages) => prevImages.filter((image) => image !== uri));
+                Alert.alert('Ошибка', 'Не удалось отправить изображение.');
+            }
         }
     };
 
     // Удаление изображения из списка
     const removeImage = (uri: string): void => {
         setSelectedImages((prevImages) => prevImages.filter((image) => image !== uri));
-    };
-
-    // Отправка изображений на сервер
-    const sendImagesToServer = async (): Promise<void> => {
-        console.log('Отправляем изображения:', selectedImages);
-        // Здесь можно реализовать отправку изображений на сервер
     };
 
     return (
@@ -96,17 +105,16 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 20,
     },
-    // Изменение: Новый стиль для контейнера сетки
     imageGridContainer: {
         marginTop: 20,
         flexDirection: 'row',
-        flexWrap: 'wrap', // Позволяет элементам переноситься на следующую строку
-        justifyContent: 'flex-start', // Выравнивание элементов по левому краю
+        flexWrap: 'wrap',
+        justifyContent: 'flex-start',
     },
     imageWrapper: {
         position: 'relative',
         marginRight: 13,
-        marginBottom: 13, // Добавляем отступ снизу для сетки
+        marginBottom: 13,
         overflow: 'visible',
     },
     image: {
@@ -133,31 +141,8 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 13, // Добавляем отступ снизу для сетки
-    },
-    galleryButton: {
-        backgroundColor: '#28a745',
-        padding: 10,
-        borderRadius: 5,
-        alignItems: 'center',
-        marginTop: 10,
-    },
-    galleryButtonText: {
-        color: 'white',
-        fontSize: 16,
-    },
-    sendButton: {
-        backgroundColor: '#ffc107',
-        padding: 10,
-        borderRadius: 5,
-        alignItems: 'center',
-        marginTop: 10,
-    },
-    sendButtonText: {
-        color: 'black',
-        fontSize: 16,
+        marginBottom: 13,
     },
 });
 
-
-export default CameraComponent;
+export default ImagePickerWithCamera;

@@ -22,7 +22,7 @@ const StartTaskScreen = () => {
         return task.id === taskId;
     });
     const task = taskFiltered[0];
-
+    console.log('task', task.services);
 
     useFocusEffect(
         useCallback(() => {
@@ -39,7 +39,7 @@ const StartTaskScreen = () => {
             return () => {
                 // Опционально: выполнить очистку, если необходимо
             };
-        }, [fetchData, taskId])
+        }, [taskId])
     );
 
 
@@ -51,6 +51,10 @@ const StartTaskScreen = () => {
             }
         });
     };
+
+    const handleSubmit = () => {
+        const response = postData(`task/${taskId}/`, {services:[]})
+    }
 
     return (
 <>
@@ -92,12 +96,16 @@ const StartTaskScreen = () => {
                 <ServiceCardContainer
                     task={task.services}
                     visible={'edit'}
+                    onServicesStatusChange={(status) => {
+                        console.log('Статус услуг:', status);
+                    }}
+                    taskId={taskId}
                 />
             </View>
             <View style={styles.containerTitleCheckList}>
                 <Text style={styles.titleCheckList}>Отчетный документ по заданию</Text>
             </View>
-                <ImagePickerWithCamera/>
+                <ImagePickerWithCamera taskId={taskId}/>
             <View style={[styles.containerTextArea, {marginBottom: 11}]}>
                 <Text style={styles.titleTextArea}>Комментарий исполнителя</Text>
                 <TextInput
