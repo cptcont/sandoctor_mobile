@@ -1,49 +1,88 @@
-import {StyleSheet, Text, ScrollView, View, TextInput} from "react-native";
+import {StyleSheet, Text, View, TextInput, ActivityIndicator} from "react-native";
 import {CustomHeaderScreen} from "@/components/CustomHeaderScreen";
 import {router, useLocalSearchParams} from "expo-router";
 import {useFocusEffect} from "@react-navigation/native";
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import React, {useCallback} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import type {Checklist} from "@/types/Checklist";
 import type {Task} from "@/types/Task";
-import {useApi} from "@/context/ApiContext";
 import TaskCard from "@/components/TaskCard";
 import ServiceCardContainer from "@/components/ServiceCardContainer";
 import ImagePickerWithCamera from "@/components/ImagePickerWithCamera";
 import Footer from "@/components/Footer";
 import {TextButton} from "@/components/TextButton";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import {fetchDataSaveStorage, getDataFromStorage, postData} from '@/services/api'
 
 const StartTaskScreen = () => {
-    const { checklists, tasks, isLoading, error, fetchData, postData } = useApi();
-    const checkList = checklists || [];
     const params = useLocalSearchParams();
+    const [task, setTask] = useState<Task | null>(null);
+    const [checklists, setChecklists] = useState<Checklist[] | null>(null);
+    const [textCommentClient, setTextCommentClient] = useState<string>('');
+    const [textCommentExec, setTextCommentExec] = useState<string>('');
+    const [loading, setLoading] = useState<boolean>(true); // Состояние загрузки
     const taskId = params.taskId as string;
-    const taskFiltered = (tasks || []).filter((task: Task) => {
-        return task.id === taskId;
-    });
-    const task = taskFiltered[0];
-    console.log('task', task.services);
+
+    const fetchData = async () => {
+        try {
+            const updatedTask = await getDataFromStorage(`task`) as Task;
+            const updatedChecklists = await getDataFromStorage(`checklists`) as Checklist[];
+            setTask(updatedTask);
+            setChecklists(updatedChecklists);
+            setTextCommentClient(updatedTask.report.comment_client);
+            setTextCommentExec(updatedTask.report.comment_exec);
+        } catch (error) {
+            console.error('Ошибка при загрузке данных:', error);
+        } finally {
+            setLoading(false); // Загрузка завершена
+        }
+    };
 
     useFocusEffect(
         useCallback(() => {
-            const loadChecklist = async () => {
-                await fetchData<Checklist>(`checklist/${taskId}/`, 'checklists');
-            };
-            //const loadTasks = async () => {
-            //    await fetchData<Task[]>(`task/`, 'tasks');
-            //};
-
-            loadChecklist();
-            //loadTasks();
-
+            fetchData();
             return () => {
-                // Опционально: выполнить очистку, если необходимо
+                // Очистка, если необходимо
             };
-        }, [taskId])
+        }, [])
     );
 
+    useEffect(() => {
+        fetchData();
+    }, []);
 
-    const handleBack = () => {
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#017EFA" />
+            </View>
+        );
+    }
+
+    if (!task || !checklists) {
+        return (
+            <View style={styles.loadingContainer}>
+                <Text>Данные не найдены</Text>
+            </View>
+        );
+    }
+
+    const handleTaskOnPress = (idCheckList: string, typeCheckList: string) => {
+        console.log('Нажата задача с id:', idCheckList, 'и типом:', typeCheckList);
+        router.push({
+            pathname: '/checklist',
+            params: {
+                id: `${idCheckList}`,
+                idTask: `${taskId}`,
+                idCheckList: `${taskId}` ,
+                typeCheckList: typeCheckList,
+                statusVisible: 'edit',
+            },
+        });
+    };
+
+    const handleBack = async () => {
+        await fetchDataSaveStorage<Checklist>(`checklist/${taskId}`, 'checklists' );
+        await fetchDataSaveStorage<Task>(`task/${taskId}`, 'task' );
         router.push({
             pathname: '/details',
             params: {
@@ -52,104 +91,118 @@ const StartTaskScreen = () => {
         });
     };
 
+    const handleChangeTextCommentClient = (textCommentClient:string) => {
+        setTextCommentClient(textCommentClient);
+    }
+
+    const handleChangeTextCommentExec = (textCommentExec:string) => {
+        setTextCommentExec(textCommentExec);
+    }
+
+    const handleBlurCommentClient = async() => {
+        await postData(`task/${taskId}/`,{report: {comment_client:textCommentClient}});
+    }
+
+    const handleBlurCommentExec = async () => {
+        await postData(`task/${taskId}/`,{report: {comment_exec:textCommentExec}});
+    }
+
     const handleSubmit = () => {
         const response = postData(`task/${taskId}/`, {services:[]})
     }
 
     return (
-<>
-        <CustomHeaderScreen onPress={handleBack} text={ `Отчет по заданию №${taskId}`} />
-
-        <KeyboardAwareScrollView
-            style={styles.container}
-            enableOnAndroid={true}
-            extraScrollHeight={100} // Добавьте дополнительный отступ для клавиатуры
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ flexGrow: 1 }} // Растягиваем контент на весь экран
-        >
-            <View style={styles.containerTitleCheckList}>
-                <Text style={styles.titleCheckList}>Чек-лист</Text>
-            </View>
-            <View style={styles.containerCheckList}>
-            {isLoading ? (
-                <Text>Загрузка...</Text>
-            ) : error ? (
-                <Text>Ошибка: {error}</Text>
-            ) : checkList.length > 0 ? (
-                checkList.map((data, index) => (
-                    <View key={index} style={{ marginBottom: 10 }}>
-                        <TaskCard
-                            onPress={() => {}}
-                            title={data.name}
-                            status={'completed'}
-                        />
-                    </View>
-                ))
-            ) : (
-                <Text>Нет данных для отображения</Text>
-            )}
-            </View>
-            <View style={styles.containerTitleCheckList}>
-                <Text style={styles.titleCheckList}>Результат выполнения работ</Text>
-            </View>
-            <View style={styles.containerTask}>
-                <ServiceCardContainer
-                    task={task.services}
-                    visible={'edit'}
-                    onServicesStatusChange={(status) => {
-                        console.log('Статус услуг:', status);
-                    }}
+        <>
+            <CustomHeaderScreen
+                onPress={handleBack}
+                text={ `Отчет по заданию №${taskId}`}
+            />
+            <KeyboardAwareScrollView>
+                <View style={styles.containerTitleCheckList}>
+                    <Text style={styles.titleCheckList}>Чек-лист</Text>
+                </View>
+                <View style={styles.containerCheckList}>
+                    {checklists.map((data, index) => (
+                        <View key={index} style={{ marginBottom: 10 }}>
+                            <TaskCard
+                                onPress={() => handleTaskOnPress(data.id, data.type)}
+                                title={data.name}
+                                idStatus={0}
+                                bgColor={'red'}
+                            />
+                        </View>
+                    ))}
+                </View>
+                <View style={styles.containerTitleCheckList}>
+                    <Text style={styles.titleCheckList}>Результат выполнения работ</Text>
+                </View>
+                <View style={styles.containerTask}>
+                    <ServiceCardContainer
+                        task={task.services}
+                        visible={'edit'}
+                        onServicesStatusChange={(status) => {
+                            console.log('Статус услуг:', status);
+                        }}
+                        taskId={taskId}
+                    />
+                </View>
+                <View style={styles.containerTitleCheckList}>
+                    <Text style={styles.titleCheckList}>Отчетный документ по заданию</Text>
+                </View>
+                <ImagePickerWithCamera
+                    key={task.id}
                     taskId={taskId}
-                />
-            </View>
-            <View style={styles.containerTitleCheckList}>
-                <Text style={styles.titleCheckList}>Отчетный документ по заданию</Text>
-            </View>
-                <ImagePickerWithCamera taskId={taskId}/>
-            <View style={[styles.containerTextArea, {marginBottom: 11}]}>
-                <Text style={styles.titleTextArea}>Комментарий исполнителя</Text>
-                <TextInput
-                    style={styles.textArea}
-                    multiline={true} // Разрешаем многострочный ввод
-                    numberOfLines={4} // Минимальное количество строк (на iOS не всегда работает)
-                    onChangeText={() => {}} // Обновляем состояние при изменении текста
-                    textAlignVertical="top" // Выравнивание текста сверху (актуально для Android)
-                />
-            </View>
-            <View style={[styles.containerTextArea, {marginBottom: 19}]}>
-                <Text style={styles.titleTextArea}>Пожелания клиента</Text>
-                <TextInput
-                    style={styles.textArea}
-                    multiline={true} // Разрешаем многострочный ввод
-                    numberOfLines={4} // Минимальное количество строк (на iOS не всегда работает)
-                    onChangeText={() => {}} // Обновляем состояние при изменении текста
-                    textAlignVertical="top" // Выравнивание текста сверху (актуально для Android)
-                />
-            </View>
-
-            <Footer>
-                <TextButton
-                    text={'Завершить задание'}
-                    width={302}
-                    height={39}
-                    textSize={16}
-                    textColor={'#FFFFFF'}
-                    backgroundColor={'#017EFA'}
-                    enabled={true}
-                    onPress={() =>{}}
-                />
-            </Footer>
-
-
-        </KeyboardAwareScrollView>
-</>
+                    initialImages={task.photos}/>
+                <View style={[styles.containerTextArea, {marginBottom: 11}]}>
+                    <Text style={styles.titleTextArea}>Комментарий исполнителя</Text>
+                    <TextInput
+                        style={styles.textArea}
+                        multiline={true}
+                        numberOfLines={4}
+                        onChangeText={handleChangeTextCommentClient}
+                        textAlignVertical="top"
+                        value={textCommentClient}
+                        onBlur={handleBlurCommentClient}
+                    />
+                </View>
+                <View style={[styles.containerTextArea, {marginBottom: 19}]}>
+                    <Text style={styles.titleTextArea}>Пожелания клиента</Text>
+                    <TextInput
+                        style={styles.textArea}
+                        multiline={true}
+                        numberOfLines={4}
+                        onChangeText={handleChangeTextCommentExec}
+                        textAlignVertical="top"
+                        value={textCommentExec}
+                        onBlur={handleBlurCommentExec}
+                    />
+                </View>
+                <Footer>
+                    <TextButton
+                        text={'Завершить задание'}
+                        width={302}
+                        height={39}
+                        textSize={16}
+                        textColor={'#FFFFFF'}
+                        backgroundColor={'#017EFA'}
+                        enabled={true}
+                        onPress={handleBack}
+                    />
+                </Footer>
+            </KeyboardAwareScrollView>
+        </>
     )
-
 }
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     containerTitleCheckList: {
         paddingHorizontal: 20,
@@ -169,7 +222,6 @@ const styles = StyleSheet.create({
     containerTask: {
         paddingHorizontal: 8,
         paddingBottom:10,
-
     },
     containerTextArea: {
         paddingHorizontal: 20,
@@ -181,13 +233,13 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     textArea: {
-        height: 63, // Высота текстового поля
+        height: 63,
         borderRadius: 6,
         padding: 10,
         fontSize: 12,
-        textAlignVertical: 'top', // Выравнивание текста сверху (актуально для Android)
+        textAlignVertical: 'top',
         backgroundColor: '#F5F7FB',
     },
-
 })
+
 export default StartTaskScreen;

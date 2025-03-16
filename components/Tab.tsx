@@ -1,14 +1,15 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 
 interface TabProps {
     label: string; // Название вкладки
     isActive: boolean; // Активна ли вкладка
     onPress: () => void; // Обработчик нажатия
     isLast?: boolean; // Последняя ли это вкладка (для стилей)
+    showDot?: boolean;
 }
 
-const Tab: React.FC<TabProps> = ({ label, isActive, onPress, isLast = false }) => {
+const Tab: React.FC<TabProps> = ({ label, isActive, onPress, isLast = false, showDot = false }) => {
     return (
         <TouchableOpacity
             style={[
@@ -21,13 +22,16 @@ const Tab: React.FC<TabProps> = ({ label, isActive, onPress, isLast = false }) =
             <Text style={[styles.tabText, isActive && styles.activeTabText]}>
                 {label}
             </Text>
+            {showDot && <View style={styles.dot} />}
         </TouchableOpacity>
     );
 };
 
 const styles = StyleSheet.create({
     tab: {
+        flexDirection: 'row',
         justifyContent: 'center',
+        alignItems: 'center',
         height: 30,
         borderStyle: 'solid',
         borderWidth: 1,
@@ -56,6 +60,13 @@ const styles = StyleSheet.create({
     },
     activeTabText: {
         color: '#000',
+    },
+    dot: {
+        width: 7,
+        height: 7,
+        marginLeft: 8,
+        borderRadius: 7,
+        backgroundColor: 'red',
     },
 });
 

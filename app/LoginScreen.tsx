@@ -6,12 +6,14 @@ import { UserSolidIcon, KeySolidIcon } from '@/components/icons/Icons';
 import { CustomTextInput } from '@/components/CustomTextInput';
 import {TextButton} from "@/components/TextButton";
 import {usePopup} from "@/context/PopupContext";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 const LoginScreen = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const { login } = useAuth();
     const { showPopup } = usePopup();
+
 
     const handleLogin = async () => {
         try {
@@ -25,6 +27,7 @@ const LoginScreen = () => {
     };
 
     return (
+        <KeyboardAwareScrollView contentContainerStyle={{flex: 1}}>
         <View style={styles.container}>
             <View style={styles.logoContainer}>
                 <Image
@@ -68,6 +71,7 @@ const LoginScreen = () => {
                 </Text>
             </Pressable>
         </View>
+        </KeyboardAwareScrollView>
     );
 };
 

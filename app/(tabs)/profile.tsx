@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Image, Pressable, Text, StyleSheet } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { UserSolidIcon, PhoneSolidIcon, EnvelopeSolidIcon } from '@/components/icons/Icons';
 import { CustomTextInput } from '@/components/CustomTextInput';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
@@ -94,14 +94,7 @@ const ProfileScreen = () => {
         <CustomHeaderScreen text={'Редактировать профиль'} onPress={handleBack} />
 
 
-        <KeyboardAwareScrollView
-            style={styles.container}
-            enableOnAndroid={true}
-            extraScrollHeight={100} // Добавьте дополнительный отступ для клавиатуры
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ flexGrow: 1 }} // Растягиваем контент на весь экран
-        >
-
+        <KeyboardAwareScrollView style={styles.container}>
             <View style={styles.containerProfile}>
                 <View style={styles.avatarContainer}>
                     <Image
@@ -109,7 +102,6 @@ const ProfileScreen = () => {
                         style={styles.logo}
                     />
                 </View>
-
                 <Pressable onPress={handleChangeAvatar} style={styles.changeAvatar}>
                     <Text style={styles.changeAvatarText}>
                         изменить фото или аватар

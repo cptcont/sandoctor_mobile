@@ -4,20 +4,29 @@ import { StyleSheet, View } from 'react-native';
 
 interface DropdownProps {
     items: { label: string; value: string }[]; // Данные для выпадающего списка
-    defaultValue?: string | null; // Значение по умолчанию
+    defaultValue?: string | null | number; // Значение по умолчанию
     placeholder?: string; // Плейсхолдер
-    onSelect: (value: string | null) => void; // Обработчик выбора значения
+    onSelect: (value: string | null | number) => void; // Обработчик выбора значения
     zIndex?: number; // zIndex для управления слоями (если несколько выпадающих списков)
     zIndexInverse?: number; // zIndex для обратного управления слоями
+    bgColor?: string;
+    bdColor?: string;
+    textColor?: string;
+    textAlign?: string;
 }
 
 const Dropdown: React.FC<DropdownProps> = ({
                                                items,
                                                defaultValue = null,
-                                               placeholder = 'Select an item',
+                                               placeholder = 'Нет данных для отображения',
                                                onSelect,
                                                zIndex = 2000,
                                                zIndexInverse = 1000,
+                                               bgColor = '#F5F7FB',
+                                               bdColor = '#F5F7FB',
+                                               textColor = '#5D6377',
+                                               textAlign = 'left',
+
                                            }) => {
     const [open, setOpen] = useState(false);
     const [value, setValue] = useState(defaultValue);
@@ -38,11 +47,12 @@ const Dropdown: React.FC<DropdownProps> = ({
                 }}
                 zIndex={zIndex} // Управление слоями
                 zIndexInverse={zIndexInverse} // Управление слоями
-                style={styles.dropdown}
+                style={[styles.dropdown, {backgroundColor: bgColor, borderColor: bdColor,}]}
                 dropDownContainerStyle={styles.dropdownContainer}
-                labelStyle={styles.labelText} // Стиль для текста элементов списка
+                labelStyle={[styles.labelText, {color: textColor }]} // Стиль для текста элементов списка
                 placeholderStyle={styles.placeholderText} // Стиль для плейсхолдера
                 textStyle={styles.selectedText} // Стиль для выбранного значения
+
             />
         </View>
     );
@@ -54,19 +64,17 @@ const styles = StyleSheet.create({
         zIndex: 2000,
     },
     dropdown: {
-        height: 40,
+        height: 60,
         borderRadius: 6,
-        backgroundColor: '#F5F7FB',
-        borderColor: '#F5F7FB',
+
     },
     dropdownContainer: {
-
+        color: 'red',
         borderColor: '#ccc',
     },
     labelText: {
         fontSize: 12,
         fontWeight: 'bold',
-        color: '#5D6377',
     },
     placeholderText: {
         fontSize: 12,

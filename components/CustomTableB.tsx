@@ -22,7 +22,7 @@ const CustomTableB = ({pests = []}: CustomTableBType) => {
             <>
             <View key={index} style={styles.dataRow}>
                 <Text style={[styles.cellStart]}>{`${data.name}`}</Text>
-                <Text style={[styles.cell, { marginRight: 25}]}>{`${data.field.value}`}</Text>
+                <Text style={[styles.cell, { marginRight: 25}]}>{`${data.value}`}</Text>
             </View>
 
             {/* Разделитель */}

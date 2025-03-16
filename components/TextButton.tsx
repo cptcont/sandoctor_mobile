@@ -12,6 +12,7 @@ type ButtonHeaderProps = {
     marginLeft?: number;
     marginRight?: number;
     enabled?: boolean;
+    touchable?: boolean;
 };
 
 export function TextButton({
@@ -25,13 +26,14 @@ export function TextButton({
                                marginLeft = 0,
                                marginRight = 0,
                                enabled = true,
+                               touchable = true,
                            }: ButtonHeaderProps) {
 
 
     return (
         <TouchableOpacity
             onPress={onPress}
-            disabled={!enabled}
+            disabled={!touchable}
             style={[styles.Button, { marginLeft, marginRight, opacity: enabled ? 1 : 0.6 }]}
         >
             <View

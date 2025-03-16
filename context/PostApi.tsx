@@ -89,8 +89,8 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
 
             if (!response.ok) throw new Error('Ошибка при загрузке изображения');
-            const responseData = await response.json();
-            return { data: responseData.data };
+            const responseData = response.json();
+            return responseData;
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Неизвестная ошибка');
             console.error('Ошибка:', error);

@@ -19,10 +19,19 @@ import { useFocusEffect } from '@react-navigation/native';
 import {useModal} from "@/context/ModalContext";
 import CancelTaskModal from "@/components/CancelTaskModal";
 import StartTaskModal from "@/components/StartTaskModal";
+import {
+    fetchDataSaveStorage,
+    getDataFromStorage,
+    postData,
+    removeDataFromStorage,
+    saveDataToStorage,
+
+} from '@/services/api'
 
 
 const DetailsScreen = () => {
     const params = useLocalSearchParams();
+    //const [taskId, setTaskId] = useState('');
     const taskId = params.taskId as string;
     const [index, setIndex] = useState(0);
     const [routes] = useState([
@@ -31,40 +40,73 @@ const DetailsScreen = () => {
         { key: 'tab3', title: 'Чек-лист' },
         { key: 'tab4', title: 'Отчет' },
     ]);
-    const { checklists, tasks, isLoading, error, fetchData, postData } = useApi();
     const { showModal, isModalVisible, hideModal } = useModal();
-    const checkList = checklists || []; // Убедимся, что checkList всегда массив
     const { width: screenWidth } = useWindowDimensions(); // Динамическая ширина экрана
     const tabsContainerRef = useRef<View>(null);
     const [tabsWidth, setTabsWidth] = useState(0); // Ширина контейнера табов
     const [statusEnabledCancel, setStatusEnabledCancel] = useState<boolean>(true);
     const [statusEnabledStart, setStatusEnabledStart] = useState<boolean>(true);
     const [statusEnabledNext, setStatusEnabledNext] = useState<boolean>(true);
+    const [task, setTask] = useState<Task>(getDataFromStorage("task"));
+    const [checklists, setChecklists] = useState<Checklist[]>(getDataFromStorage("checklists"));
 
-    const taskFiltered = (tasks || []).filter((task: Task) => {
-        return task.id === taskId;
-    });
-    const task = taskFiltered[0];
+    console.log('Это detailScreen', taskId);
+    console.log('detail taskId', taskId);
+
+    const loadChecklistsTask = async () => {
+        console.log('detail taskId', taskId);
+        await fetchDataSaveStorage<Checklist>(`checklist/${taskId}`, 'checklists' );
+        await fetchDataSaveStorage<Task>(`task/${taskId}`, 'task' );
+        //setTask(getDataFromStorage("task"));
+        //setChecklists(getDataFromStorage("checklists"));
+        //console.log('запрос checklist отправлен');
+    };
+
+    const changeCondition = async () => {
+        console.log('detail taskId', taskId);
+        await postData(`task/${taskId}/`, {condition_id: 2, cancel_reason: 0, cancel_comment: ''} );
+
+    }
 
     useFocusEffect(
         useCallback (() => {
-            const loadChecklist = async () => {
-                await fetchData<Checklist>(`checklist/${taskId}/`, 'checklists');
-            };
-            const loadTasks = async () => {
-                await fetchData<Task[]>(`task/`, 'tasks');
-            };
-
-            loadChecklist();
-            loadTasks();
-
-            return () => {
+            //loadChecklistsTask();
+            //taskId = params.taskId as string;
+            setTask(getDataFromStorage("task"));
+            setChecklists(getDataFromStorage("checklists"));
+            //changeCondition()
+            //removeDataFromStorage("tasks");
+            //removeDataFromStorage("checklists");
+            //    saveDataToStorage('tasks', task);
+    //        return () => {
                 // Опционально: выполнить очистку, если необходимо
-            };
-        }, [fetchData, taskId])
+    //        };
+        }, [])
     );
+   //console.log("DetailsScreen.checklist", checklists);
+    useEffect(() => {
+        //taskId = params.taskId as string;
+        //loadChecklistsTask();
+        setTask(getDataFromStorage("task"));
+        setChecklists(getDataFromStorage("checklists"));
+        //saveDataToStorage('checklists', checklists);
+
+        //saveDataToStorage('task', task);
+        //setTask(getDataFromStorage("task"));
+        //setChecklists(getDataFromStorage("checklists"));
+    //    console.log("YES")
+
+    }, []);
+    //console.log("DetailsScreenStorage.task", task);
+    //console.log("DetailsScreenStorage.checklists", checklists);
+    useEffect(() => {
+
+    }, [task, checklists]);
+
     // Используем useEffect для обновления состояния statusEnabled
     useEffect(() => {
+
+
         if (task.condition.id === '3' || task.condition.id === '4') {
             setStatusEnabledCancel(false);
             setStatusEnabledStart(false);
@@ -84,18 +126,19 @@ const DetailsScreen = () => {
     }, [task]); // Зависимость от task
 
     const handleSubmit = async (type: string, conditionId: number, cancelReason: number, cancelComment: string) => {
-        console.log('type:', type);
-        console.log('conditionId:', conditionId);
-        console.log('cancelReason:', cancelReason);
-        console.log('cancelComment:', cancelComment);
-        console.log('taskId:', taskId);
+
         if (type === 'cancel') {
-           const response = await postData(`task/${taskId}/`, {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment} );
-           console.log('response:', response.data);
+
+
+            const response = await postData(`task/${taskId}/`, {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment} );
+           //updateDataFromStorage("task", {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment});
+           //console.log('response:', response.data);
            router.push('/');
         }
         if (type === 'start') {
+            console.log('detail taskId start', taskId);
             const response = await postData(`task/${taskId}/`, {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment} );
+            //updateDataFromStorage("task", {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment});
             console.log('response:', response.data);
             router.push({
                 pathname:'/starttask',
@@ -110,13 +153,15 @@ const DetailsScreen = () => {
 
     const handleTaskOnPress = (idCheckList: string, typeCheckList: string) => {
         console.log('Нажата задача с id:', idCheckList, 'и типом:', typeCheckList);
+        console.log('detail taskId', taskId);
         router.push({
             pathname: '/checklist',
             params: {
                 id: `${idCheckList}`,
                 idTask: `${taskId}`,
                 idCheckList: idCheckList,
-                typeCheckList: typeCheckList
+                typeCheckList: typeCheckList,
+                statusVisible: 'view'
             },
         });
     };
@@ -126,6 +171,7 @@ const DetailsScreen = () => {
     };
 
     const handleStart = () => {
+        console.log('detail next taskId', taskId);
         router.push({
             pathname:'/starttask',
             params: {
@@ -134,8 +180,7 @@ const DetailsScreen = () => {
 
         });
     }
-    //postData(`task/${taskId}/`, {condition_id: 1 , cancel_reason: 0, cancel_comment: ''} );
-
+    //console.log('details.checkList', checkList);
     const renderScene = SceneMap({
         tab1: () => (
             <View style={styles.tab1Container}>
@@ -146,7 +191,7 @@ const DetailsScreen = () => {
                             address={`${task.adress}`}
                             route={`${task.comment}`}
                             arrivalDate={`${task.date_begin_work.split('-').reverse().join('.')}`}
-                            arrivalTime={`с ${task.time_begin_work} до ${task.time_end_work}`}
+                            arrivalTime={`с ${task.time_work} до ${task.time_end_work}`}
                         />
                     </View>
                     <View style={{ marginBottom: 15 }}>
@@ -155,7 +200,7 @@ const DetailsScreen = () => {
                     <View>
                         <ActorsCard name_1={`${task.executors[0].user}`} />
                     </View>
-                    <View style={{flexDirection: 'row', justifyContent: 'center'}}>
+                    {task.condition.id === '1' && (<View style={{flexDirection: 'row', justifyContent: 'center'}}>
                         <View style={{marginRight: 13}}>
                             <TextButton text={'Отменить задание'}
                                         width={170}
@@ -164,9 +209,11 @@ const DetailsScreen = () => {
                                         textColor={'#FD1F9B'}
                                         backgroundColor={'#FFEAF6'}
                                         enabled={statusEnabledCancel}
+                                        touchable={statusEnabledCancel}
                                         onPress={toggleCancelTaskModal}
                             />
                         </View>
+
                         <TextButton text={'Приступить к выполнению'}
                                     width={170}
                                     height={52}
@@ -174,11 +221,13 @@ const DetailsScreen = () => {
                                     textColor={'#30DA88'}
                                     backgroundColor={'#EAFBF3'}
                                     enabled={statusEnabledStart}
+                                    touchable={statusEnabledStart}
                                     onPress={toggleStartTaskModal}
                         />
-                    </View>
+                    </View>)}
                 </ScrollView>
-                <Footer>
+                {task.condition.id === '2' && (
+                    <Footer>
                     <TextButton
                         text={'Продолжить заполнение отчёта'}
                         width={302}
@@ -187,9 +236,10 @@ const DetailsScreen = () => {
                         textColor={'#FFFFFF'}
                         backgroundColor={'#017EFA'}
                         enabled={statusEnabledNext}
+                        touchable={statusEnabledNext}
                         onPress={handleStart}
                     />
-                </Footer>
+                </Footer>)}
             </View>
         ),
         tab2: () => (
@@ -201,33 +251,28 @@ const DetailsScreen = () => {
         ),
         tab3: () => (
             <View style={styles.tab3Container}>
-                {isLoading ? (
-                    <Text>Загрузка...</Text>
-                ) : error ? (
-                    <Text>Ошибка: {error}</Text>
-                ) : checkList.length > 0 ? (
-                    checkList.map((data, index) => (
+                {checklists.map((data, index) => (
                         <View key={index} style={{ marginBottom: 10 }}>
                             <TaskCard
                                 onPress={() => handleTaskOnPress(data.id, data.type)}
                                 title={data.name}
-                                status={'completed'}
+                                idStatus={0}
+                                bgColor={'red'}
                             />
                         </View>
-                    ))
-                ) : (
-                    <Text>Нет данных для отображения</Text>
-                )}
+                        )
+                    )
+                }
             </View>
         ),
         tab4: () => (
             <View style={styles.tab4Container}>
                 <ReportCard
-                    image={require('@/assets/images/example1.png')}
-                    workingTime={'10:20 — 11:45'}
-                    time={'11:45'}
-                    executorComment={'Клиент не был готов к обработке'}
-                    customerComment={'Нужно обязательно звонить перед выездом'}
+                    image={task.photos}
+                    workingTime={`${task.report.time_start} - ${task.report.time_end}`}
+                    time={`${task.report.work_len}`}
+                    executorComment={task.report.comment_exec}
+                    customerComment={task.report.comment_client}
                 />
             </View>
         ),

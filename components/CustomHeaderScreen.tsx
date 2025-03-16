@@ -2,6 +2,7 @@ import React from 'react';
 import {View, StyleSheet, Image, Text, TouchableOpacity} from 'react-native';
 import { router } from 'expo-router'
 import {BackIcon, CheckSolid} from "@/components/icons/Icons";
+import ProgressBarCircle from "@/components/ProgressBarCircle";
 
 type CustomHeaderScreenProps = {
     onPress: () => void;
@@ -11,9 +12,11 @@ type CustomHeaderScreenProps = {
         color:string;
         bgColor: string};
     marginBottom?: number;
+    progress?: number;
+    progressVisible?: boolean;
 }
 
-export const CustomHeaderScreen: React.FC<CustomHeaderScreenProps> = ({ text, status, marginBottom = 0, onPress }) => {
+export const CustomHeaderScreen: React.FC<CustomHeaderScreenProps> = ({ text, progressVisible = false, progress = 0, status, marginBottom = 0, onPress }) => {
     return (
         <View style={{ marginBottom }}>
             <TouchableOpacity style={styles.header} onPress={onPress}>
@@ -21,7 +24,7 @@ export const CustomHeaderScreen: React.FC<CustomHeaderScreenProps> = ({ text, st
                     <View style={styles.logoContainer}>
                         <BackIcon />
                     </View>
-                    <Text style={[styles.text, !status && { width: '90%' }]}>
+                    <Text style={[styles.text, !status && { width: '90%' }, progressVisible && { width: '70%'}]}>
                         {text}
                     </Text>
                 </View>
@@ -35,6 +38,11 @@ export const CustomHeaderScreen: React.FC<CustomHeaderScreenProps> = ({ text, st
                             <CheckSolid color={status.color} />
                         </View>
                     </View>
+                )}
+                {progressVisible &&(
+                <View style={{marginRight: 10}}>
+                    <ProgressBarCircle progress={progress} />
+                </View>
                 )}
             </TouchableOpacity>
         </View>

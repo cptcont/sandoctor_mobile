@@ -1,17 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { Camera, XMarkSolid } from '@/components/icons/Icons';
-import { usePost } from '@/context/PostApi';
+import {
+    fetchDataSaveStorage,
+    getDataFromStorage,
+    postData,
+    removeDataFromStorage,
+    saveDataToStorage,
+    uploadImage,
+    addPhotoToJsonInMMKV
+} from '@/services/api'
+
+type ImageObject = {
+    thumbUrl: string;
+};
 
 type ImagePickerWithCameraProps = {
-    taskId: string;
-}
+    name?: string;
+    taskId: string | string[];
+    path?: string;
+    initialImages?: ImageObject[]; // Исправленный тип
 
-const ImagePickerWithCamera = ({ taskId }: ImagePickerWithCameraProps) => {
+};
+
+const ImagePickerWithCamera = ({ name = '', taskId, initialImages=[], path = `task/${taskId}` }: ImagePickerWithCameraProps) => {
     const [selectedImages, setSelectedImages] = useState<string[]>([]);
-    const { uploadImage } = usePost();
+    useEffect(() => {
+        if (initialImages.length > 0) {
+            const initialImageUrls = initialImages.map(image => image.thumbUrl);
+            setSelectedImages(initialImageUrls);
+        } else {
+            setSelectedImages([]);
+        }
+
+    }, []);
+    useEffect(() => {
+        if (initialImages.length > 0) {
+            const initialImageUrls = initialImages.map(image => image.thumbUrl);
+            setSelectedImages(initialImageUrls);
+        }
+    }, [initialImages])
 
     // Запрашиваем разрешение на доступ к камере и медиатеке
     const requestPermissions = async (): Promise<boolean> => {
@@ -31,7 +61,7 @@ const ImagePickerWithCamera = ({ taskId }: ImagePickerWithCameraProps) => {
         if (!hasPermission) return;
 
         const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
+            allowsEditing: false,
             aspect: [1, 1],
             quality: 0.5,
         });
@@ -62,11 +92,12 @@ const ImagePickerWithCamera = ({ taskId }: ImagePickerWithCameraProps) => {
     const handleImageSelect = async (uri: string): Promise<void> => {
         if (!selectedImages.includes(uri)) {
             setSelectedImages((prevImages) => [...prevImages, uri]);
-
+            console.log('ImagePickerWithCamera.path', path);
             try {
                 // Отправляем изображение на сервер
-                const response = await uploadImage<{ url: string }>(`task/${taskId}`, uri);
-                console.log('Изображение успешно отправлено:', response.data);
+                const response = await uploadImage<{ url: string }>(path, uri);
+                addPhotoToJsonInMMKV('task', response);
+                console.log('Изображение успешно отправлено:', response);
             } catch (error) {
                 console.error('Ошибка при отправке изображения:', error);
                 // Удаляем изображение из списка, если отправка не удалась
@@ -77,8 +108,29 @@ const ImagePickerWithCamera = ({ taskId }: ImagePickerWithCameraProps) => {
     };
 
     // Удаление изображения из списка
-    const removeImage = (uri: string): void => {
+    const removeImage = async (uri: string): void => {
         setSelectedImages((prevImages) => prevImages.filter((image) => image !== uri));
+
+        // Находим URL, содержащий "thumb_"
+        const thumbUrls = selectedImages.filter(url => url.includes("thumb_"))[0];
+
+        // Проверяем, что thumbUrls существует, и извлекаем имя файла
+        if (thumbUrls) {
+            const matchResult = thumbUrls.match(/thumb_([a-f0-9]+_[0-9]+\.jpeg)/);
+            if (matchResult) {
+                const fileName = matchResult[1];
+                await postData(path, {
+                    answers: [
+                        { answer: name, value: fileName },
+                    ],
+                }, 'DELETE');
+                console.log('ImagePickerWithCamera.removeImage', fileName, name);
+            } else {
+                console.error('No match found for the file name pattern.');
+            }
+        } else {
+            console.error('No URL containing "thumb_" found.');
+        }
     };
 
     return (
@@ -92,7 +144,7 @@ const ImagePickerWithCamera = ({ taskId }: ImagePickerWithCameraProps) => {
                         </TouchableOpacity>
                     </View>
                 ))}
-                <TouchableOpacity style={styles.cameraButton} onPress={pickImageFromGallery}>
+                <TouchableOpacity style={styles.cameraButton} onPress={openCamera}>
                     <Camera />
                 </TouchableOpacity>
             </View>

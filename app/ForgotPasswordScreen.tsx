@@ -4,6 +4,8 @@ import {router} from "expo-router";
 import {UserSolidIcon} from "@/components/icons/Icons";
 import {CustomTextInput} from "@/components/CustomTextInput";
 import {TextButton} from "@/components/TextButton";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+
 
 const ForgotPasswordScreen = () => {
     const [username, setUsername] = useState('');
@@ -13,6 +15,7 @@ const ForgotPasswordScreen = () => {
     };
 
     return (
+        <KeyboardAwareScrollView contentContainerStyle={{flex: 1}}>
         <View style={styles.container}>
             <View style={styles.logoContainer}>
                 <Image
@@ -45,6 +48,7 @@ const ForgotPasswordScreen = () => {
                 </Text>
             </Pressable>
         </View>
+        </KeyboardAwareScrollView>
     );
 };
 

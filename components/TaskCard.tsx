@@ -4,22 +4,23 @@ import { router } from 'expo-router';
 
 interface TaskCardProps {
     title: string;
-    status?: string;
+    idStatus?: number;
+    bgColor?: string;
     onPress: () => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ title, status, onPress }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ title, idStatus = 0, bgColor = '#F9F9F9', onPress }) => {
     return (
         <TouchableOpacity onPress={onPress} style={styles.card}>
             <View style={styles.cardTitle}>
                 <Text style={styles.title}>{title}</Text>
             </View>
-            {status === 'новая' && (
-                <View style={styles.statusNew}>
+            {idStatus === 0 && (
+                <View style={[styles.statusNew, { backgroundColor: bgColor }]}>
                 </View>
             )}
-            {status === 'выполнено' && (
-                <View style={styles.statusActive}>
+            {idStatus === 3 && (
+                <View style={[styles.statusActive, { backgroundColor: bgColor }]}>
                 </View>            )}
         </TouchableOpacity>
     );
@@ -48,14 +49,11 @@ const styles = StyleSheet.create({
         width: 7,
         height: 7,
         borderRadius: 50,
-        backgroundColor: '#30DA88',
-
     },
     statusActive: {
         width: 7,
         height: 7,
         borderRadius: 50,
-        backgroundColor: '#FFA500',
     },
     statusNew: {
         width: 7,

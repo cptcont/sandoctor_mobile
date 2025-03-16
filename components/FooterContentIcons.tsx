@@ -3,8 +3,12 @@ import {ListIcon, TableCellsIcon} from "@/components/icons/Icons";
 import {TextButton} from "@/components/TextButton";
 import { View, Text, StyleSheet } from 'react-native';
 import React from "react";
-
-const FooterContentIcons = () => {
+import {Checklist, Zone} from "@/types/Checklist";
+type FooterContentIconsType = {
+    visible?: boolean;
+};
+const FooterContentIcons = ({visible = true}: FooterContentIconsType) => {
+    if (!visible) return null;
     return (
         <View style={styles.container}>
             <IconButton icon={<ListIcon/>} size={35} marginLeft={20} onPress={() => {}}/>

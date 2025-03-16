@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, ImageSourcePropType } from 'react-native';
 
 interface ReportCardProps {
-    image: ImageSourcePropType; // Новый тип для изображений
+    image: string[]; // Новый тип для изображений
     workingTime: string;
     time: string;
     executorComment: string;
@@ -25,13 +25,13 @@ const ReportCard: React.FC<ReportCardProps> = ({
                 <Text style={styles.title}>{'Отчетные документы'}</Text>
             </View>
             <View style={styles.imageContainer}>
-                {[...Array(imageCount)].map((_, index) => (
+                {image.map((foto: any, index: number) => (
                     <Image
                         key={index}
-                        source={image}
+                        source={{ uri: foto.thumbUrl }}
                         style={[
                             styles.image,
-                            index !== imageCount - 1 && styles.imageMargin, // marginRight для всех, кроме последнего
+                            index !== 3 && styles.imageMargin,
                         ]}
                     />
                 ))}

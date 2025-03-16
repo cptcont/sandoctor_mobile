@@ -1,31 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Dropdown from '@/components/Dropdown';
-import { Zone, Field, Param } from "@/types/Checklist";
+import { Zone, Field } from "@/types/Checklist";
 import Footer from "@/components/Footer";
 import {TextButton} from "@/components/TextButton";
 
 type Tab2ContentType = {
     index: number;
     itemsTabContent?: Zone[];
+    onNextTab?: () => void;
+    onPreviousTab?: () => void;
 };
 
-const Tab2Content = ({ itemsTabContent = [], index }: Tab2ContentType) => {
+const Tab2Content = ({
+                         itemsTabContent = [],
+                         index,
+                         onNextTab,
+                         onPreviousTab,
+                     }: Tab2ContentType) => {
+    const [selectedValue, setSelectedValue] = useState(0);
     const [field, setField] = useState<{ label: string; value: string | null; id?: string}[]>([]);
-    const items = itemsTabContent[index].param.map((data: Param, index: any) => (
-        { label: data.name.toString(), value: `tab${index}` }
+    const items = itemsTabContent[index].param.map((data, index: any) => (
+        { label: data.name.toString(), value: index }
     ));
 
     useEffect(() => {
         if (
             itemsTabContent[index].param.length > 0 ) {
-            const fieldItem = itemsTabContent[index].param[0].fields.map((field: Field) => field);
+            const fieldItem = itemsTabContent[index].param[selectedValue].fields.map((field: Field) => field);
             const transformedField = transformData(fieldItem);
             setField(transformedField);
         } else {
             setField([]); // Если данных нет, устанавливаем пустой массив
         }
-    }, [itemsTabContent, index]);
+    }, [itemsTabContent, index, selectedValue]);
 
     function transformData(data: Field[]): { label: string; value: string | null; type?: string; options?: any; id?: string }[] {
         return data.map(item => {
@@ -56,15 +64,36 @@ const Tab2Content = ({ itemsTabContent = [], index }: Tab2ContentType) => {
             };
         });
     }
-    const handleSelect = (value: string | null) => {
+    const handleSelect = (value) => {
         if (value !== null) {
-            const match = value.match(/\d+$/);
-            const num = match ? Number(match[0]) : 0;
-            const fieldItem = itemsTabContent[index].param[num].fields.map((field: Field) => field);
+            setSelectedValue(value);
+            //const match = value.match(/\d+$/);
+            //const num = match ? Number(match[0]) : 0;
+            const fieldItem = itemsTabContent[index].param[value].fields.map((field: Field) => field);
             const transformedField = transformData(fieldItem);
             setField(transformedField);
         }
     };
+
+    const handleNext = async () => {
+        if (selectedValue < items.length - 1) {
+            const nextIndex = selectedValue + 1;
+            setSelectedValue(nextIndex);
+            handleSelect(nextIndex);
+        } else {
+            onNextTab?.();
+        }
+    }
+
+    const handlePrevious = () => {
+        if (selectedValue > 0) {
+            const prevIndex = selectedValue - 1;
+            setSelectedValue(prevIndex);
+            handleSelect(prevIndex);
+        } else {
+            onPreviousTab?.();
+        }
+    }
 
     const renderField = (field: { label: string; value: string | null; type?: string; options?: any; id?: string }) => {
         if (field.type === 'select') {
@@ -114,7 +143,11 @@ const Tab2Content = ({ itemsTabContent = [], index }: Tab2ContentType) => {
                     <Text style={styles.title}>{'Вредитель'}</Text>
                 </View>
                 <View style={{ marginBottom: 23 }}>
-                    <Dropdown items={items} defaultValue={'tab0'} onSelect={handleSelect} />
+                    <Dropdown
+                        key={selectedValue}
+                        items={items}
+                        defaultValue={selectedValue}
+                        onSelect={handleSelect} />
                 </View>
                 {field.some(f => f.value === 'нет' && f.id === '1' || f.value === '-' && f.id === '1')
                     ? field
@@ -136,7 +169,7 @@ const Tab2Content = ({ itemsTabContent = [], index }: Tab2ContentType) => {
                         textSize={14}
                         textColor={'#FFFFFF'}
                         backgroundColor={'#5D6377'}
-                        onPress={() => {}}
+                        onPress={handlePrevious}
                     />
                     <TextButton
                         text={'Далее'}
@@ -145,7 +178,7 @@ const Tab2Content = ({ itemsTabContent = [], index }: Tab2ContentType) => {
                         textSize={14}
                         textColor={'#FFFFFF'}
                         backgroundColor={'#017EFA'}
-                        onPress={() => {}}
+                        onPress={handleNext}
                     />
                 </View>
             </Footer>

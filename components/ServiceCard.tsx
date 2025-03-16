@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CheckSolid, XMarkSolid, Document } from "@/components/icons/Icons";
-import {usePost} from "@/context/PostApi";
+//import {usePost} from "@/context/PostApi";
+import { postData, updateDataFromStorage, getDataFromStorage } from '@/services/api'
+
 
 type ServiceCardProps = {
     title?: string;
     value?: string;
-    statusId?: number;
+    statusId?: string;
     unit?: string;
     color?: string;
     description?: boolean;
     visible?: string;
     onStatusChange?: (status: boolean | null) => void;
-    task_services_id?: number;
+    task_services_id?: string;
     taskId?: string;
 };
 
@@ -30,7 +32,7 @@ const ServiceCard = ({
 
     const [isCheckActive, setIsCheckActive] = useState(true);
     const [isXMarkActive, setIsXMarkActive] = useState(false);
-    const { postData } = usePost();
+    //const { postData } = usePost();
 
     // Функция для обновления состояний и вызова callback
     const updateStatus = (newCheckActive: boolean, newXMarkActive: boolean) => {
@@ -58,14 +60,14 @@ const ServiceCard = ({
         let newXMarkActive = false;
 
         switch (statusId) {
-            case 0:
+            case '0':
                 newCheckActive = false;
                 newXMarkActive = false;
                 break;
-            case 3:
+            case '3':
                 newCheckActive = true;
                 break;
-            case 4:
+            case '4':
                 newXMarkActive = true;
                 break;
             default:
@@ -84,8 +86,16 @@ const ServiceCard = ({
         }
          await postData(`task/${taskId}/`,
             {services:[{task_services_id: task_services_id, status: 3 }]});
-
-
+            updateDataFromStorage('task',{
+                services:[{
+                    task_services_id: task_services_id,
+                    status: {
+                        id: "3",
+                        name: "Выполнена",
+                        color: "#30da88",
+                        bgcolor: "#EFEFF1"}  }]})
+            //console.log('updateDataFromStorage', getDataFromStorage('task').services );
+           // console.log('task_services_id',task_services_id );
     };
 
     const handleXMarkPress = async () => {
@@ -94,6 +104,15 @@ const ServiceCard = ({
         }
          await postData(`task/${taskId}/`,
             {services:[{task_services_id: Number(task_services_id), status: 4 }]});
+            updateDataFromStorage('task',{
+                services:[{
+                    task_services_id: task_services_id,
+                    status: {
+                        id: "4",
+                        name: "Отклонена",
+                        color: "#FD1F9B",
+                        bgcolor: "#FDEED0"}  }]})
+            //console.log('updateDataFromStorage', getDataFromStorage('task').services );
 
     };
 
@@ -115,11 +134,11 @@ const ServiceCard = ({
                         </View>
                     )}
                     <View style={styles.statusIcon}>
-                        {statusId === 0 && <CheckSolid color={color} />}
-                        {statusId === 1 && <CheckSolid color={color} />}
-                        {statusId === 2 && <CheckSolid color={color} />}
-                        {statusId === 3 && <CheckSolid color={color} />}
-                        {statusId === 4 && <XMarkSolid />}
+                        {statusId === '0' && <CheckSolid color={color} />}
+                        {statusId === '1' && <CheckSolid color={color} />}
+                        {statusId === '2' && <CheckSolid color={color} />}
+                        {statusId === '3' && <CheckSolid color={color} />}
+                        {statusId === '4' && <XMarkSolid />}
                     </View>
                 </View>
             )}

@@ -1,108 +1,51 @@
-export type Checklist = {
+export interface Checklists {
+    checklists: Checklist[];
+}
+export interface Checklist {
     id: string;
     type: string;
     name: string;
+    progress: number;
     zones: Zone[];
-};
-
-// Тип для поля options в radio-кнопках
-export type RadioOptions = {
-    [key: string]: { value: string; selected: boolean };
-};
-
-// Тип для поля fields (поля формы)
-export type Field = {
-    id: string;
-    label: string;
-    type: 'radio' | 'text' | 'foto' | 'checkbox' | 'select';
-    options?: RadioOptions; // Опционально, только для типа 'radio'
-    value?: string; // Опционально, только для типа 'text'
-    name: string;
-    checked?: boolean;
-    color?: string;
-    selected?: boolean;
-    access: Access[];
-};
-
-export type Access = {
-    options: [];
 }
 
-// Тип для элемента param (параметры зоны)
-export type Param = {
-    name: string;
-    id: string;
-    fields: Field[];
-};
-
-// Тип для зоны (zone)
-export type Zone = {
+export interface Zone {
     name: string;
     id: string;
     fields_arr: {
-        [key: string]: string; // Например, '1': 'Наличие проблемы'
+        [key: string]: string;
     };
-    param_arr: { id: string; name: string }[]; // Список параметров
-    param: Param[]; // Детали параметров
+    param_arr: Parameter[];
+    param: ParameterDetail[];
+}
+
+export interface Parameter {
+    id: string;
+    name: string;
+}
+
+export interface ParameterDetail {
+    name: string;
+    id: string;
     fields: Field[];
-    control_points: Point[];
-};
-
-export interface Option {
-    value: string;
-    color: string;
-    bgcolor?: string;
-    selected: boolean;
 }
 
-export interface Fields {
-    id: string;
-    label: string;
-    name: string;
+export interface Field {
+    id: string | null;
+    label: string | null;
     type: string;
-    options?: Option[] | { [key: string]: Option };
-}
-
-export interface TMCValue {
-    p: number;
-    n: string;
-    u: string;
-    v: string;
-}
-
-export interface TMCField {
-    name: string;
-    value: TMCValue;
-    fields: {
-        p: { name: string; value: number };
-        n: { name: string; value: string };
-        u: { name: string; value: string };
-        v: { name: string; value: string };
+    options?: {
+        [key: string]: {
+            value: string;
+            selected: boolean;
+        };
     };
-}
-
-export interface PestField {
-    type: string;
+    value?: string | Photo[];
     name: string;
-    value: string;
 }
 
-export interface Pest {
+export interface Photo {
     name: string;
-    id: number;
-    field: PestField;
+    thumbUrl: string;
+    originalUrl: string;
 }
-
-export interface Point {
-    name: string;
-    point_name: string;
-    id: string;
-    fields: {
-        access: Fields;
-        point_status: Fields;
-        mount_condition: Fields;
-    };
-    tmc: TMCField[];
-    pests: Pest[];
-}
-

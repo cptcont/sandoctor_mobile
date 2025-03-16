@@ -1,5 +1,5 @@
 import React, { useEffect, useState,memo } from 'react';
-import {View, Text, StyleSheet, TextInput, ScrollView, KeyboardAvoidingView,} from 'react-native';
+import {View, Text, StyleSheet, TextInput, ScrollView,} from 'react-native';
 import Dropdown from '@/components/Dropdown';
 import { Checklist, Zone, Checklists} from "@/types/Checklist";
 import { FormField, TransferField } from "@/types/Field"
@@ -13,13 +13,11 @@ import {
     fetchDataSaveStorage,
     getDataFromStorage,
     postData,
-    removeDataFromStorage,
-    saveDataToStorage,
 
 } from '@/services/api'
 import CustomSwitch from "@/components/CustomSwitch";
 
-type Tab2ContentEditType = {
+type Tab1ContentEditType = {
     id: string | string[];
     index: number;
     itemsTabContent?: Zone[];
@@ -29,16 +27,14 @@ type Tab2ContentEditType = {
     idCheckList?: string;
 };
 
-
-
-const Tab2ContentEdit = ({
+const Tab1ContentEdit = ({
                              id,
                              index,
                              idTask = '0',
                              onNextTab,
                              onPreviousTab,
                              idCheckList
-                         }: Tab2ContentEditType) => {
+                         }: Tab1ContentEditType) => {
     const [selectedValue, setSelectedValue] = useState(0);
     const { showPopup } = usePopup();
     const [field, setField] = useState<TransferField[]>([]);
@@ -48,10 +44,8 @@ const Tab2ContentEdit = ({
     const [radioStates, setRadioStates] = useState<Record<string, { yes: boolean; no: boolean; isContentVisible: boolean }>>({});
     const [allFields, setAllFields] = useState({});
     const [radioStatesStatus, setRadioStatesStatus] = useState<boolean>(true);
-    const [selectedDropdownValues, setSelectedDropdownValues] = useState<Record<string, number>>({});
 
     const checkList =  (checklists || []).filter((checklist: Checklist) => {return checklist.id === id;}).flat()[0];
-    console.log('checklist2', checkList);
     const itemsTabContent:Zone[] = checkList.zones;
     const items = itemsTabContent[index].param.map((data: any, index: any) => (
         { label: data.name.toString(), value: index}
@@ -63,7 +57,7 @@ const Tab2ContentEdit = ({
         const fieldItem = Array.isArray(fields) ? fields.map((field:any) => field) : [];
 
         const transformedField = transformData(fieldItem);
-        //console.log(transformedField);
+//        console.log(transformedField);
         const initialFields = {};
         if (Array.isArray(itemsTabContent[index]?.param)) {
             itemsTabContent[index].param.forEach((param:any, idx:number) => {
@@ -80,17 +74,16 @@ const Tab2ContentEdit = ({
         const initialInputTexts: Record<string, string> = {};
         const initialCheckboxStates: Record<string, boolean> = {};
         const initialRadioStates: Record<string, { yes: boolean; no: boolean; isContentVisible: boolean }> = {};
-        const initialDropdownValues: Record<string, number> = {};
 
         if (Array.isArray(transformedField)) {
             transformedField.forEach(item => {
-                if (item.text) {
+                if (item?.text) {
                     initialInputTexts[item.text.name] = item.text.value;
                 }
-                if (item.checkbox) {
+                if (item?.checkbox) {
                     initialCheckboxStates[item.checkbox.name] = item.checkbox.checked;
                 }
-                if (item.radio) {
+                if (item?.radio) {
                     initialRadioStates[item.radio.name] = {
                         yes: item.radio.yes,
                         no: item.radio.no,
@@ -98,19 +91,12 @@ const Tab2ContentEdit = ({
                     };
                     setRadioStatesStatus(item.radio.yes);
                 }
-                if (item.select) {
-                    const selectedOption = Object.keys(item.select.options).find(key => item.select.options[key].selected);
-                    if (selectedOption) {
-                        initialDropdownValues[item.select.name] = parseInt(selectedOption);
-                    }
-                }
             });
         }
 
         setInputTexts(initialInputTexts);
         setIsEnabled(initialCheckboxStates);
         setRadioStates(initialRadioStates);
-        setSelectedDropdownValues(initialDropdownValues);
 
     }, []);
 
@@ -145,7 +131,6 @@ const Tab2ContentEdit = ({
         const initialInputTexts: Record<string, string> = {};
         const initialCheckboxStates: Record<string, boolean> = {};
         const initialRadioStates: Record<string, { yes: boolean; no: boolean; isContentVisible: boolean }> = {};
-        const initialDropdownValues: Record<string, number> = {};
 
         if (Array.isArray(field)) {
             field.forEach(item => {
@@ -162,23 +147,16 @@ const Tab2ContentEdit = ({
                         isContentVisible: item.radio.yes,
                     };
                 }
-                if (item.select) {
-                    const selectedOption = Object.keys(item.select.options).find(key => item.select.options[key].selected);
-                    if (selectedOption) {
-                        initialDropdownValues[item.select.name] = parseInt(selectedOption);
-                    }
-                }
             });
         }
 
         setInputTexts(initialInputTexts);
         setIsEnabled(initialCheckboxStates);
         setRadioStates(initialRadioStates);
-        setSelectedDropdownValues(initialDropdownValues);
 
     }, [field, selectedValue, index, itemsTabContent]);
 
-    const handleSelect = (value: string | number | null) => {
+    const handleSelect = (value: number | null) => {
         if (value !== null) {
             setSelectedValue(value);
             const fieldItem = itemsTabContent[index].param[value].fields.map((field: Field) => field);
@@ -291,13 +269,9 @@ const Tab2ContentEdit = ({
                 case 'text':
                     //const inputText = componentData.value;
                     return (
-                        <View
-                            key={`text-${index}`}
-                            style={[styles.text, { marginBottom: 17 }]}
-                        >
+                        <View key={`text-${index}`} style={[styles.text, { marginBottom: 17 }]}>
                             <Text style={[styles.title, { color: '#1C1F37' }]}>{`${componentData.label}`}</Text>
                             <TextInput
-
                                 style={styles.textArea}
                                 multiline={true}
                                 numberOfLines={4}
@@ -317,6 +291,7 @@ const Tab2ContentEdit = ({
                             taskId={idTask}
                             initialImages={arrayPhoto}
                             path={`checklist/${idCheckList}/${componentData.name}`}
+                            name={componentData.name}
                         />
                     );
                 case 'checkbox':
@@ -327,63 +302,10 @@ const Tab2ContentEdit = ({
                         </View>
                     )
                 case 'select':
-                    const selectedValue = selectedDropdownValues[componentData.name] || 0;
-                    const options = Object.entries(componentData.options).map(([key, value]) => ({
-                        label: value.value,
-                        value: parseInt(key),
-                    }));
-
-                    return (
-                        <View key={`select-${index}`} style={[styles.text, { marginBottom: 17 }]}>
-                            <Text style={[styles.title, { color: '#1C1F37', marginBottom: 10 }]}>{`${componentData.label}`}</Text>
-                            <Dropdown
-                                key={selectedValue}
-                                items={options}
-                                defaultValue={selectedValue}
-                                onSelect={(value) => handleSelectDropdown(value, componentData.name)}
-                            />
-                        </View>
-                    );
 
                 default:
                     return null;
             }
-        });
-    };
-
-    const handleSelectDropdown = async (value: number, name: string) => {
-        setSelectedDropdownValues(prev => ({
-            ...prev,
-            [name]: value,
-        }));
-
-        const updatedField = field.map(item => {
-            if (item.select && item.select.name === name) {
-                const updatedOptions = Object.keys(item.select.options).reduce((acc, key) => {
-                    acc[key] = {
-                        ...item.select.options[key],
-                        selected: parseInt(key) === value,
-                    };
-                    return acc;
-                }, {});
-
-                return {
-                    ...item,
-                    select: {
-                        ...item.select,
-                        options: updatedOptions,
-                    },
-                };
-            }
-            return item;
-        });
-
-        setField(updatedField);
-
-        await postData(`checklist/${idCheckList}`, {
-            answers: [
-                { answer: name, value: value },
-            ],
         });
     };
 
@@ -511,7 +433,7 @@ const Tab2ContentEdit = ({
             ],
         });
 
-        console.log('hasText', hasText.text.value);
+//        console.log('hasText', hasText.text.value);
     }
 
     return (
@@ -531,7 +453,6 @@ const Tab2ContentEdit = ({
                 <KeyboardAwareScrollView>
                     {transferDataVisible(field)}
                 </KeyboardAwareScrollView>
-
             </View>
 
             <Footer>
@@ -616,4 +537,4 @@ const styles = StyleSheet.create({
     }
 });
 
-export default Tab2ContentEdit;
+export default Tab1ContentEdit;

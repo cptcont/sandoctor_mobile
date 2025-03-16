@@ -26,10 +26,12 @@ const CustomTable = ({tmc = []}:CustomTableType) => {
            <>
                 <View key={index} style={styles.dataRow}>
                 <Text style={[styles.cellStart]}>{`${data.name}`}</Text>
-                <Text style={[styles.cell, { marginRight: 40}]}>10</Text>
-                <Text style={[styles.cell, { marginRight: 55}]}>5</Text>
-                <Text style={[styles.cell, { marginRight: 50}]}>0</Text>
-                <Text style={[styles.cell, { marginRight: 12}]}>0</Text>
+                    <View style={[styles.cellContainer]}>
+                        <Text style={[styles.cell, { }]}>{`${data.value.n}`}</Text>
+                        <Text style={[styles.cell, { }]}>{`${data.value.p}`}</Text>
+                        <Text style={[styles.cell, { }]}>{`${data.value.u}`}</Text>
+                        <Text style={[styles.cell, {}]}>{`${data.value.v}`}</Text>
+                    </View>
             </View>
 
             {/* Разделитель */}
@@ -56,14 +58,20 @@ const styles = StyleSheet.create({
         paddingVertical: 7,
         paddingHorizontal: 5,
     },
+    cellContainer: {
+        width: '60%',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+
+    },
     cell: {
-        width: 'auto',
+
         fontSize: 8,
         color: '#1C1F37',
     },
     cellStart: {
         flex: 3,
-        width: 'auto',
+        width: '40%',
         fontSize: 10,
         color: '#1C1F37',
     },
