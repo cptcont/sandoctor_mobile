@@ -13,7 +13,7 @@ import { ApiProvider } from "@/context/ApiContext";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {PostProvider} from "@/context/PostApi";
 import {ChecklistProvider} from "@/context/UpdateServerData";
-import { KeyboardProvider, KeyboardController } from 'react-native-keyboard-controller';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 
 
@@ -43,7 +43,7 @@ export default function RootLayout() {
 
 
 function RootLayoutNav() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isAppUsageExpired } = useAuth();
     const { hideModal, isModalVisible, modalContent, overlayStyle, overlayBackgroundStyle, modalContentStyle } = useModal();
     if (Platform.OS === 'android') {
         //NavigationBar.setVisibilityAsync("hidden");
@@ -59,12 +59,18 @@ function RootLayoutNav() {
     }, []);
 
     useEffect(() => {
+        if (isAppUsageExpired) {
+            // Показываем сообщение об истечении времени использования
+            alert('Время использования приложения истекло. Пожалуйста, свяжитесь с поддержкой.');
+            return;
+        }
+
         if (isAuthenticated) {
             router.replace('/(tabs)');
         } else {
             router.replace('/LoginScreen');
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, isAppUsageExpired]);
 
     return (
             <View style={styles.container}>

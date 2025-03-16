@@ -4,6 +4,7 @@ import { Buffer } from 'buffer';
 
 type AuthContextType = {
     isAuthenticated: boolean;
+    isAppUsageExpired: boolean; // Добавляем новое поле
     userData: any; // Данные пользователя из JSON-ответа
     token: string | null; // Токен
     login: (username: string, password: string) => Promise<void>;
@@ -15,6 +16,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>({
     isAuthenticated: false,
+    isAppUsageExpired: false,
     userData: null,
     token: null,
     login: async () => {},
@@ -99,23 +101,40 @@ const updateUserDataOnServer = async (userId: string, data: any): Promise<any> =
     }
 };
 
+// Универсальная функция для сохранения даты первого запуска
+const setFirstLaunchDate = async (date: string): Promise<void> => {
+    await SecureStore.setItemAsync('firstLaunchDate', date);
+};
+
+// Универсальная функция для получения даты первого запуска
+const getFirstLaunchDate = async (): Promise<string | null> => {
+    return await SecureStore.getItemAsync('firstLaunchDate');
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userData, setUserData] = useState<any>(null); // Данные пользователя
     const [token, setTokenState] = useState<string | null>(null); // Токен
+    const [isAppUsageExpired, setIsAppUsageExpired] = useState(false); // Состояние для отслеживания истечения времени использования
 
-    // Проверка аутентификации при загрузке приложения
     useEffect(() => {
-        const checkAuth = async () => {
+        const checkAuthAndUsage = async () => {
             const token = await getToken();
             const userData = await getUserDataStorage();
+            const isExpired = await checkAppUsageExpiry();
+
+            if (isExpired) {
+                setIsAppUsageExpired(true);
+                return;
+            }
+
             if (token && userData) {
                 setIsAuthenticated(true);
                 setTokenState(token);
                 setUserData(userData);
             }
         };
-        checkAuth();
+        checkAuthAndUsage();
     }, []);
 
     const login = async (username: string, password: string) => {
@@ -153,9 +172,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthenticated(false);
     };
 
+    // Функция для проверки, истекло ли время использования приложения
+    const checkAppUsageExpiry = async (): Promise<boolean> => {
+        const firstLaunchDate = await getFirstLaunchDate();
+        if (!firstLaunchDate) {
+            // Если дата первого запуска не сохранена, сохраняем текущую дату
+            await setFirstLaunchDate(new Date().toISOString());
+            return false;
+        }
+
+        const currentDate = new Date();
+        const launchDate = new Date(firstLaunchDate);
+        const diffTime = Math.abs(currentDate.getTime() - launchDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return diffDays > 7; // Возвращаем true, если прошло больше 7 дней
+    };
+
     return (
         <AuthContext.Provider value={{
             isAuthenticated,
+            isAppUsageExpired, // Добавляем isAppUsageExpired в контекст
             userData,
             token,
             login,
