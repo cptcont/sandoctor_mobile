@@ -21,9 +21,12 @@ const StartTaskScreen = () => {
     const [textCommentExec, setTextCommentExec] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(true); // Состояние загрузки
     const taskId = params.taskId as string;
+    const [keyRandom, setKeyRandom] = useState<string>(`${Math.floor(Math.random() * 1000)}`);
 
     const fetchData = async () => {
         try {
+            await fetchDataSaveStorage<Checklist>(`checklist/${taskId}`, 'checklists' );
+            await fetchDataSaveStorage<Task>(`task/${taskId}`, 'task' );
             const updatedTask = await getDataFromStorage(`task`) as Task;
             const updatedChecklists = await getDataFromStorage(`checklists`) as Checklist[];
             setTask(updatedTask);
@@ -33,13 +36,15 @@ const StartTaskScreen = () => {
         } catch (error) {
             console.error('Ошибка при загрузке данных:', error);
         } finally {
-            setLoading(false); // Загрузка завершена
+            setLoading(false);
         }
     };
 
     useFocusEffect(
         useCallback(() => {
+            console.log("useFocusEffect StartTaskScreen")
             fetchData();
+            setKeyRandom(`${Math.floor(Math.random() * 1000)}`)
             return () => {
                 // Очистка, если необходимо
             };
@@ -72,10 +77,11 @@ const StartTaskScreen = () => {
             pathname: '/checklist',
             params: {
                 id: `${idCheckList}`,
-                idTask: `${taskId}`,
                 idCheckList: `${taskId}` ,
                 typeCheckList: typeCheckList,
                 statusVisible: 'edit',
+                tabId: '',
+                tabIdTMC: ''
             },
         });
     };
@@ -107,8 +113,13 @@ const StartTaskScreen = () => {
         await postData(`task/${taskId}/`,{report: {comment_exec:textCommentExec}});
     }
 
-    const handleSubmit = () => {
-        const response = postData(`task/${taskId}/`, {services:[]})
+    const handleSubmit = async () => {
+         await postData(`task/${taskId}/`,  {condition_id: 3 , cancel_reason: '', cancel_comment: ''})
+        router.push({
+            pathname: '/',
+            params: {
+            }
+        });
     }
 
     return (
@@ -128,7 +139,7 @@ const StartTaskScreen = () => {
                                 onPress={() => handleTaskOnPress(data.id, data.type)}
                                 title={data.name}
                                 idStatus={0}
-                                bgColor={'red'}
+                                bgColor={data.badge.color}
                             />
                         </View>
                     ))}
@@ -150,9 +161,11 @@ const StartTaskScreen = () => {
                     <Text style={styles.titleCheckList}>Отчетный документ по заданию</Text>
                 </View>
                 <ImagePickerWithCamera
-                    key={task.id}
+                    key={keyRandom}
                     taskId={taskId}
-                    initialImages={task.photos}/>
+                    initialImages={task.photos}
+                    path={`task/${taskId}`}
+                />
                 <View style={[styles.containerTextArea, {marginBottom: 11}]}>
                     <Text style={styles.titleTextArea}>Комментарий исполнителя</Text>
                     <TextInput
@@ -186,7 +199,7 @@ const StartTaskScreen = () => {
                         textColor={'#FFFFFF'}
                         backgroundColor={'#017EFA'}
                         enabled={true}
-                        onPress={handleBack}
+                        onPress={handleSubmit}
                     />
                 </Footer>
             </KeyboardAwareScrollView>

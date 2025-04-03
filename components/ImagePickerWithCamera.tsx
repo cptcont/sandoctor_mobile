@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet, Alert, Modal } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
-import { Camera, XMarkSolid } from '@/components/icons/Icons';
+import { Camera, XMarkSolid, Gallery, CheckSolid } from '@/components/icons/Icons';
 import {
     fetchDataSaveStorage,
     getDataFromStorage,
@@ -11,42 +11,52 @@ import {
     saveDataToStorage,
     uploadImage,
     addPhotoToJsonInMMKV
-} from '@/services/api'
+} from '@/services/api';
 
-type ImageObject = {
+interface ImageObject {
+    name: string;
     thumbUrl: string;
-};
+    originalUrl: string;
+}
 
-type ImagePickerWithCameraProps = {
+interface ImagePickerWithCameraProps {
     name?: string;
-    taskId: string | string[];
+    taskId?: string | string[];
     path?: string;
-    initialImages?: ImageObject[]; // Исправленный тип
+    initialImages?: ImageObject[];
+    onImageUploaded?: (response: { url: string; thumbUrl: string; name: string }) => void;
+    onImageRemoved?: (removedImage: ImageObject) => void;
+    viewGallery?: boolean;
+    selected?: boolean;
+}
 
-};
+const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
+                                                                         name = '',
+                                                                         taskId,
+                                                                         initialImages = [],
+                                                                         path = taskId ? `task/${taskId}` : '',
+                                                                         onImageUploaded,
+                                                                         onImageRemoved,
+                                                                         viewGallery = false,
+                                                                         selected = false
+                                                                     }) => {
+    const [selectedImages, setSelectedImages] = useState<ImageObject[]>(initialImages);
+    const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+    const [markedImageUrl, setMarkedImageUrl] = useState<string | null>(null);
 
-const ImagePickerWithCamera = ({ name = '', taskId, initialImages=[], path = `task/${taskId}` }: ImagePickerWithCameraProps) => {
-    const [selectedImages, setSelectedImages] = useState<string[]>([]);
     useEffect(() => {
-        if (initialImages.length > 0) {
-            const initialImageUrls = initialImages.map(image => image.thumbUrl);
-            setSelectedImages(initialImageUrls);
-        } else {
-            setSelectedImages([]);
+        const isEqual = JSON.stringify(initialImages) === JSON.stringify(selectedImages);
+        if (!isEqual) {
+            setSelectedImages(initialImages.length > 0 ? initialImages : []);
         }
+    }, [initialImages]);
 
-    }, []);
-    useEffect(() => {
-        if (initialImages.length > 0) {
-            const initialImageUrls = initialImages.map(image => image.thumbUrl);
-            setSelectedImages(initialImageUrls);
-        }
-    }, [initialImages])
-
-    // Запрашиваем разрешение на доступ к камере и медиатеке
     const requestPermissions = async (): Promise<boolean> => {
-        const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-        const mediaLibraryPermission = await MediaLibrary.requestPermissionsAsync();
+        const [cameraPermission, mediaLibraryPermission] = await Promise.all([
+            ImagePicker.requestCameraPermissionsAsync(),
+            MediaLibrary.requestPermissionsAsync()
+        ]);
 
         if (cameraPermission.status !== 'granted' || mediaLibraryPermission.status !== 'granted') {
             Alert.alert('Разрешение не получено', 'Пожалуйста, предоставьте доступ к камере и медиатеке.');
@@ -55,23 +65,21 @@ const ImagePickerWithCamera = ({ name = '', taskId, initialImages=[], path = `ta
         return true;
     };
 
-    // Функция для открытия камеры
     const openCamera = async (): Promise<void> => {
         const hasPermission = await requestPermissions();
         if (!hasPermission) return;
 
         const result = await ImagePicker.launchCameraAsync({
             allowsEditing: false,
-            aspect: [1, 1],
+            aspect: [1, 1] as [number, number],
             quality: 0.5,
         });
 
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-            handleImageSelect(result.assets[0].uri);
+        if (!result.canceled && result.assets?.length) {
+            await handleImageSelect(result.assets[0].uri);
         }
     };
 
-    // Функция для выбора изображений из медиатеки
     const pickImageFromGallery = async (): Promise<void> => {
         const hasPermission = await requestPermissions();
         if (!hasPermission) return;
@@ -79,67 +87,97 @@ const ImagePickerWithCamera = ({ name = '', taskId, initialImages=[], path = `ta
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsMultipleSelection: true,
-            aspect: [1, 1],
+            aspect: [1, 1] as [number, number],
             quality: 0.5,
         });
 
         if (!result.canceled && result.assets) {
-            result.assets.forEach((asset) => handleImageSelect(asset.uri));
+            await Promise.all(result.assets.map(asset => handleImageSelect(asset.uri)));
         }
     };
 
-    // Обработка выбранного изображения и отправка на сервер
     const handleImageSelect = async (uri: string): Promise<void> => {
-        if (!selectedImages.includes(uri)) {
-            setSelectedImages((prevImages) => [...prevImages, uri]);
-            console.log('ImagePickerWithCamera.path', path);
-            try {
-                // Отправляем изображение на сервер
-                const response = await uploadImage<{ url: string }>(path, uri);
-                addPhotoToJsonInMMKV('task', response);
-                console.log('Изображение успешно отправлено:', response);
-            } catch (error) {
-                console.error('Ошибка при отправке изображения:', error);
-                // Удаляем изображение из списка, если отправка не удалась
-                setSelectedImages((prevImages) => prevImages.filter((image) => image !== uri));
-                Alert.alert('Ошибка', 'Не удалось отправить изображение.');
-            }
+        if (selected && onImageUploaded) {
+            onImageUploaded({ url: uri, thumbUrl: uri, name: '' });
+            return;
+        }
+
+        try {
+            const response = await uploadImage<{ url: string; thumbUrl: string; name: string }>(path, uri);
+            const newImage: ImageObject = {
+                name: response.name,
+                thumbUrl: response.thumbUrl,
+                originalUrl: response.url
+            };
+
+            setSelectedImages(prevImages => [...prevImages, newImage]);
+            await addPhotoToJsonInMMKV('task', response);
+            console.log('Изображение успешно отправлено:', response);
+
+            // Уведомляем родительский компонент о добавлении изображения
+            onImageUploaded?.(response);
+        } catch (error) {
+            console.error('Ошибка при отправке изображения:', error);
+            Alert.alert('Ошибка', 'Не удалось отправить изображение.');
         }
     };
 
-    // Удаление изображения из списка
-    const removeImage = async (uri: string): void => {
-        setSelectedImages((prevImages) => prevImages.filter((image) => image !== uri));
+    const removeImage = async (image: ImageObject): Promise<void> => {
+        setSelectedImages(prevImages => prevImages.filter(img => img.thumbUrl !== image.thumbUrl));
 
-        // Находим URL, содержащий "thumb_"
-        const thumbUrls = selectedImages.filter(url => url.includes("thumb_"))[0];
+        const matchResult = image.thumbUrl.match(/thumb_([a-f0-9]+_[0-9]+\.jpe?g)/i);
+        if (matchResult) {
+            const fileName = matchResult[1];
+            await postData(path, {
+                answers: [
+                    { answer: name, value: fileName },
+                ],
+            }, 'DELETE');
+            console.log('ImagePickerWithCamera.removeImage', fileName, name);
+        }
 
-        // Проверяем, что thumbUrls существует, и извлекаем имя файла
-        if (thumbUrls) {
-            const matchResult = thumbUrls.match(/thumb_([a-f0-9]+_[0-9]+\.jpeg)/);
-            if (matchResult) {
-                const fileName = matchResult[1];
-                await postData(path, {
-                    answers: [
-                        { answer: name, value: fileName },
-                    ],
-                }, 'DELETE');
-                console.log('ImagePickerWithCamera.removeImage', fileName, name);
-            } else {
-                console.error('No match found for the file name pattern.');
+        // Уведомляем родительский компонент об удалении изображения
+        onImageRemoved?.(image);
+    };
+
+    const openImagePreview = (image: ImageObject): void => {
+        setSelectedImageUrl(image.originalUrl);
+        setIsModalVisible(true);
+    };
+
+    const closeImagePreview = (): void => {
+        setIsModalVisible(false);
+        setSelectedImageUrl(null);
+    };
+
+    const toggleImageMark = (): void => {
+        if (selectedImageUrl) {
+            setMarkedImageUrl(prev => prev === selectedImageUrl ? null : selectedImageUrl);
+            if (onImageUploaded && selectedImageUrl !== markedImageUrl) {
+                onImageUploaded({
+                    url: selectedImageUrl,
+                    thumbUrl: selectedImageUrl,
+                    name: ''
+                });
             }
-        } else {
-            console.error('No URL containing "thumb_" found.');
         }
     };
 
     return (
         <View style={styles.container}>
             <View style={styles.imageGridContainer}>
-                {selectedImages.map((uri, index) => (
-                    <View key={index} style={styles.imageWrapper}>
-                        <Image source={{ uri }} style={styles.image} />
-                        <TouchableOpacity onPress={() => removeImage(uri)} style={styles.removeButton}>
+                {selectedImages.map((image, index) => (
+                    <View
+                        key={`${image.thumbUrl}-${index}`}
+                        style={[
+                            styles.imageWrapper,
+                            markedImageUrl === image.originalUrl && styles.markedImageWrapper
+                        ]}
+                    >
+                        <TouchableOpacity onPress={() => openImagePreview(image)}>
+                            <Image source={{ uri: image.thumbUrl }} style={styles.image} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => removeImage(image)} style={styles.removeButton}>
                             <XMarkSolid />
                         </TouchableOpacity>
                     </View>
@@ -147,27 +185,64 @@ const ImagePickerWithCamera = ({ name = '', taskId, initialImages=[], path = `ta
                 <TouchableOpacity style={styles.cameraButton} onPress={openCamera}>
                     <Camera />
                 </TouchableOpacity>
+                {viewGallery && (
+                    <TouchableOpacity style={[styles.cameraButton]} onPress={pickImageFromGallery}>
+                        <Gallery />
+                    </TouchableOpacity>
+                )}
             </View>
+
+            <Modal
+                visible={isModalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={closeImagePreview}
+            >
+                <View style={styles.modalContainer}>
+                    {selected && (
+                        <TouchableOpacity
+                            style={styles.modalMarkButton}
+                            onPress={toggleImageMark}
+                        >
+                            <CheckSolid
+                                color={markedImageUrl === selectedImageUrl ? '#081A51' : '#fff'}
+                            />
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={styles.modalCloseButton} onPress={closeImagePreview}>
+                        <XMarkSolid color="#fff" />
+                    </TouchableOpacity>
+                    {selectedImageUrl && (
+                        <Image
+                            source={{ uri: selectedImageUrl }}
+                            style={[
+                                styles.fullImage,
+                                markedImageUrl === selectedImageUrl && styles.markedFullImage
+                            ]}
+                            resizeMode="contain"
+                        />
+                    )}
+                </View>
+            </Modal>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         paddingHorizontal: 20,
     },
     imageGridContainer: {
         marginTop: 20,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'flex-start',
+        flexDirection: 'row' as const,
+        flexWrap: 'wrap' as const,
+        justifyContent: 'flex-start' as const,
     },
     imageWrapper: {
-        position: 'relative',
+        position: 'relative' as const,
         marginRight: 13,
         marginBottom: 13,
-        overflow: 'visible',
+        overflow: 'visible' as const,
     },
     image: {
         width: 60,
@@ -175,15 +250,15 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     removeButton: {
-        position: 'absolute',
+        position: 'absolute' as const,
         top: -10,
         right: -10,
         backgroundColor: '#F5F7FB',
         borderRadius: 15,
         width: 25,
         height: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: 'center' as const,
+        alignItems: 'center' as const,
         zIndex: 100,
     },
     cameraButton: {
@@ -191,9 +266,40 @@ const styles = StyleSheet.create({
         height: 60,
         backgroundColor: '#F5F7FB',
         borderRadius: 6,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: 'center' as const,
+        alignItems: 'center' as const,
         marginBottom: 13,
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        justifyContent: 'center' as const,
+        alignItems: 'center' as const,
+    },
+    fullImage: {
+        width: '90%',
+        height: '80%',
+    },
+    modalCloseButton: {
+        position: 'absolute' as const,
+        top: 40,
+        right: 20,
+        zIndex: 100,
+    },
+    markedImageWrapper: {
+        borderWidth: 2,
+        borderColor: '#081A51',
+        borderRadius: 6,
+    },
+    modalMarkButton: {
+        position: 'absolute' as const,
+        top: 40,
+        left: 20,
+        zIndex: 100,
+    },
+    markedFullImage: {
+        borderWidth: 4,
+        borderColor: '#081A51',
     },
 });
 

@@ -27,12 +27,21 @@ export function ButtonHeader({
                 <View
                     style={[
                         styles.circleContainer,
-                        { width: containerSize, height: containerSize, backgroundColor },
+                        {
+                            width: containerSize,
+                            height: containerSize,
+                            backgroundColor,
+                            borderRadius: containerSize ? containerSize / 2 : 15, // Делаем идеальный круг
+                        },
                     ]}
                 >
                     <Image
                         source={iconSource}
-                        style={{ width: size, height: size, resizeMode: 'contain' }}
+                        style={{
+                            width: containerSize, // Растягиваем на весь контейнер
+                            height: containerSize, // Растягиваем на весь контейнер
+                            borderRadius: containerSize ? containerSize / 2 : 15, // Обрезаем изображение по кругу
+                        }}
                     />
                 </View>
             ) : (
@@ -51,8 +60,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     circleContainer: {
-        borderRadius: 15,
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden', // Обрезаем всё, что выходит за границы круга
     },
 });

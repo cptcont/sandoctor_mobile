@@ -1,18 +1,68 @@
-import {IconButton} from "@/components/IconButton";
-import {ListIcon, TableCellsIcon} from "@/components/icons/Icons";
-import {TextButton} from "@/components/TextButton";
-import { View, Text, StyleSheet } from 'react-native';
+import { IconButton } from "@/components/IconButton";
+import { ListIcon, TableCellsIcon } from "@/components/icons/Icons";
+import { TextButton } from "@/components/TextButton";
+import { View, StyleSheet } from 'react-native';
+import { router } from "expo-router";
 import React from "react";
-import {Checklist, Zone} from "@/types/Checklist";
+
 type FooterContentIconsType = {
     visible?: boolean;
+    onTodayPress?: () => void; // Добавляем пропсы для обработки нажатий
+    onTomorrowPress?: () => void;
 };
-const FooterContentIcons = ({visible = true}: FooterContentIconsType) => {
+
+const FooterContentIcons = ({ visible = true, onTodayPress, onTomorrowPress }: FooterContentIconsType) => {
     if (!visible) return null;
+
+    const handleOnPressList = () => {
+        router.push({
+            pathname: '/daydetails',
+            params: {},
+        });
+    };
+
+    const handleOnPressTableCells = () => {
+        router.push({
+            pathname: '/',
+            params: {},
+        });
+    };
+
+    const handleOnPressToday = () => {
+        if (onTodayPress) {
+            onTodayPress(); // Вызываем переданный обработчик для HomeScreen
+        } else {
+            // Логика для DayDetailsScreen
+            const today = new Date();
+            router.push({
+                pathname: '/daydetails',
+                params: {
+                    upLoad: 'upLoadToday',
+                },
+            });
+        }
+    };
+
+    const handleOnPressTomorrow = () => {
+        if (onTomorrowPress) {
+            onTomorrowPress(); // Вызываем переданный обработчик для HomeScreen
+        } else {
+            // Логика для DayDetailsScreen
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            router.push({
+                pathname: '/daydetails',
+                params: {
+                    upLoad: 'upLoadTomorrow',
+                },
+            });
+        }
+    };
+
     return (
         <View style={styles.container}>
-            <IconButton icon={<ListIcon/>} size={35} marginLeft={20} onPress={() => {}}/>
-            <IconButton icon={<TableCellsIcon/>} size={35} marginLeft={8} onPress={() => {}}/>
+            <IconButton icon={<ListIcon />} size={35} marginLeft={20} onPress={handleOnPressList} />
+            <IconButton icon={<TableCellsIcon />} size={35} marginLeft={8} onPress={handleOnPressTableCells} />
             <TextButton
                 text={'Сегодня'}
                 width={112}
@@ -21,7 +71,8 @@ const FooterContentIcons = ({visible = true}: FooterContentIconsType) => {
                 textColor={'#5D6377'}
                 backgroundColor={'#F5F7FB'}
                 marginLeft={40}
-                onPress={() => {}}/>
+                onPress={handleOnPressToday}
+            />
             <TextButton
                 text={'Завтра'}
                 width={112}
@@ -30,9 +81,10 @@ const FooterContentIcons = ({visible = true}: FooterContentIconsType) => {
                 textColor={'#5D6377'}
                 backgroundColor={'#F5F7FB'}
                 marginLeft={10}
-                onPress={() => {}}/>
+                onPress={handleOnPressTomorrow}
+            />
         </View>
-);
+    );
 };
 
 const styles = StyleSheet.create({

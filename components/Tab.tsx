@@ -7,9 +7,10 @@ interface TabProps {
     onPress: () => void; // Обработчик нажатия
     isLast?: boolean; // Последняя ли это вкладка (для стилей)
     showDot?: boolean;
+    color?: string;
 }
 
-const Tab: React.FC<TabProps> = ({ label, isActive, onPress, isLast = false, showDot = false }) => {
+const Tab: React.FC<TabProps> = ({ label, isActive, onPress, isLast = false, showDot = false, color = 'white' }) => {
     return (
         <TouchableOpacity
             style={[
@@ -22,7 +23,7 @@ const Tab: React.FC<TabProps> = ({ label, isActive, onPress, isLast = false, sho
             <Text style={[styles.tabText, isActive && styles.activeTabText]}>
                 {label}
             </Text>
-            {showDot && <View style={styles.dot} />}
+            {showDot && <View style={[styles.dot, { backgroundColor: color }]} />}
         </TouchableOpacity>
     );
 };
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
         height: 7,
         marginLeft: 8,
         borderRadius: 7,
-        backgroundColor: 'red',
+
     },
 });
 

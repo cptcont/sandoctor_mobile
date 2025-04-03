@@ -4,7 +4,9 @@ import { storage } from '@/storage/storage';
 
 // Универсальный тип для ответа API
 type ApiResponse<T> = {
-    data: T[];
+    success: boolean;
+    data?: T[];
+    error?: string;
 };
 
 type ReactNativeFile = {
@@ -20,33 +22,43 @@ const getToken = async (): Promise<string | null> => {
 };
 
 // Универсальная функция для GET запросов
-export const fetchData = async <T,>(
+export const fetchData = async <T>(
     endpoint: string,
     onSuccess?: (data: T[]) => void
 ): Promise<ApiResponse<T>> => {
     try {
         const token = await getToken();
-        if (!token) throw new Error('Токен не найден');
+        if (!token) {
+            return {
+                success: false,
+                error: 'Токен не найден',
+            };
+        }
 
         const response = await fetch(`https://sandoctor.ru/api/v1/${endpoint}`, {
             method: 'GET',
-            headers: { 'Authorization': token },
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json', // Добавлен для явности
+            },
         });
 
-        if (!response.ok) throw new Error('Ошибка при загрузке данных');
-
-        const responseData = await response.json();
-        if (onSuccess) {
-            onSuccess(responseData.responce || []);
+        if (!response.ok) {
+            throw new Error(`Ошибка при загрузке данных: ${response.status}`);
         }
 
-        // Сохраняем данные в кэш
-        //await saveDataToStorage(endpoint, responseData.responce || []);
+        const responseData: T[] = await response.json(); // Предполагаем, что API возвращает массив данных
+
+        // Вызываем callback, если он передан
+        if (onSuccess) {
+            onSuccess(responseData);
+        }
 
         return responseData
+
     } catch (error) {
-        console.error('Ошибка:', error);
-        throw error;
+        console.error('Ошибка в fetchData:', error);
+
     }
 };
 

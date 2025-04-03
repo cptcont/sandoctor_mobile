@@ -7,6 +7,7 @@ export interface Checklist {
     name: string;
     progress: number;
     zones: Zone[];
+    badge: Badge;
 }
 
 export interface Zone {
@@ -48,4 +49,8 @@ export interface Photo {
     name: string;
     thumbUrl: string;
     originalUrl: string;
+}
+
+export interface Badge {
+    color: string;
 }

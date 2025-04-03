@@ -3,41 +3,29 @@ import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useEffect } from 'react';
 import { router } from 'expo-router';
-//import { StatusBar } from 'expo-status-bar';
 import { PopupProvider } from '@/context/PopupContext';
-import { SafeAreaView, Platform, StyleSheet, StatusBar, View } from 'react-native';
+import { Platform, StyleSheet, StatusBar, View } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
 import { ModalProvider, useModal } from '@/context/ModalContext';
 import { CustomModal } from '@/components/CustomModal';
-import { ApiProvider } from "@/context/ApiContext";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import {PostProvider} from "@/context/PostApi";
-import {ChecklistProvider} from "@/context/UpdateServerData";
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 
 
 export default function RootLayout() {
     return (
-
         <AuthProvider>
             <PopupProvider>
                 <ModalProvider>
-                    <ApiProvider>
-                        <PostProvider>
-                            <ChecklistProvider>
-                                <GestureHandlerRootView style={{ flex: 1 }}>
-                                    <KeyboardProvider preserveEdgeToEdge={false}>
-                                        <RootLayoutNav />
-                                    </KeyboardProvider>
-                                </GestureHandlerRootView>
-                            </ChecklistProvider>
-                        </PostProvider>
-                    </ApiProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                        <KeyboardProvider preserveEdgeToEdge={false}>
+                            <RootLayoutNav />
+                        </KeyboardProvider>
+                    </GestureHandlerRootView>
                 </ModalProvider>
             </PopupProvider>
         </AuthProvider>
-
     );
 }
 
@@ -59,12 +47,6 @@ function RootLayoutNav() {
     }, []);
 
     useEffect(() => {
-        if (isAppUsageExpired) {
-            // Показываем сообщение об истечении времени использования
-            alert('Время использования приложения истекло. Пожалуйста, свяжитесь с поддержкой.');
-            return;
-        }
-
         if (isAuthenticated) {
             router.replace('/(tabs)');
         } else {

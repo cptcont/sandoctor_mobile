@@ -1,10 +1,10 @@
-import React, {useState, useEffect, useRef, memo, useMemo} from 'react';
-import { View, ScrollView, StyleSheet, useWindowDimensions, Text} from 'react-native';
+import React, { useState, useEffect, useRef, memo, useMemo, useCallback } from 'react';
+import { View, ScrollView, StyleSheet, useWindowDimensions, Text, Button } from 'react-native';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
 import { router, useLocalSearchParams } from "expo-router";
-import { NavigationState, Route, SceneMap, SceneRendererProps, TabView } from "react-native-tab-view";
+import { NavigationState, SceneMap, SceneRendererProps, TabView } from "react-native-tab-view";
 import Tab from "@/components/Tab";
-import type {Checklist, Zone} from "@/types/Checklist";
+import type { Checklist, Zone } from "@/types/Checklist";
 import Tab1Content from "@/components/Tab1Content";
 import Tab2Content from "@/components/Tab2Content";
 import Tab3Content from "@/components/Tab3Content";
@@ -17,9 +17,9 @@ import {
     postData,
     removeDataFromStorage,
     saveDataToStorage,
-
-} from '@/services/api'
-import type {Task} from "@/types/Task";
+} from '@/services/api';
+import type { Task } from "@/types/Task";
+import { useFocusEffect } from "@react-navigation/native";
 
 interface TabContent {
     key: string;
@@ -27,114 +27,150 @@ interface TabContent {
     content: React.ReactNode;
 }
 
+interface Route {
+    key: string;
+    title?: string;
+    tabColor?: string;
+}
+
 const ChecklistScreen = memo(() => {
-    //const { checklists, fetchData } = useApi();
     const params = useLocalSearchParams();
-    const { id, idTask, idCheckList, typeCheckList, statusVisible } = params;
-    const [checklists, setChecklists] = useState<Checklist[]>(getDataFromStorage('checklists'));
+    const { id, idCheckList, typeCheckList, statusVisible, tabId, tabIdTMC } = params;
+    const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [index, setIndex] = useState(0);
-    console.log('Это checklist');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [routes, setRoutes] = useState<Route[]>([]);
+    const [isFirstTab, setIsFirstTab] = useState(true); // Состояние для первого таба
+    const [isLastTab, setIsLastTab] = useState(false);  // Состояние для последнего таба
 
-    const loadChecklistsTask = async () => {
-        await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists' );
-        await fetchDataSaveStorage<Task>(`task/${idCheckList}`, 'task' );
-    };
+    const loadChecklistsTask = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            await Promise.all([
+                fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists'),
+                fetchDataSaveStorage<Task>(`task/${idCheckList}`, 'task'),
+            ]);
+            const loadedChecklists = getDataFromStorage('checklists') || [];
+            setChecklists(loadedChecklists);
+            console.log("Data loaded, checklists:", loadedChecklists);
+        } catch (err) {
+            console.error('Ошибка при загрузке данных:', err);
+            setError('Не удалось загрузить данные. Попробуйте ещё раз.');
+            const cachedChecklists = getDataFromStorage('checklists') || [];
+            if (cachedChecklists.length > 0) {
+                setChecklists(cachedChecklists);
+                setError('Использованы кэшированные данные из-за ошибки загрузки.');
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [idCheckList]);
 
-    // Устанавливаем начальное значение tabId при монтировании компонента
-    useEffect(
-        () => {
-            const loadChecklist = async () => {
-                if (!checklists) {
-                   // await fetchData<Checklist>(`checklist/${idCheckList}/`, 'checklists'); // Указываем только endpoint
-                   // console.log('ChecklistUseEffect[]',checklists);
-                }
+    const retryLoadData = useCallback(() => {
+        loadChecklistsTask();
+    }, [loadChecklistsTask]);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadChecklistsTask();
+            return () => {
+                // Очистка при необходимости
             };
-            //console.log('ChecklistUseEffect',checklists);
-            loadChecklist();
-        }, [checklists]
+        }, [loadChecklistsTask])
     );
 
     useEffect(() => {
-        //console.log("Hi useEffect checklist New")
-    }, []);
-    const updateCheckList = async () => {
-        await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists' );
-    }
-    if (statusVisible === 'edit') {
-        updateCheckList();
-//        console.log('checklist update');
-    }
-console.log("id",id)
-    const checkList =
-        (checklists || []).filter((checklist: Checklist) => {return checklist.id === id;}).flat()[0];
-    //saveDataToStorage('checklist', checkList.zones);
-//    const itemsTabContent = useMemo(() => {
-//        if (!checkList) return [];/
-//        return checkList.zones.map((zone : Zone) =>
-//            zone
-//        );
-//    }, [checkList]);
+        if (checklists.length > 0 && tabId) {
+            const checkList = checklists.find((c) => c.id === id);
+            if (checkList) {
+                const tabIndex = checkList.zones.findIndex((zone: Zone) => zone.id === tabId);
+                if (tabIndex !== -1) {
+                    setIndex(tabIndex);
+                    setIsFirstTab(tabIndex === 0);
+                    setIsLastTab(tabIndex === checkList.zones.length - 1);
+                }
+            }
+        }
+    }, [tabId, checklists, id]);
 
-//    if (!checklists || !checkList) {
-//        return (
-//            <View>
-//                <Text>Загрузка...</Text>
-//            </View>
-//        );
-//    }
+    const updateCheckList = useCallback(async () => {
+        await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists');
+        setChecklists(getDataFromStorage('checklists') || []);
+    }, [idCheckList]);
 
+    useEffect(() => {
+        if (statusVisible === 'edit') {
+            updateCheckList();
+        }
+    }, [statusVisible, updateCheckList]);
 
-    // Функция для перехода на следующую вкладку
-    const handleNextTab = () => {
+    const checkList = checklists.find((checklist: Checklist) => checklist.id === id);
+
+    const handleNextTab = useCallback(() => {
         if (index < routes.length - 1) {
-            setIndex(index + 1); // Переключаемся на следующую вкладку
+            const newIndex = index + 1;
+            setIndex(newIndex);
+            setIsFirstTab(newIndex === 0);
+            setIsLastTab(newIndex === routes.length - 1);
+            updateCheckList();
         } else {
-            console.log('Это последняя вкладка'); // Действие, если вкладки закончились
+            console.log('Это последняя вкладка');
+            setIsLastTab(true); // Убеждаемся, что состояние обновлено
         }
-    };
+    }, [index, routes, updateCheckList]);
 
-    // Функция для перехода на предыдущую вкладку
-    const handlePreviousTab = async () => {
+    const handlePreviousTab = useCallback(() => {
         if (index > 0) {
-            setIndex(index - 1); // Переключаемся на предыдущую вкладку
-            //await fetchData(`checklist/${idCheckList}/`, 'checklists');
+            const newIndex = index - 1;
+            setIndex(newIndex);
+            setIsFirstTab(newIndex === 0);
+            setIsLastTab(newIndex === routes.length - 1);
+            updateCheckList();
         } else {
-            console.log('Это первая вкладка'); // Действие, если вкладка первая
+            console.log('Это первая вкладка');
+            setIsFirstTab(true); // Убеждаемся, что состояние обновлено
         }
-    };
+    }, [index, routes, updateCheckList]);
 
-    const handleFinish = () => {
-        if (statusVisible ==='edit') {
+    const handleTabChange = useCallback((newIndex: number) => {
+        setIndex(newIndex);
+        setIsFirstTab(newIndex === 0);
+        setIsLastTab(newIndex === routes.length - 1);
+        updateCheckList();
+    }, [updateCheckList, routes.length]);
+
+    const handleFinish = useCallback(() => {
+        if (statusVisible === 'edit') {
             loadChecklistsTask();
             router.push({
                 pathname: '/starttask',
-                params: {
-                    taskId: idTask,
-                }
+                params: { taskId: idCheckList },
             });
         } else {
             router.push({
                 pathname: '/details',
-                params: {
-                    taskId: idTask,
-                }
+                params: { taskId: idCheckList },
             });
         }
-    };
+    }, [statusVisible, idCheckList, loadChecklistsTask]);
 
     const tabsData: TabContent[] = useMemo(() => {
-
-
+        if (!checkList || !checkList.zones || checkList.zones.length === 0) {
+            console.log("No checklist or zones found, returning empty tabsData");
+            return [];
+        }
         return checkList.zones.map((zone: Zone, key: number) => {
             let tabContent = null;
-
-            // Определяем содержимое вкладки в зависимости от typeCheckList и statusVisible
             if (typeCheckList === '1' && statusVisible === 'view') {
                 tabContent = <Tab1Content
                     itemsTabContent={checkList.zones}
                     index={index}
                     onNextTab={handleNextTab}
                     onPreviousTab={handlePreviousTab}
+                    isFirstTab={isFirstTab}
+                    isLastTab={isLastTab}
                 />;
             }
             if (typeCheckList === '2' && statusVisible === 'view') {
@@ -143,6 +179,8 @@ console.log("id",id)
                     index={index}
                     onNextTab={handleNextTab}
                     onPreviousTab={handlePreviousTab}
+                    isFirstTab={isFirstTab}
+                    isLastTab={isLastTab}
                 />;
             }
             if (typeCheckList === '3' && statusVisible === 'view') {
@@ -151,102 +189,97 @@ console.log("id",id)
                     index={index}
                     onNextTab={handleNextTab}
                     onPreviousTab={handlePreviousTab}
+                    isFirstTab={isFirstTab}
+                    isLastTab={isLastTab}
                 />;
             }
-
             if (typeCheckList === '1' && statusVisible === 'edit') {
                 tabContent = (
                     <Tab1ContentEdit
                         id={id}
                         index={index}
-                        idTask={idTask}
+                        idTask={idCheckList}
                         onNextTab={handleNextTab}
                         onPreviousTab={handlePreviousTab}
                         idCheckList={idCheckList}
-
+                        itemsTabContent={checkList.zones}
+                        isFirstTab={isFirstTab}
+                        isLastTab={isLastTab}
                     />
                 );
             }
             if (typeCheckList === '2' && statusVisible === 'edit') {
-                tabContent = (
-                    <Tab2ContentEdit
-                        id={id}
-                        index={index}
-                        idTask={idTask}
-                        onNextTab={handleNextTab}
-                        onPreviousTab={handlePreviousTab}
-                        idCheckList={idCheckList}
-                    />
-                );
+                tabContent = <Tab2ContentEdit
+                    id={id}
+                    index={index}
+                    idTask={idCheckList}
+                    onNextTab={handleNextTab}
+                    onPreviousTab={handlePreviousTab}
+                    idCheckList={idCheckList}
+                    itemsTabContent={checkList.zones}
+                    isFirstTab={isFirstTab}
+                    isLastTab={isLastTab}
+                />;
             }
             if (typeCheckList === '3' && statusVisible === 'edit') {
-                tabContent = (
-                    <Tab3ContentEdit
-                        checklistSort={checkList}
-                        id={id}
-                        index={index}
-                        idTask={idTask}
-                        onNextTab={handleNextTab}
-                        onPreviousTab={handlePreviousTab}
-                        idCheckList={idCheckList} />
-            )
+                tabContent = <Tab3ContentEdit
+                    id={id}
+                    index={index}
+                    idTask={idCheckList}
+                    onNextTab={handleNextTab}
+                    onPreviousTab={handlePreviousTab}
+                    idCheckList={idCheckList}
+                    tabId={tabIdTMC}
+                    itemsTabContent={checkList.zones}
+                    isFirstTab={isFirstTab}
+                    isLastTab={isLastTab}
+                />;
             }
 
-            return {
-                key: `tab${key}`,
-                title: zone.name,
-                content: tabContent,
-            };
+            return { key: `tab${key}`, title: zone.name, content: tabContent, tabColor: zone.badge.color };
         });
-    }, [handleNextTab, handlePreviousTab]);
+    }, [checkList, handleNextTab, handlePreviousTab, id, idCheckList, typeCheckList, statusVisible, tabIdTMC, isFirstTab, isLastTab]);
 
-    const finalTabsData = tabsData.length > 0 ? tabsData : [
-        {
-            key: 'tab0',
-            title: 'Нет данных',
-            content: <View><Text>Нет данных для отображения</Text></View>,
-        },
-    ];
-//    console.log('tabsData', tabsData);
-//    console.log('CheckList.Progress', checkList.progress);
+    const finalTabsData = useMemo(() => {
+        return tabsData.length > 0 ? tabsData : [
+            { key: 'tab0', title: 'Нет данных', content: <View><Text>Нет данных для отображения</Text></View> },
+        ];
+    }, [tabsData]);
 
+    useEffect(() => {
+        const newRoutes = finalTabsData.map(tab => ({
+            key: tab.key,
+            title: tab.title,
+            tabColor: tab.tabColor
+        }));
+        setRoutes(prevRoutes => {
+            if (JSON.stringify(prevRoutes) !== JSON.stringify(newRoutes)) {
+                console.log("Updated routes:", newRoutes);
+                return newRoutes;
+            }
+            return prevRoutes;
+        });
+    }, [finalTabsData]);
 
-
-    const [routes] = useState(
-        finalTabsData.map(tab => ({ key: tab.key, title: tab.title }))
-    );
-//    console.log('checklist', routes);
     const renderScene = SceneMap(
         finalTabsData.reduce((acc, tab) => {
-            acc[tab.key] = () => tab.content; // tab.content — это React.ReactNode
+            acc[tab.key] = () => tab.content;
             return acc;
-        }, {} as { [key: string]: () => React.ReactNode }) // Используем React.ReactNode
+        }, {} as { [key: string]: () => React.ReactNode })
     );
 
     const tabsContainerRef = useRef<View>(null);
-    const [tabsWidth, setTabsWidth] = useState(0); // Ширина контейнера табов
-    const { width: screenWidth } = useWindowDimensions(); // Динамическая ширина экрана
+    const [tabsWidth, setTabsWidth] = useState(0);
+    const { width: screenWidth } = useWindowDimensions();
 
-    const renderTabBar = (
+    const renderTabBar = useCallback((
         props: SceneRendererProps & { navigationState: NavigationState<Route> }
     ) => {
-        const needsEmptyTab = tabsWidth < screenWidth; // Нужен ли пустой таб
-
+        const needsEmptyTab = tabsWidth < screenWidth;
         return (
             <View style={styles.tabBarOuterContainer}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.tabBarContainer}
-                >
-                    <View
-                        ref={tabsContainerRef}
-                        onLayout={(event) => {
-                            const { width } = event.nativeEvent.layout;
-                            setTabsWidth(width); // Обновляем ширину контейнера табов
-                        }}
-                        style={styles.tabsContainer}
-                    >
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabBarContainer}>
+                    <View ref={tabsContainerRef} onLayout={(event) => setTabsWidth(event.nativeEvent.layout.width)} style={styles.tabsContainer}>
                         {props.navigationState.routes.map((route: Route, i: number) => {
                             const isActive = i === props.navigationState.index;
                             return (
@@ -254,48 +287,54 @@ console.log("id",id)
                                     key={route.key}
                                     label={route.title ?? ""}
                                     isActive={isActive}
-                                    onPress={() => setIndex(i)}
+                                    onPress={() => handleTabChange(i)}
                                     isLast={i === props.navigationState.routes.length - 1 && !needsEmptyTab}
                                     showDot={statusVisible === 'edit'}
+                                    color={route.tabColor}
                                 />
                             );
                         })}
                     </View>
-                    {needsEmptyTab && (
-                        <View
-                            style={[
-                                styles.emptyTab,
-                                { width: screenWidth - tabsWidth },
-                            ]}
-                        />
-                    )}
+                    {needsEmptyTab && <View style={[styles.emptyTab, { width: screenWidth - tabsWidth }]} />}
                 </ScrollView>
             </View>
         );
-    };
+    }, [tabsWidth, screenWidth, statusVisible, handleTabChange]);
+
+    if (loading) {
+        return <View style={styles.container}><Text>Загрузка данных...</Text></View>;
+    }
+
+    if (error && checklists.length === 0) {
+        return (
+            <View style={styles.container}>
+                <Text>{error}</Text>
+                <Button title="Повторить загрузку" onPress={retryLoadData} />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
             {statusVisible === 'edit' && (
                 <CustomHeaderScreen
-                    text={`${checkList.name}`}
+                    text={`${checkList?.name || 'Checklist'}`}
                     marginBottom={0}
                     onPress={handleFinish}
-                    progress={checkList.progress}
+                    progress={checkList?.progress}
                     progressVisible={true}
                 />
             )}
             {statusVisible === 'view' && (
-                <CustomHeaderScreen text={`${checkList.name}`} marginBottom={0} onPress={handleFinish} />
+                <CustomHeaderScreen text={`${checkList?.name || 'Checklist'}`} marginBottom={0} onPress={handleFinish} />
             )}
             <TabView
                 navigationState={{ index, routes }}
                 renderScene={renderScene}
-                onIndexChange={setIndex}
+                onIndexChange={handleTabChange}
                 initialLayout={{ width: screenWidth }}
                 renderTabBar={renderTabBar}
             />
-
         </View>
     );
 });
@@ -309,14 +348,14 @@ const styles = StyleSheet.create({
         marginBottom: 13,
     },
     title: {
-        fontSize:12,
+        fontSize: 12,
         fontWeight: 'bold',
     },
     tabBarOuterContainer: {
-        height: 30, // Фиксированная высота для контейнера табов
+        height: 30,
     },
     tabBarContainer: {
-        flexDirection: 'row', // Располагаем табы в строку
+        flexDirection: 'row',
         backgroundColor: '#fff',
     },
     tabsContainer: {
@@ -354,7 +393,7 @@ const styles = StyleSheet.create({
     },
     imageMargin: {
         marginRight: 14,
-        marginBottom: 14, // marginRight для всех, кроме последнего
+        marginBottom: 14,
     },
     emptyTab: {
         height: 30,

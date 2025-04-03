@@ -1,26 +1,35 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-type ActorsCardProps = {
-    name_1: string;
-    name_2?: string;
-}
+type Executor = {
+    user: string;
+    id: string;
+    user_id: string;
+};
 
-const ActorsCard = ({ name_1, name_2 } : ActorsCardProps) => {
+type ActorsCardProps = {
+    executors: Executor[];
+};
+
+const ActorsCard = ({ executors }: ActorsCardProps) => {
     return (
         <View style={styles.card}>
             <Text style={styles.title}>{'Исполнители'}</Text>
             <View style={styles.container}>
-                <View style={{width: '50%'}}>
-                    <Text style={styles.name}>{name_1}</Text>
-                </View>
-                <View style={{width: '50%'}}>
-                    <Text style={styles.tel}>{name_2}</Text>
-                </View>
+                {executors.map((executor, index) => (
+                    <View
+                        key={`executor-${executor.id}`}
+                        style={[
+                            styles.executorContainer,
+                            index % 2 === 0 ? styles.leftColumn : styles.rightColumn
+                        ]}
+                    >
+                        <Text style={styles.name}>{executor.user}</Text>
+                    </View>
+                ))}
             </View>
-
         </View>
-    )
+    );
 };
 
 const styles = StyleSheet.create({
@@ -40,9 +49,22 @@ const styles = StyleSheet.create({
     },
     container: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         paddingHorizontal: 13,
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between',
+    },
+    executorContainer: {
         marginBottom: 15,
+    },
+    leftColumn: {
+        width: '50%',
+        paddingRight: 5,
+        justifyContent: 'flex-start',
+    },
+    rightColumn: {
+        width: '50%',
+        paddingLeft: 5,
+        justifyContent: 'flex-start',
     },
     name: {
         fontSize: 12,
@@ -50,19 +72,6 @@ const styles = StyleSheet.create({
         color: '#1C1F37',
         marginBottom: 5,
     },
-    post: {
-        fontSize: 12,
-        fontWeight: 'medium',
-        color: '#939393',
-
-    },
-    tel: {
-        fontSize: 12,
-        fontWeight: 'medium',
-        color: '#000',
-        marginBottom: 5,
-    },
-
 });
 
 export default ActorsCard;

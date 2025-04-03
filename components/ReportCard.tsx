@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ImageSourcePropType } from 'react-native';
+import type { Photo } from '@/types/Checklist';
 
 interface ReportCardProps {
-    image: string[]; // Новый тип для изображений
+    image: Photo[]; // Новый тип для изображений
     workingTime: string;
     time: string;
     executorComment: string;

@@ -13,13 +13,24 @@ import {
 } from 'date-fns';
 import { ru } from 'date-fns/locale'; // Русская локализация
 
+interface Task {
+    date_begin_work?: string;
+    color?: string;
+    point?: string;
+    time_begin_work?: string;
+    time_end_work?: string;
+    adress?: string;
+}
+
 interface DaysCarouselProps {
     month?: number; // Месяц (1-12)
     year?: number; // Год (например, 2023)
     day?: number; // День (1-31)
+    tasks?: Task[]; // Список задач для отображения точек
+    onDaySelect?: (day: number) => void; // Коллбэк для выбора дня
 }
 
-const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
+const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day, tasks = [], onDaySelect }) => {
     // Устанавливаем текущую дату по умолчанию, если входные данные не предоставлены
     const currentDate = new Date();
     const initialDate = new Date(
@@ -65,6 +76,9 @@ const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
         setSelectedDate(date);
         const offset = index * dayWidth - screenWidth / 2 + dayWidth / 2; // Центрируем выбранный день
         scrollViewRef.current?.scrollTo({ x: offset, animated: true });
+        if (onDaySelect) {
+            onDaySelect(getDate(date)); // Передаем выбранный день через коллбэк
+        }
     };
 
     // Получаем дни недели для указанного месяца
@@ -81,6 +95,21 @@ const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
         }
     }, [selectedDate]); // Зависимость от selectedDate
 
+    // Функция для получения точек под датой
+    const getCirclesForDate = (date: Date) => {
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        const circles = tasks
+            .filter((task) => task.date_begin_work === formattedDate)
+            .slice(0, 3) // Ограничиваем до 3 точек
+            .map((task, index) => (
+                <View
+                    key={index}
+                    style={[styles.circle, { backgroundColor: task.color }]}
+                />
+            ));
+        return circles;
+    };
+
     return (
         <View style={styles.container}>
             <ScrollView
@@ -91,42 +120,47 @@ const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
                 snapToInterval={dayWidth} // Шаг прокрутки
                 decelerationRate="fast"
             >
-                {paddedDays.map((date, index) => (
-                    <TouchableOpacity
-                        key={index}
-                        style={[
-                            styles.dayContainer,
-                            {
-                                width: dayWidth,
-                            },
-                            date && isSameDay(date, selectedDate) && styles.selectedDayContainer, // Стиль для выделенного элемента
-                        ]}
-                        onPress={() => handleDayPress(date, index)}
-                    >
-                        {date ? (
-                            <>
-                                <Text
-                                    style={[
-                                        styles.dayText,
-                                        isSameDay(date, selectedDate) && styles.selectedDayText,
-                                    ]}
-                                >
-                                    {format(date, 'd')}
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.weekDayText,
-                                        isSameDay(date, selectedDate) && styles.selectedWeekDayText,
-                                    ]}
-                                >
-                                    {weekDays[getDay(date)]}
-                                </Text>
-                            </>
-                        ) : (
-                            <Text style={styles.dayText}></Text> // Пустой текст для пустых элементов
-                        )}
-                    </TouchableOpacity>
-                ))}
+                {paddedDays.map((date, index) => {
+                    const circles = date ? getCirclesForDate(date) : null;
+
+                    return (
+                        <TouchableOpacity
+                            key={index}
+                            style={[
+                                styles.dayContainer,
+                                {
+                                    width: dayWidth,
+                                },
+                                date && isSameDay(date, selectedDate) && styles.selectedDayContainer, // Стиль для выделенного элемента
+                            ]}
+                            onPress={() => handleDayPress(date, index)}
+                        >
+                            {date ? (
+                                <View style={styles.dayContent}>
+                                    <Text
+                                        style={[
+                                            styles.dayText,
+                                            isSameDay(date, selectedDate) && styles.selectedDayText,
+                                        ]}
+                                    >
+                                        {format(date, 'd')}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.weekDayText,
+                                            isSameDay(date, selectedDate) && styles.selectedWeekDayText,
+                                        ]}
+                                    >
+                                        {weekDays[getDay(date)]}
+                                    </Text>
+                                    {circles && <View style={styles.circlesContainer}>{circles}</View>}
+                                </View>
+                            ) : (
+                                <Text style={styles.dayText}></Text> // Пустой текст для пустых элементов
+                            )}
+                        </TouchableOpacity>
+                    );
+                })}
             </ScrollView>
         </View>
     );
@@ -134,20 +168,26 @@ const DaysCarousel: React.FC<DaysCarouselProps> = ({ month, year, day }) => {
 
 const styles = StyleSheet.create({
     container: {
-        height: 64, // Увеличиваем высоту компонента для отображения дней недели
+        height: 70, // Увеличиваем высоту для размещения точек
         justifyContent: 'center',
         alignItems: 'center',
     },
     scrollViewContent: {
         alignItems: 'center',
-        height: 63, // Увеличиваем высоту контента ScrollView
+        height: 70, // Увеличиваем высоту контента ScrollView
         paddingHorizontal: 0, // Убираем горизонтальные отступы
     },
     dayContainer: {
-        justifyContent: 'center',
+        paddingTop: 5,
+        justifyContent: 'flex-start',
         alignItems: 'center',
-        height: 70, // Высота каждого элемента дня
+        height: 70, // Увеличиваем высоту каждого элемента дня
         width: Dimensions.get('window').width / 7, // Ширина дня равна 1/7 экрана
+    },
+    dayContent: {
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     dayText: {
         fontSize: 18,
@@ -161,7 +201,7 @@ const styles = StyleSheet.create({
     },
     selectedDayContainer: {
         width: 53,
-        height: 53,
+        height: 70,
         backgroundColor: '#F0F5FF',
         borderRadius: 16,
         paddingHorizontal: 10,
@@ -172,6 +212,18 @@ const styles = StyleSheet.create({
     },
     selectedWeekDayText: {
         color: '#1541C7',
+    },
+    circlesContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        position: 'absolute',
+        bottom: -10, // Располагаем точки ниже текста
+    },
+    circle: {
+        width: 7,
+        height: 7,
+        borderRadius: 3.5,
+        marginHorizontal: 1,
     },
 });
 

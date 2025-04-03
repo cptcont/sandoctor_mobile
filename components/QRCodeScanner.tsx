@@ -66,13 +66,15 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
+        zIndex: 1,
     },
     message: {
         textAlign: 'center',
         paddingBottom: 10,
     },
     camera: {
-        flex: 1,
+        width: '100%', // Явно задаем ширину
+        height: '100%', // Явно задаем высоту
     },
     overlay: {
         position: 'absolute',

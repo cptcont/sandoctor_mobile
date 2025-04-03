@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import {View, ScrollView, StyleSheet, useWindowDimensions, Text} from 'react-native';
+import {View, ScrollView, StyleSheet, useWindowDimensions,} from 'react-native';
 import { TabView, SceneMap, NavigationState, SceneRendererProps, Route } from 'react-native-tab-view';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
 import ArrivalCard from "@/components/ArrivalCard";
@@ -12,7 +12,6 @@ import TaskCard from "@/components/TaskCard";
 import ReportCard from "@/components/ReportCard";
 import { router, useLocalSearchParams } from "expo-router";
 import Tab from "@/components/Tab";
-import { useApi } from '@/context/ApiContext';
 import type { Checklist } from '@/types/Checklist';
 import type { Task } from '@/types/Task';
 import { useFocusEffect } from '@react-navigation/native';
@@ -23,15 +22,11 @@ import {
     fetchDataSaveStorage,
     getDataFromStorage,
     postData,
-    removeDataFromStorage,
-    saveDataToStorage,
-
 } from '@/services/api'
 
 
 const DetailsScreen = () => {
     const params = useLocalSearchParams();
-    //const [taskId, setTaskId] = useState('');
     const taskId = params.taskId as string;
     const [index, setIndex] = useState(0);
     const [routes] = useState([
@@ -57,9 +52,6 @@ const DetailsScreen = () => {
         console.log('detail taskId', taskId);
         await fetchDataSaveStorage<Checklist>(`checklist/${taskId}`, 'checklists' );
         await fetchDataSaveStorage<Task>(`task/${taskId}`, 'task' );
-        //setTask(getDataFromStorage("task"));
-        //setChecklists(getDataFromStorage("checklists"));
-        //console.log('запрос checklist отправлен');
     };
 
     const changeCondition = async () => {
@@ -70,43 +62,22 @@ const DetailsScreen = () => {
 
     useFocusEffect(
         useCallback (() => {
-            //loadChecklistsTask();
-            //taskId = params.taskId as string;
             setTask(getDataFromStorage("task"));
             setChecklists(getDataFromStorage("checklists"));
-            //changeCondition()
-            //removeDataFromStorage("tasks");
-            //removeDataFromStorage("checklists");
-            //    saveDataToStorage('tasks', task);
-    //        return () => {
+            setIndex(0)
+            return () => {
                 // Опционально: выполнить очистку, если необходимо
-    //        };
+            };
         }, [])
     );
    //console.log("DetailsScreen.checklist", checklists);
     useEffect(() => {
-        //taskId = params.taskId as string;
-        //loadChecklistsTask();
         setTask(getDataFromStorage("task"));
         setChecklists(getDataFromStorage("checklists"));
-        //saveDataToStorage('checklists', checklists);
-
-        //saveDataToStorage('task', task);
-        //setTask(getDataFromStorage("task"));
-        //setChecklists(getDataFromStorage("checklists"));
-    //    console.log("YES")
-
     }, []);
-    //console.log("DetailsScreenStorage.task", task);
-    //console.log("DetailsScreenStorage.checklists", checklists);
-    useEffect(() => {
-
-    }, [task, checklists]);
 
     // Используем useEffect для обновления состояния statusEnabled
     useEffect(() => {
-
-
         if (task.condition.id === '3' || task.condition.id === '4') {
             setStatusEnabledCancel(false);
             setStatusEnabledStart(false);
@@ -125,20 +96,16 @@ const DetailsScreen = () => {
 
     }, [task]); // Зависимость от task
 
+//    console.log('detail index', index);
+
     const handleSubmit = async (type: string, conditionId: number, cancelReason: number, cancelComment: string) => {
-
         if (type === 'cancel') {
-
-
-            const response = await postData(`task/${taskId}/`, {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment} );
-           //updateDataFromStorage("task", {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment});
-           //console.log('response:', response.data);
+           const response = await postData(`task/${taskId}/`, {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment} );
            router.push('/');
         }
         if (type === 'start') {
             console.log('detail taskId start', taskId);
             const response = await postData(`task/${taskId}/`, {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment} );
-            //updateDataFromStorage("task", {condition_id: conditionId , cancel_reason: cancelReason, cancel_comment: cancelComment});
             console.log('response:', response.data);
             router.push({
                 pathname:'/starttask',
@@ -158,10 +125,11 @@ const DetailsScreen = () => {
             pathname: '/checklist',
             params: {
                 id: `${idCheckList}`,
-                idTask: `${taskId}`,
-                idCheckList: idCheckList,
+                idCheckList: `${taskId}`,
                 typeCheckList: typeCheckList,
-                statusVisible: 'view'
+                statusVisible: 'view',
+                tabId: '',
+                tabIdTMC: '',
             },
         });
     };
@@ -190,15 +158,18 @@ const DetailsScreen = () => {
                             destination={`${task.point}`}
                             address={`${task.adress}`}
                             route={`${task.comment}`}
-                            arrivalDate={`${task.date_begin_work.split('-').reverse().join('.')}`}
+                            arrivalDate={`${task.date_begin_work.split(' ')[0] // "2025-02-07"
+                                .split('-') // ["2025", "02", "07"]
+                                .reverse() // ["07", "02", "2025"]
+                                .join('.')}`}
                             arrivalTime={`с ${task.time_work} до ${task.time_end_work}`}
                         />
                     </View>
                     <View style={{ marginBottom: 15 }}>
-                        <ContactCard name={`${task.contacts[0].fio}`} post={`${task.contacts[0].position}`} tel1={`${task.contacts[0].phone_1}`} />
+                        <ContactCard contacts={task.contacts}/>
                     </View>
                     <View>
-                        <ActorsCard name_1={`${task.executors[0].user}`} />
+                        <ActorsCard executors={task.executors} />
                     </View>
                     {task.condition.id === '1' && (<View style={{flexDirection: 'row', justifyContent: 'center'}}>
                         <View style={{marginRight: 13}}>
@@ -257,7 +228,7 @@ const DetailsScreen = () => {
                                 onPress={() => handleTaskOnPress(data.id, data.type)}
                                 title={data.name}
                                 idStatus={0}
-                                bgColor={'red'}
+                                bgColor={data.badge.color}
                             />
                         </View>
                         )

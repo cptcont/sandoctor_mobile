@@ -7,29 +7,37 @@ interface CardProps {
     address?: string;
     objectName?: string;
     colorStyle: string;
-    time: string;
+    time?: string;
     onPress?: () => void;
+    noTasks?: boolean;
 }
 
-const Card: React.FC<CardProps> = ({ title, colorStyle, address = '', objectName = '', time, onPress }) => {
-
+const Card: React.FC<CardProps> = ({ title, colorStyle, address = '', objectName = '', time, onPress, noTasks }) => {
     return (
         <TouchableOpacity onPress={onPress} style={[styles.card, { borderColor: colorStyle }]}>
-            <View style={styles.cardHeader}>
-                <Text style={[styles.text, { color: colorStyle }]}>{title}</Text>
-                <Text style={[styles.time, { color: colorStyle }]}>{time}</Text>
-            </View>
+            {noTasks ? (
+                <View style={styles.noTasksContainer}>
+                    <Text style={styles.noTasksText}>Заданий нет</Text>
+                </View>
+            ) : (
+                <>
+                    <View style={styles.cardHeader}>
+                        <Text style={[styles.text, { color: colorStyle }]}>{title}</Text>
+                        <Text style={[styles.time, { color: colorStyle }]}>{time}</Text>
+                    </View>
 
-            {/* Условный рендеринг для адреса */}
-            {address !== '' && (
-                <View style={styles.addressContainer}>
-                    <Text style={styles.address}>{address}</Text>
-                </View>
-            )}
-            {objectName !== '' && (
-                <View style={styles.addressContainer}>
-                    <Text style={styles.address}>{objectName}</Text>
-                </View>
+                    {/* Условный рендеринг для адреса */}
+                    {address !== '' && (
+                        <View style={styles.addressContainer}>
+                            <Text style={styles.address}>{address}</Text>
+                        </View>
+                    )}
+                    {objectName !== '' && (
+                        <View style={styles.addressContainer}>
+                            <Text style={styles.address}>{objectName}</Text>
+                        </View>
+                    )}
+                </>
             )}
         </TouchableOpacity>
     );
@@ -44,10 +52,10 @@ const styles = StyleSheet.create({
         marginVertical: 10,
     },
     cardHeader: {
-        flexDirection: 'row', // Размещаем title и time в одну строку
+        flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center', // Выравниваем по центру по вертикали
-        marginBottom: 10, // Отступ сверху для адреса
+        alignItems: 'center',
+        marginBottom: 10,
     },
     text: {
         width: '50%',
@@ -57,15 +65,25 @@ const styles = StyleSheet.create({
     time: {
         fontSize: 16,
         fontWeight: 'bold',
-        flexShrink: 0, // Запрещаем сжимание времени
+        flexShrink: 0,
     },
     addressContainer: {
-        width: 223, // Ограничение ширины контейнера
-
+        width: 223,
     },
     address: {
-        fontSize: 10, // Размер шрифта 10
-        color: '#000', // Черный цвет для адреса
+        fontSize: 10,
+        color: '#000',
+    },
+    noTasksContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: 50, // Минимальная высота для карточки
+    },
+    noTasksText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
     },
 });
 

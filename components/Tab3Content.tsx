@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import {View, Text, StyleSheet, ScrollView} from 'react-native';
-import Dropdown from '@/components/Dropdown';
-import CustomTable from '@/components/CustomTable';
-import CustomTableB from '@/components/CustomTableB';
-import {Option, Pest, Point, TMCField, Zone} from "@/types/Checklist";
-import {TextButton} from "@/components/TextButton";
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Dropdown } from 'react-native-element-dropdown';
+import { Option, Pest, Point, TMCField, Zone } from "@/types/Checklist";
+import { TextButton } from "@/components/TextButton";
 import Footer from "@/components/Footer";
-import {fetchDataSaveStorage, getDataFromStorage} from "@/services/api";
+import { TransferField } from "@/types/Field";
 
 type Tab3ContentType = {
     index: number;
     itemsTabContent?: Zone[];
     onNextTab?: () => void;
     onPreviousTab?: () => void;
+    isFirstTab?: boolean;
+    isLastTab?: boolean;
 };
 
 interface FilterData {
@@ -28,125 +28,262 @@ const Tab3Content = ({
                          index,
                          onNextTab,
                          onPreviousTab,
-}: Tab3ContentType) => {
-    const [filterData, setFilterData] = useState<FilterData | undefined>();
+                         isFirstTab = true,
+                         isLastTab = false,
+                     }: Tab3ContentType) => {
+    const [field, setField] = useState<TransferField[]>([]);
     const [tabIndex, setTabIndex] = useState('tab0');
-    const [tmcData, setTmcData] = useState<Map<string, string>>();
+    const [tmcValues, setTmcValues] = useState<Record<string, { n: string; u: string; v: string }>>({});
+    const [pestValues, setPestValues] = useState<Record<string, string>>({});
+
     const items: { label: string; value: string }[] = itemsTabContent[index].control_points.map((data: Point, index: number) =>
         ({ label: data.name.toString(), value: `tab${index}` })
     );
 
+    const transformObjectToArrayTMC = (originalObject: any) => {
+        const { name, fields } = originalObject;
+        const fieldName = fields.p.name;
+        const baseName = fieldName.replace(/\[[^\]]+\]$/, "");
+        return [{
+            name: baseName,
+            label: name,
+            type: 'tmc',
+            value: fields,
+        }];
+    };
+
+    const transformObjectToArrayPests = (originalObject: any) => {
+        const { name, field } = originalObject;
+        return [{
+            type: "pest",
+            name: field.name,
+            value: field.value,
+            label: name,
+        }];
+    };
+
     useEffect(() => {
-        const fields = itemsTabContent[index]?.control_points[0]?.fields || [];
-        const TMC = itemsTabContent[index]?.control_points[0]?.tmc || [];
-        const pests = itemsTabContent[index]?.control_points[0]?.pests || [];
+        const updateFields = () => {
+            const match = tabIndex.match(/\d+$/);
+            const num = match ? Number(match[0]) : 0;
 
-        const fieldsTMC = { tmc: Array.isArray(TMC) ? TMC.flat() : [] };
-        const fieldsPests = { pests: Array.isArray(pests) ? pests.flat() : [] };
-        const fieldItem = { fields: Array.isArray(fields) ? fields : [] };
+            const fields = itemsTabContent[index]?.control_points[num]?.fields;
+            const TMC = itemsTabContent[index]?.control_points[num]?.tmc;
+            const pests = itemsTabContent[index]?.control_points[num]?.pests;
 
-        const combinedArray = [fieldItem, fieldsTMC, fieldsPests];
-        console.log('combinedArray', combinedArray);
-        console.log('filteredData', filteredData(combinedArray));
-        setFilterData(filteredData(combinedArray))
+            const fieldsTMC = Array.isArray(TMC) ? TMC.map((data: any) => transformObjectToArrayTMC(data)).flat() : [];
+            const fieldsPests = Array.isArray(pests) ? pests.map((data: any) => transformObjectToArrayPests(data)).flat() : [];
+            const fieldItem = Array.isArray(fields) ? fields.map((field: any) => field) : [];
+            const combinedArray = [...fieldItem, ...fieldsTMC, ...fieldsPests];
+            const transformedField = transformData(combinedArray);
 
-    }, []);
+            const initialTmcValues: Record<string, { n: string; u: string; v: string }> = {};
+            const initialPestValues: Record<string, string> = {};
 
-    useEffect(() => {
-        const match = tabIndex.match(/\d+$/);
-        const num = match ? Number(match[0]) : 0;
+            if (Array.isArray(transformedField)) {
+                transformedField.forEach(item => {
+                    if (item?.tmc) {
+                        initialTmcValues[item.tmc.name] = {
+                            n: item.tmc.value.n.value,
+                            u: item.tmc.value.u.value,
+                            v: item.tmc.value.v.value,
+                        };
+                    }
+                    if (item?.pest) {
+                        initialPestValues[item.pest.name] = item.pest.value;
+                    }
+                });
+            }
 
-        const fields = itemsTabContent[index]?.control_points[num]?.fields || [];
-        const TMC = itemsTabContent[index]?.control_points[num]?.tmc || [];
-        const pests = itemsTabContent[index]?.control_points[num]?.pests || [];
+            setTmcValues(initialTmcValues);
+            setPestValues(initialPestValues);
+            setField(transformedField);
+        };
 
-        const fieldsTMC = { tmc: Array.isArray(TMC) ? TMC.flat() : [] };
-        const fieldsPests = { pests: Array.isArray(pests) ? pests.flat() : [] };
-        const fieldItem = { fields: Array.isArray(fields) ? fields : [] };
+        updateFields();
+    }, [tabIndex, index, itemsTabContent]);
 
-        const combinedArray = [fieldItem, fieldsTMC, fieldsPests];
-        console.log('combinedArray', combinedArray);
-        console.log('filteredData', filteredData(combinedArray));
-        setFilterData(filteredData(combinedArray))
+    const transformData = (data: TransferField[]) => data.map(data => {
+        if (data.type === "radio") {
+            return {
+                radio: {
+                    label: data.label,
+                    name: data.name,
+                    options: data.options.map(option => ({
+                        text: option.text,
+                        value: option.value,
+                        color: option.color,
+                        bgcolor: option.bgcolor,
+                        selected: option.selected,
+                    })),
+                }
+            };
+        }
+        if (data.type === "text") {
+            return { text: { label: data.label, value: data.value, name: data.name } };
+        }
+        if (data.type === "foto") {
+            return { foto: { value: data.value, name: data.name } };
+        }
+        if (data.type === "checkbox") {
+            return { checkbox: { label: data.label, checked: data.checked, name: data.name } };
+        }
+        if (data.type === "select") {
+            return { select: { label: data.label, options: data.options, name: data.name } };
+        }
+        if (data.type === "tmc") {
+            return { tmc: { label: data.label, name: data.name, value: data.value } };
+        }
+        if (data.type === "pest") {
+            return { pest: { label: data.label, name: data.name, value: data.value } };
+        }
+    });
 
-    }, [tabIndex]);
+    const transferDataVisible = (data = [{}]) => {
+        if (!data || typeof data !== 'object' || !Array.isArray(data) || data.length === 0) {
+            data = [{}];
+        }
 
-    const filteredData = (data) => {
-        let accessOptions = {};
-        let pointStatus = {};
-        let mountCondition = {};
-        let tmcData = [];
-        let pestsData = [];
+        let isHeaderVisibleTmc = false;
+        let isHeaderVisiblePest = false;
 
+        let isNoSelected = false;
         data.forEach(item => {
-            if (item.fields) {
-                item.fields.forEach(fieldItem => {
-                    if (fieldItem.type === "radio") {
-                        const selectedOption = fieldItem.options.find(option => option.selected);
-                        if (selectedOption) {
-                            accessOptions = {
-                                label: fieldItem.label,
-                                value: selectedOption.value,
-                                color: selectedOption.color
-                            };
-                        } else {
-                            accessOptions = {
-                                value: "-",
-                                color: "#000000"
-                            };
-                        }
-                    }
-                    if (fieldItem.type === "select" && fieldItem.id === "point_status") {
-                        const selectedOption = Object.values(fieldItem.options).find(option => option.selected);
-                        if (selectedOption) {
-                            pointStatus = {
-                                label: fieldItem.label,
-                                value: selectedOption.value,
-                                color: selectedOption.color
-                            };
-                        }
-                    }
-                    if (fieldItem.type === "select" && fieldItem.id === "mount_condition") {
-                        const selectedOption = Object.values(fieldItem.options).find(option => option.selected);
-                        if (selectedOption) {
-                            mountCondition = {
-                                label: fieldItem.label,
-                                value: selectedOption.value,
-                                color: selectedOption.color
-                            };
-                        }
-                    }
-                });
-            }
-            if (item.tmc) {
-                tmcData = item.tmc.map(tmcItem => {
-                    return { name: tmcItem.name, value: tmcItem.value };
-                });
-            }
-            if (item.pests) {
-                pestsData = item.pests.map(pestItem => {
-                    return { name: pestItem.name, value: pestItem.field.value };
-                });
+            if (item.radio) {
+                isNoSelected = item.radio.options.some(option => option.value === "0" && option.selected);
             }
         });
 
-        return {
-            access: accessOptions,
-            point_status: pointStatus,
-            mount_condition: mountCondition,
-            tmc: tmcData,
-            pests: pestsData,
-        };
+        return data.map((item, index) => {
+            if (!item || typeof item !== 'object' || Object.keys(item).length === 0) {
+                return null;
+            }
+
+            const type = Object.keys(item)[0];
+            const componentData = item[type];
+
+            if (!componentData) {
+                return null;
+            }
+
+            if (type !== 'radio' && isNoSelected) {
+                return null;
+            }
+
+            switch (type) {
+                case 'radio':
+                    return (
+                        <View key={`radio-${index}`} style={[styles.text, { marginBottom: 17 }]}>
+                            <Text style={[styles.title, { color: '#1C1F37' }]}>{`${componentData.label}`}</Text>
+                            {componentData.options.map((option, optionIndex) => {
+                                if (option.selected) {
+                                    return (
+                                        <Text key={`option-${optionIndex}`} style={[styles.title, { color: option.color }]}>
+                                            {option.text}
+                                        </Text>
+                                    );
+                                }
+                                return null;
+                            })}
+                        </View>
+                    );
+                case 'text':
+                    return (
+                        <View key={`text-${index}`} style={[styles.text, { marginBottom: 17 }]}>
+                            <Text style={[styles.title, { color: '#1C1F37' }]}>{`${componentData.label}`}</Text>
+                            <Text style={[styles.title, { color: '#939393' }]}>{`${componentData.value}`}</Text>
+                        </View>
+                    );
+                case 'foto':
+                    return <View key={`foto-${index}`} />;
+                case 'checkbox':
+                    return <View key={`checkbox-${index}`} />;
+                case 'select':
+                    const dropdownItems = Object.entries(componentData.options || {}).map(([key, opt]: [string, any]) => ({
+                        label: opt.value,
+                        value: key,
+                    }));
+                    const defaultValue = Object.entries(componentData.options || {}).find(([key, opt]: [string, any]) => opt.selected)?.[0] || null;
+
+                    return (
+                        <View key={`select-${index}`} style={[styles.text, { marginBottom: 17 }]}>
+                            <Text style={[styles.title, { color: '#1C1F37' }]}>{`${componentData.label}`}</Text>
+                            <Dropdown
+                                style={styles.dropdown}
+                                data={dropdownItems}
+                                labelField="label"
+                                valueField="value"
+                                value={defaultValue}
+                                placeholder="Выберите значение"
+                                placeholderStyle={{ color: '#000000', fontSize: 12 }}
+                                selectedTextStyle={{ color: '#000000', fontSize: 12 }}
+                                itemTextStyle={{ fontSize: 14 }}
+                                disable={true} // Отключаем взаимодействие
+                            />
+                        </View>
+                    );
+                case 'tmc':
+                    return (
+                        <>
+                            {!isHeaderVisibleTmc && (
+                                <>
+                                    <Text style={styles.tmcTitle}>{'Наличие препаратов в ТК'}</Text>
+                                    <View style={styles.tmcHeaderContainer}>
+                                        <Text style={styles.tmcHeaderText}>{'Наименование'}</Text>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                            <Text style={styles.tmcHeaderText}>{'В наличии'}</Text>
+                                            <Text style={styles.tmcHeaderText}>{'Утилизировано'}</Text>
+                                            <Text style={styles.tmcHeaderText}>{'Внесено'}</Text>
+                                        </View>
+                                    </View>
+                                </>
+                            )}
+                            {!isHeaderVisibleTmc && (isHeaderVisibleTmc = true)}
+                            <View key={`tmc-${index}`} style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
+                                <Text style={[styles.tmcText, { width: '50%' }]}>{`${componentData.label}`}</Text>
+                                <View style={{ width: '44%', flexDirection: 'row', justifyContent: 'space-between', marginRight: 12 }}>
+                                    <Text style={styles.tmcTextInput}>{tmcValues[componentData.name]?.n || ''}</Text>
+                                    <Text style={styles.tmcTextInput}>{tmcValues[componentData.name]?.u || ''}</Text>
+                                    <Text style={styles.tmcTextInput}>{tmcValues[componentData.name]?.v || ''}</Text>
+                                </View>
+                            </View>
+                        </>
+                    );
+                case 'pest':
+                    return (
+                        <>
+                            {!isHeaderVisiblePest && (
+                                <>
+                                    <Text style={styles.tmcTitle}>{'Вредители'}</Text>
+                                    <View style={styles.tmcHeaderContainer}>
+                                        <Text style={styles.tmcHeaderText}>{'Наименование'}</Text>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                            <Text style={styles.tmcHeaderText}>{'Обнаружено'}</Text>
+                                        </View>
+                                    </View>
+                                </>
+                            )}
+                            {!isHeaderVisiblePest && (isHeaderVisiblePest = true)}
+                            <View key={`pest-${index}`} style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
+                                <Text style={[styles.tmcText, { width: '50%' }]}>{`${componentData.label}`}</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginRight: 20 }}>
+                                    <Text style={styles.tmcTextInput}>{pestValues[componentData.name] || ''}</Text>
+                                </View>
+                            </View>
+                        </>
+                    );
+                default:
+                    return null;
+            }
+        });
     };
 
     const handleSelect = (value: string | null) => {
         if (value !== null) {
-            const match = value.match(/\d+$/);
-            const num = match ? Number(match[0]) : 0;
-            setTabIndex(value)
-
+            setTabIndex(value);
         }
     };
+
     const handleNext = async () => {
         const match = tabIndex.match(/\d+$/);
         const currentIndex = match ? Number(match[0]) : 0;
@@ -155,7 +292,7 @@ const Tab3Content = ({
             const nextIndex = `tab${currentIndex + 1}`;
             setTabIndex(nextIndex);
             handleSelect(nextIndex);
-        } else {
+        } else if (!isLastTab) {
             onNextTab?.();
         }
     };
@@ -168,53 +305,32 @@ const Tab3Content = ({
             const prevIndex = `tab${currentIndex - 1}`;
             setTabIndex(prevIndex);
             handleSelect(prevIndex);
-        } else {
+        } else if (!isFirstTab) {
             onPreviousTab?.();
         }
     };
-    // Инициализация filterData при первой загрузке
-    //useEffect(() => {
-    //    if (itemsTabContent[index].control_points.length > 0) {
-    //        handleSelect('tab0'); // Устанавливаем начальное значение
-    //    }
-    //}, [itemsTabContent, index]); // Зависимости для useEffect
-    console.log('Filter Data:', filterData);
 
     return (
-
         <View style={styles.tab3Container}>
             <View style={styles.text}>
                 <Text style={styles.title}>{'Точка контроля'}</Text>
             </View>
             <View style={{ marginBottom: 23 }}>
                 <Dropdown
-                    key={tabIndex}
-                    items={items}
-                    defaultValue={tabIndex}
-                    onSelect={handleSelect} />
+                    style={styles.dropdown}
+                    data={items}
+                    labelField="label"
+                    valueField="value"
+                    value={tabIndex}
+                    onChange={(item) => handleSelect(item.value)}
+                    placeholder="Выберите параметр"
+                    placeholderStyle={{ color: '#000000', fontSize: 12 }}
+                    selectedTextStyle={{ color: '#000000', fontSize: 12 }}
+                    itemTextStyle={{ fontSize: 14 }}
+                />
             </View>
             <ScrollView nestedScrollEnabled={true} keyboardShouldPersistTaps="handled">
-            <View style={[styles.text, { marginBottom: 17 }]}>
-                <Text style={[styles.title, { marginBottom: 5 }]}>{'Доступ'}</Text>
-                <Text style={[styles.title, { color: filterData?.access.color }]}>{filterData?.access.value}</Text>
-            </View>
-            <View style={[styles.text, { marginBottom: 13 }]}>
-                <Text style={[styles.title, { marginBottom: 5 }]}>{'Состояние'}</Text>
-                <Text style={[styles.title, { color: filterData?.point_status.color }]}>{filterData?.point_status.value}</Text>
-            </View>
-            <View style={[styles.text, { marginBottom: 16 }]}>
-                <Text style={[styles.title, { marginBottom: 5 }]}>{'Состояние крепления'}</Text>
-                <Text style={[styles.title, { color: filterData?.mount_condition.color }]}>{filterData?.mount_condition.value}</Text>
-            </View>
-
-                <View style={[styles.text, { marginBottom: 19 }]}>
-                <Text style={[styles.title, { marginBottom: 5 }]}>{'Наличие препаратов в ТК'}</Text>
-                <CustomTable tmc={filterData?.tmc}/>
-            </View>
-            <View style={[styles.text, { marginBottom: 20 }]}>
-                <Text style={[styles.title, { marginBottom: 5 }]}>{'Вредители'}</Text>
-                <CustomTableB pests={filterData?.pests}/>
-            </View>
+                {transferDataVisible(field)}
             </ScrollView>
             <Footer>
                 <View style={styles.footerContainer}>
@@ -226,6 +342,8 @@ const Tab3Content = ({
                         textColor={'#FFFFFF'}
                         backgroundColor={'#5D6377'}
                         onPress={handlePrevious}
+                        enabled={tabIndex !== 'tab0' || !isFirstTab}
+                        touchable={tabIndex !== 'tab0' || !isFirstTab}
                     />
                     <TextButton
                         text={'Далее'}
@@ -235,12 +353,12 @@ const Tab3Content = ({
                         textColor={'#FFFFFF'}
                         backgroundColor={'#017EFA'}
                         onPress={handleNext}
+                        enabled={tabIndex !== `tab${items.length - 1}` || !isLastTab}
+                        touchable={tabIndex !== `tab${items.length - 1}` || !isLastTab}
                     />
                 </View>
             </Footer>
         </View>
-
-
     );
 };
 
@@ -262,6 +380,53 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         justifyContent: 'space-between',
+    },
+    tmcContainer: {
+        paddingBottom: 10,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        borderBottomWidth: 1,
+        borderBottomColor: '#DADADA',
+    },
+    tmcTitle: {
+        marginTop: 10,
+        marginBottom: 12,
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#1C1F37',
+    },
+    tmcHeaderContainer: {
+        marginBottom: 12,
+        paddingBottom: 10,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        borderBottomWidth: 1,
+        borderBottomColor: '#DADADA',
+    },
+    tmcHeaderText: {
+        marginRight: 5,
+        fontSize: 10,
+        fontWeight: 'medium',
+        color: '#919191',
+    },
+    tmcTextInput: {
+        width: 20,
+        height: 20,
+        backgroundColor: '#F5F7FB',
+        fontSize: 10,
+        color: '#1C1F37',
+        textAlign: 'center',
+    },
+    tmcText: {
+        fontSize: 10,
+        color: '#1C1F37',
+    },
+    dropdown: {
+        height: 40,
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        backgroundColor: '#F5F7FB',
+        marginBottom: 5,
     },
 });
 

@@ -26,6 +26,7 @@ export type SelectField = {
 };
 
 export type TransferField = {
+    text: string;
     type: string;
     label: string;
     name: string;

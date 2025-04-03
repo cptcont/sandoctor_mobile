@@ -12,7 +12,7 @@ import {
 
 interface MonthsCarouselProps {
     year?: number;
-    month?: number;
+    month: number;
     onMonthChange?: (year: number, month: number) => void;
 }
 

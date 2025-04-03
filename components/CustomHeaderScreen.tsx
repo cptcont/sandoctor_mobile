@@ -5,7 +5,7 @@ import {BackIcon, CheckSolid} from "@/components/icons/Icons";
 import ProgressBarCircle from "@/components/ProgressBarCircle";
 
 type CustomHeaderScreenProps = {
-    onPress: () => void;
+    onPress?: () => void;
     text: string;
     status?: {
         text:string;

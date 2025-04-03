@@ -64,6 +64,7 @@ export interface Task {
     photos: photo[];
     time_begin_work: string;
     time_end_work: string;
+    time_work: string;
     tmc: TMC[];
 }
 

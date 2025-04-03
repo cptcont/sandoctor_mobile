@@ -10,7 +10,9 @@ export default function TabsLayout() {
             drawerContent={(props) => <CustomDrawerContent {...props} />}
             screenOptions={{
                 header: () => <CustomHeader />,
+                swipeEnabled: false, // Отключает боковую панель
             }}
+
         >
             <Drawer.Screen
                 name="index"
@@ -60,6 +62,9 @@ export default function TabsLayout() {
             />
             <Drawer.Screen
                 name="starttask"
+            />
+            <Drawer.Screen
+                name="notifications"
             />
         </Drawer>
         </>

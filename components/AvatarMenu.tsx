@@ -25,9 +25,9 @@ export const AvatarMenu: React.FC<AvatarMenuProps> = ({ onProfilePress, onLogout
 
 const styles = StyleSheet.create({
     menu: {
-        width: 142,
+        width: 160,
         backgroundColor: '#fff',
-        padding: 11,
+        padding: 15,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 13,
+        marginBottom: 15,
     },
     menuItemEnd: {
         flexDirection: 'row',
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     },
     menuText: {
         marginLeft: 8,
-        fontSize: 11,
+        fontSize: 14,
         color: '#1B2B65',
     },
 });

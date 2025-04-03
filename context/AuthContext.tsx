@@ -9,6 +9,7 @@ type AuthContextType = {
     token: string | null; // Токен
     login: (username: string, password: string) => Promise<void>;
     logout: () => void;
+    updateUserDataNow: () => Promise<void>;
     setUserDataStorage: (data: any) => Promise<void>;
     getUserDataStorage: () => Promise<any>;
     updateUserDataOnServer: (userId: string, data: any) => Promise<any>;
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
     token: null,
     login: async () => {},
     logout: () => {},
+    updateUserDataNow: async () => {},
     setUserDataStorage: async () => {},
     getUserDataStorage: async () => {},
     updateUserDataOnServer: async () => {},
@@ -189,6 +191,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return diffDays > 7; // Возвращаем true, если прошло больше 7 дней
     };
 
+    const updateUserDataNow = async () => {
+        const storedData = await getUserDataStorage();
+        setUserData(storedData); // Синхронизируем userData с SecureStore
+    };
+
     return (
         <AuthContext.Provider value={{
             isAuthenticated,
@@ -200,6 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUserDataStorage,
             getUserDataStorage,
             updateUserDataOnServer,
+            updateUserDataNow,
         }}>
             {children}
         </AuthContext.Provider>
