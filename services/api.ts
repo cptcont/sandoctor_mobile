@@ -4,9 +4,8 @@ import { storage } from '@/storage/storage';
 
 // Универсальный тип для ответа API
 type ApiResponse<T> = {
-    success: boolean;
     data?: T[];
-    error?: string;
+    responce?: any;
 };
 
 type ReactNativeFile = {
@@ -24,22 +23,16 @@ const getToken = async (): Promise<string | null> => {
 // Универсальная функция для GET запросов
 export const fetchData = async <T>(
     endpoint: string,
-    onSuccess?: (data: T[]) => void
 ): Promise<ApiResponse<T>> => {
     try {
         const token = await getToken();
-        if (!token) {
-            return {
-                success: false,
-                error: 'Токен не найден',
-            };
-        }
+        if (!token) throw new Error('Токен не найден');
 
         const response = await fetch(`https://sandoctor.ru/api/v1/${endpoint}`, {
             method: 'GET',
             headers: {
                 'Authorization': token,
-                'Content-Type': 'application/json', // Добавлен для явности
+                'Content-Type': 'application/json',
             },
         });
 
@@ -47,18 +40,12 @@ export const fetchData = async <T>(
             throw new Error(`Ошибка при загрузке данных: ${response.status}`);
         }
 
-        const responseData: T[] = await response.json(); // Предполагаем, что API возвращает массив данных
+        const responseData = await response.json(); // Предполагаем, что API возвращает массив данных
 
-        // Вызываем callback, если он передан
-        if (onSuccess) {
-            onSuccess(responseData);
-        }
-
-        return responseData
-
+        return responseData; // Возвращаем объект с полем data
     } catch (error) {
         console.error('Ошибка в fetchData:', error);
-
+        throw error;
     }
 };
 
@@ -85,17 +72,17 @@ export const fetchDataSaveStorage = async <T,>(
                 case 'checklists': {
                     removeDataFromStorage(typeResponse);
                     saveDataToStorage(typeResponse,responseData.responce.parts || []);
-                    return responseData.data;
+                    return responseData;
                 }
                 case 'tasks': {
                     removeDataFromStorage(typeResponse);
                     saveDataToStorage(typeResponse,responseData.responce || []);
-                    return responseData.data;
+                    return responseData;
                 }
                 case 'task': {
                     removeDataFromStorage(typeResponse);
                     saveDataToStorage(typeResponse,responseData.responce || []);
-                    return responseData.data;
+                    return responseData;
                 }
 
                 default: {

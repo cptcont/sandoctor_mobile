@@ -1,17 +1,15 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { useEffect } from 'react';
 import { router } from 'expo-router';
 import { PopupProvider } from '@/context/PopupContext';
-import { Platform, StyleSheet, StatusBar, View } from 'react-native';
+import { Platform, StyleSheet, StatusBar, View, AppState } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
 import { ModalProvider, useModal } from '@/context/ModalContext';
 import { CustomModal } from '@/components/CustomModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-
-
+import { removeDataFromStorage } from '@/services/api'; // Импортируем функцию удаления
 
 export default function RootLayout() {
     return (
@@ -29,19 +27,17 @@ export default function RootLayout() {
     );
 }
 
-
 function RootLayoutNav() {
     const { isAuthenticated, isAppUsageExpired } = useAuth();
     const { hideModal, isModalVisible, modalContent, overlayStyle, overlayBackgroundStyle, modalContentStyle } = useModal();
+
     if (Platform.OS === 'android') {
-        //NavigationBar.setVisibilityAsync("hidden");
+        // NavigationBar.setVisibilityAsync("hidden");
     }
+
     useEffect(() => {
         if (Platform.OS === 'android') {
-          //  NavigationBar.setVisibilityAsync("hidden");
-            // Установите цвет фона Navigation Bar
-            NavigationBar.setBackgroundColorAsync("#081A51"); // Используйте тот же цвет, что и для StatusBar
-            // Установите светлый стиль кнопок (белые иконки)
+            NavigationBar.setBackgroundColorAsync("#081A51");
             NavigationBar.setButtonStyleAsync("light");
         }
     }, []);
@@ -54,41 +50,66 @@ function RootLayoutNav() {
         }
     }, [isAuthenticated, isAppUsageExpired]);
 
+    // Очистка selectedDate при запуске приложения
+    useEffect(() => {
+        const clearSelectedDateOnStart = async () => {
+            await removeDataFromStorage('selectedDate');
+            console.log('SelectedDate удалён из хранилища при запуске приложения');
+        };
+
+        clearSelectedDateOnStart();
+    }, []); // Пустой массив зависимостей — выполняется только при монтировании
+
+    // Отслеживание состояния приложения (опционально, для отладки)
+    useEffect(() => {
+        const handleAppStateChange = (nextAppState: string) => {
+            console.log('AppState changed to:', nextAppState);
+            // Здесь можно добавить дополнительную логику, если нужно
+        };
+
+        const subscription = AppState.addEventListener('change', handleAppStateChange);
+        return () => {
+            subscription.remove();
+        };
+    }, []);
+
     return (
-            <View style={styles.container}>
-            <StatusBar backgroundColor={'#081A51'} barStyle="light-content"/>
-                {!isAuthenticated && (
-                    <Stack>
-                        <Stack.Screen
-                            name="LoginScreen"
-                            options={{ headerShown: false }}
-                        />
-                        <Stack.Screen
-                            name="ForgotPasswordScreen"
-                            options={{ headerShown: false }}
-                        />
-                    </Stack>
-                )}
-                {isAuthenticated && (
-                    <Stack>
-                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                        <Stack.Screen name="+not-found" />
-                    </Stack>
-                )}
-                <CustomModal visible={isModalVisible}
-                             onClose={hideModal}
-                             overlay={overlayStyle}
-                             overlayBackground={overlayBackgroundStyle}
-                             modalContent={modalContentStyle}>
-                    {modalContent}
-                </CustomModal>
-            </View>
+        <View style={styles.container}>
+            <StatusBar backgroundColor={'#081A51'} barStyle="light-content" />
+            {!isAuthenticated && (
+                <Stack>
+                    <Stack.Screen
+                        name="LoginScreen"
+                        options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                        name="ForgotPasswordScreen"
+                        options={{ headerShown: false }}
+                    />
+                </Stack>
+            )}
+            {isAuthenticated && (
+                <Stack>
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="+not-found" />
+                </Stack>
+            )}
+            <CustomModal
+                visible={isModalVisible}
+                onClose={hideModal}
+                overlay={overlayStyle}
+                overlayBackground={overlayBackgroundStyle}
+                modalContent={modalContentStyle}
+            >
+                {modalContent}
+            </CustomModal>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        height:'100%',
+        height: '100%',
     },
 });
