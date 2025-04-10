@@ -1,11 +1,12 @@
 import {View, Text, StyleSheet, ScrollView} from 'react-native';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
-import React, { useCallback, useState } from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import { router } from 'expo-router';
 import { useFocusEffect } from "@react-navigation/native";
 import { fetchData } from "@/services/api";
 import { Card } from '@rneui/themed';
 import { format } from 'date-fns';
+import {useNotifications} from "@/context/NotificationContext";
 
 
 interface Notification {
@@ -17,6 +18,8 @@ interface Notification {
 
 export default function NotificationsScreen() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const { notificationsCount, resetNotifications, refreshNotifications } = useNotifications();
+
 
     const getNotifications = async () => {
         try {
@@ -44,6 +47,17 @@ export default function NotificationsScreen() {
         }, [])
     );
 
+    useEffect(() => {
+        const loadNotifications = async () => {
+            const fetchedNotifications = await getNotifications();
+            console.log('fetchedNotifications', fetchedNotifications);
+            setNotifications(fetchedNotifications || []);
+        };
+
+        loadNotifications();
+        resetNotifications();
+    }, [notificationsCount]);
+
     const handleBack = () => {
         router.back();
     };
@@ -56,18 +70,18 @@ export default function NotificationsScreen() {
                 onPress={handleBack}
             />
             <ScrollView>
-            <View style={{paddingHorizontal: 16, width: '100%', alignItems: 'center'}}>
+
                 {notifications.length > 0 ? (
                     notifications.map((notification: Notification) => (
                         <Card key={notification.id} containerStyle = {styles.cardContainerStyle}>
+                            <Text style={styles.textTime}>{format(new Date(notification.date), 'dd.MM.yyyy HH:mm')}</Text>
                             <Text style={styles.textBody}>{notification.body}</Text>
-                            <Text style={styles.textTime}>{format(new Date(notification.date), 'HH:mm dd.MM.yyyy')}</Text>
                         </Card>
                     ))
                 ) : (
                     <Text>Уведомлений нет</Text> // Сообщение, если уведомлений нет
                 )}
-            </View>
+
             </ScrollView>
         </View>
     );
@@ -81,22 +95,21 @@ const styles = StyleSheet.create({
 
     },
     cardContainerStyle: {
-        width: '100%',
-        borderWidth: 2,
-        borderRadius: 10,
-        borderColor: '#30DA88',
-        //backgroundColor: '#EAFBF3',
+        borderWidth: 1,
+        borderRadius: 8,
+        borderColor: '#ECECEC',
+        backgroundColor: '#F9F9F9',
     },
     textBody: {
         paddingBottom: 10,
         fontSize: 16,
-        fontWeight: '500',
-        color: '#30DA88',
+        fontWeight: '400',
+        color: '#1B2B65',
     },
-
     textTime: {
+        marginBottom: 10,
         fontSize: 10,
+        fontWeight: '900',
+        color: '#1B2B65',
     }
-
-
 });

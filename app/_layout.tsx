@@ -10,17 +10,20 @@ import { CustomModal } from '@/components/CustomModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { removeDataFromStorage } from '@/services/api'; // Импортируем функцию удаления
+import { NotificationProvider } from '@/context/NotificationContext';
 
 export default function RootLayout() {
     return (
         <AuthProvider>
             <PopupProvider>
                 <ModalProvider>
-                    <GestureHandlerRootView style={{ flex: 1 }}>
-                        <KeyboardProvider preserveEdgeToEdge={false}>
-                            <RootLayoutNav />
-                        </KeyboardProvider>
-                    </GestureHandlerRootView>
+                    <NotificationProvider>
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                            <KeyboardProvider preserveEdgeToEdge={false}>
+                                <RootLayoutNav />
+                            </KeyboardProvider>
+                        </GestureHandlerRootView>
+                    </NotificationProvider>
                 </ModalProvider>
             </PopupProvider>
         </AuthProvider>

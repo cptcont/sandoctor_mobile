@@ -1,22 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, StyleSheet, Text, View, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Dimensions, Modal } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { router } from "expo-router";
 import { useDrawerStatus } from '@react-navigation/drawer';
-import {
-    fetchData,
-    fetchDataSaveStorage,
-    getDataFromStorage,
-    postData,
-    removeDataFromStorage,
-    saveDataToStorage,
-} from '@/services/api'
+import { postData } from '@/services/api'
+import { Button } from '@rneui/themed';
 
 interface BarCodeScannedEvent {
-    data: string; // Указываем, что data — это строка
-    type: string; // Дополнительно можно указать тип QR-кода, если нужно
-    bounds: { origin: { x: number, y: number }, size: { width: number, height: number } }; // Координаты QR-кода
+    data: string;
+    type: string;
+    bounds: { origin: { x: number, y: number }, size: { width: number, height: number } };
+    error?: string;
 }
 
 export default function QRCodeScreen() {
@@ -24,35 +19,33 @@ export default function QRCodeScreen() {
     const [facing, setFacing] = useState<CameraType>('back');
     const [permission, requestPermission] = useCameraPermissions();
     const [scanned, setScanned] = useState(false);
-    const [cameraKey, setCameraKey] = useState(0); // Состояние для перезагрузки камеры
+    const [cameraKey, setCameraKey] = useState(0);
+    const [errorModalVisible, setErrorModalVisible] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
-    // Используем хук useDrawerStatus для отслеживания состояния Drawer
     const isDrawerOpen = useDrawerStatus();
-
     const { width, height } = Dimensions.get('window');
     const squareSize = 200;
-    const squareX = (width ) / 2;
-    const squareY = (height ) / 2;
+    const squareX = (width) / 2;
+    const squareY = (height) / 2;
 
     useFocusEffect(
         useCallback(() => {
-            // Активируем камеру, когда экран в фокусе
             setIsCameraActive(true);
             setScanned(false);
             return () => {
-                // Отключаем камеру, когда экран теряет фокус
                 setIsCameraActive(false);
             };
         }, [])
     );
+
     console.log('qr scanned', scanned);
+
     useEffect(() => {
         if (isDrawerOpen === 'closed') {
-            // Перезагружаем камеру, когда Drawer закрывается
             setCameraKey((prevKey) => prevKey + 1);
             setIsCameraActive(true);
         } else {
-            // Отключаем камеру, когда Drawer открывается
             setIsCameraActive(false);
         }
     }, [isDrawerOpen]);
@@ -62,26 +55,36 @@ export default function QRCodeScreen() {
     }
 
     if (!permission.granted) {
-        requestPermission()
-
+        requestPermission();
     }
 
     const handleBarCodeScanned = async ({ data, bounds }: BarCodeScannedEvent) => {
-        //const { origin: { x, y } } = bounds;
-
-        // Проверяем, находится ли QR-код в пределах квадрата
-        //if (
-         //   x >= squareX && x <= squareX + squareSize &&
-         //   y >= squareY && y <= squareY + squareSize
-        //) {
         setScanned(true);
-
         console.log("QRCodeScanned handleBarCodeScanned", data);
-        const response = await postData(`qr`, {url: data});
-        if (!response) {
-         setScanned(false);
-        } else {
-            console.log('Response', response.respoce);
+
+        try {
+            const response = await postData(`qr`, { url: data });
+
+            if (!response) {
+                setScanned(false);
+                return;
+            }
+
+            if (response.error) {
+                setErrorMessage(response.error || 'Произошла неизвестная ошибка');
+                setErrorModalVisible(true);
+                setScanned(false);
+                return;
+            }
+
+            if (!response.responce || !response.responce.task || !response.responce.zone || !response.responce.point) {
+                setErrorMessage('Неверный формат ответа от сервера');
+                setErrorModalVisible(true);
+                setScanned(false);
+                return;
+            }
+
+            console.log('Response', response);
             router.push({
                 pathname: '/checklist',
                 params: {
@@ -93,8 +96,17 @@ export default function QRCodeScreen() {
                     tabIdTMC: response.responce.point,
                 },
             });
+        } catch (error) {
+            console.error('Error in handleBarCodeScanned:', error);
+            setErrorMessage('Ошибка при обработке QR-кода');
+            setErrorModalVisible(true);
+            setScanned(false);
         }
-        //}
+    };
+
+    const handleCloseModal = () => {
+        setErrorModalVisible(false);
+        router.push('/');
     };
 
     function toggleCameraFacing() {
@@ -108,7 +120,9 @@ export default function QRCodeScreen() {
                     key={`${facing}-${cameraKey}`}
                     style={styles.camera}
                     facing={facing}
-                    onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                    onBarcodeScanned={
+                        errorModalVisible || scanned ? undefined : handleBarCodeScanned
+                    }
                     barcodeScannerSettings={{
                         barcodeTypes: ["qr"],
                     }}
@@ -118,6 +132,25 @@ export default function QRCodeScreen() {
                     </View>
                 </CameraView>
             )}
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={errorModalVisible}
+                onRequestClose={() => setErrorModalVisible(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalText}>{errorMessage}</Text>
+                        <Button
+                            title="Закрыть"
+                            titleStyle={styles.buttonTitleStyles}
+                            buttonStyle={styles.button}
+                            onPress={handleCloseModal}
+                        />
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -156,13 +189,38 @@ const styles = StyleSheet.create({
         margin: 64,
     },
     button: {
-        flex: 1,
+        width: 120,
+        borderRadius: 6,
+        backgroundColor: '#017EFA',
         alignSelf: 'flex-end',
         alignItems: 'center',
+
+    },
+    buttonTitleStyles: {
+      fontSize: 16,
+      fontWeight: '700',
     },
     text: {
         fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        width: '80%',
+    },
+    modalText: {
+        fontSize: 16,
+        marginBottom: 30,
+        textAlign: 'center',
     },
 });

@@ -1,40 +1,43 @@
-import {StyleSheet, Text, View, TextInput, ActivityIndicator} from "react-native";
-import {CustomHeaderScreen} from "@/components/CustomHeaderScreen";
-import {router, useLocalSearchParams} from "expo-router";
-import {useFocusEffect} from "@react-navigation/native";
-import React, {useCallback, useEffect, useState} from "react";
-import type {Checklist} from "@/types/Checklist";
-import type {Task} from "@/types/Task";
+import { StyleSheet, Text, View, TextInput, ActivityIndicator } from "react-native";
+import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
+import { router, useLocalSearchParams } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useState } from "react";
+import type { Checklist } from "@/types/Checklist";
+import type { Task } from "@/types/Task";
 import TaskCard from "@/components/TaskCard";
 import ServiceCardContainer from "@/components/ServiceCardContainer";
 import ImagePickerWithCamera from "@/components/ImagePickerWithCamera";
 import Footer from "@/components/Footer";
-import {TextButton} from "@/components/TextButton";
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import {fetchDataSaveStorage, getDataFromStorage, postData} from '@/services/api'
+import { TextButton } from "@/components/TextButton";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { fetchDataSaveStorage, getDataFromStorage, postData } from "@/services/api";
 
 const StartTaskScreen = () => {
     const params = useLocalSearchParams();
     const [task, setTask] = useState<Task | null>(null);
     const [checklists, setChecklists] = useState<Checklist[] | null>(null);
-    const [textCommentClient, setTextCommentClient] = useState<string>('');
-    const [textCommentExec, setTextCommentExec] = useState<string>('');
-    const [loading, setLoading] = useState<boolean>(true); // Состояние загрузки
+    const [textCommentClient, setTextCommentClient] = useState<string>("");
+    const [textCommentExec, setTextCommentExec] = useState<string>("");
+    const [loading, setLoading] = useState<boolean>(true);
     const taskId = params.taskId as string;
     const [keyRandom, setKeyRandom] = useState<string>(`${Math.floor(Math.random() * 1000)}`);
 
     const fetchData = async () => {
         try {
-            await fetchDataSaveStorage<Checklist>(`checklist/${taskId}`, 'checklists' );
-            await fetchDataSaveStorage<Task>(`task/${taskId}`, 'task' );
-            const updatedTask = await getDataFromStorage(`task`) as Task;
-            const updatedChecklists = await getDataFromStorage(`checklists`) as Checklist[];
+            setLoading(true);
+            await fetchDataSaveStorage<Checklist>(`checklist/${taskId}`, "checklists");
+            await fetchDataSaveStorage<Task>(`task/${taskId}`, "task");
+            const updatedTask = (await getDataFromStorage("task")) as Task;
+            const updatedChecklists = (await getDataFromStorage("checklists")) as Checklist[];
+//            console.log("Updated task:", updatedTask);
+//            console.log("Updated checklists:", updatedChecklists);
             setTask(updatedTask);
             setChecklists(updatedChecklists);
-            setTextCommentClient(updatedTask.report.comment_client);
-            setTextCommentExec(updatedTask.report.comment_exec);
+            setTextCommentClient(updatedTask.report.comment_client || "");
+            setTextCommentExec(updatedTask.report.comment_exec || "");
         } catch (error) {
-            console.error('Ошибка при загрузке данных:', error);
+            console.error("Ошибка при загрузке данных:", error);
         } finally {
             setLoading(false);
         }
@@ -42,18 +45,14 @@ const StartTaskScreen = () => {
 
     useFocusEffect(
         useCallback(() => {
-            console.log("useFocusEffect StartTaskScreen")
+//            console.log("useFocusEffect triggered for taskId:", taskId);
             fetchData();
-            setKeyRandom(`${Math.floor(Math.random() * 1000)}`)
+            setKeyRandom(`${Math.floor(Math.random() * 1000)}`);
             return () => {
                 // Очистка, если необходимо
             };
-        }, [])
+        }, [taskId]) // Добавляем taskId как зависимость
     );
-
-    useEffect(() => {
-        fetchData();
-    }, []);
 
     if (loading) {
         return (
@@ -72,62 +71,72 @@ const StartTaskScreen = () => {
     }
 
     const handleTaskOnPress = (idCheckList: string, typeCheckList: string) => {
-        console.log('Нажата задача с id:', idCheckList, 'и типом:', typeCheckList);
+        console.log("Нажата задача с id:", idCheckList, "и типом:", typeCheckList);
         router.push({
-            pathname: '/checklist',
+            pathname: "/checklist",
             params: {
                 id: `${idCheckList}`,
-                idCheckList: `${taskId}` ,
+                idCheckList: `${taskId}`,
                 typeCheckList: typeCheckList,
-                statusVisible: 'edit',
-                tabId: '',
-                tabIdTMC: ''
+                statusVisible: "edit",
+                tabId: "0",
+                tabIdTMC: "0",
             },
         });
     };
 
     const handleBack = async () => {
-        await fetchDataSaveStorage<Checklist>(`checklist/${taskId}`, 'checklists' );
-        await fetchDataSaveStorage<Task>(`task/${taskId}`, 'task' );
+        await fetchDataSaveStorage<Checklist>(`checklist/${taskId}`, "checklists");
+        await fetchDataSaveStorage<Task>(`task/${taskId}`, "task");
         router.push({
-            pathname: '/details',
+            pathname: "/details",
             params: {
                 taskId: taskId,
-            }
+            },
         });
     };
 
-    const handleChangeTextCommentClient = (textCommentClient:string) => {
-        setTextCommentClient(textCommentClient);
-    }
+    const handleChangeTextCommentClient = (text: string) => {
+        setTextCommentClient(text);
+    };
 
-    const handleChangeTextCommentExec = (textCommentExec:string) => {
-        setTextCommentExec(textCommentExec);
-    }
+    const handleChangeTextCommentExec = (text: string) => {
+        setTextCommentExec(text);
+    };
 
-    const handleBlurCommentClient = async() => {
-        await postData(`task/${taskId}/`,{report: {comment_client:textCommentClient}});
-    }
+    const handleBlurCommentClient = async () => {
+        try {
+            await postData(`task/${taskId}/`, { report: { comment_client: textCommentClient } });
+            setTask((prev) => prev ? { ...prev, report: { ...prev.report, comment_client: textCommentClient } } : null);
+        } catch (error) {
+            console.error("Ошибка при сохранении комментария клиента:", error);
+        }
+    };
 
     const handleBlurCommentExec = async () => {
-        await postData(`task/${taskId}/`,{report: {comment_exec:textCommentExec}});
-    }
+        try {
+            await postData(`task/${taskId}/`, { report: { comment_exec: textCommentExec } });
+            setTask((prev) => prev ? { ...prev, report: { ...prev.report, comment_exec: textCommentExec } } : null);
+        } catch (error) {
+            console.error("Ошибка при сохранении комментария исполнителя:", error);
+        }
+    };
 
     const handleSubmit = async () => {
-         await postData(`task/${taskId}/`,  {condition_id: 3 , cancel_reason: '', cancel_comment: ''})
-        router.push({
-            pathname: '/',
-            params: {
-            }
-        });
-    }
+        try {
+            await postData(`task/${taskId}/`, { condition_id: 3, cancel_reason: "", cancel_comment: "" });
+            router.push({
+                pathname: "/",
+                params: {},
+            });
+        } catch (error) {
+            console.error("Ошибка при завершении задания:", error);
+        }
+    };
 
     return (
         <>
-            <CustomHeaderScreen
-                onPress={handleBack}
-                text={ `Отчет по заданию №${taskId}`}
-            />
+            <CustomHeaderScreen onPress={handleBack} text={`Отчет по заданию №${taskId}`} />
             <KeyboardAwareScrollView>
                 <View style={styles.containerTitleCheckList}>
                     <Text style={styles.titleCheckList}>Чек-лист</Text>
@@ -150,9 +159,9 @@ const StartTaskScreen = () => {
                 <View style={styles.containerTask}>
                     <ServiceCardContainer
                         task={task.services}
-                        visible={'edit'}
+                        visible={"edit"}
                         onServicesStatusChange={(status) => {
-                            console.log('Статус услуг:', status);
+                            console.log("Статус услуг:", status);
                         }}
                         taskId={taskId}
                     />
@@ -166,7 +175,7 @@ const StartTaskScreen = () => {
                     initialImages={task.photos}
                     path={`task/${taskId}`}
                 />
-                <View style={[styles.containerTextArea, {marginBottom: 11}]}>
+                <View style={[styles.containerTextArea, { marginBottom: 11 }]}>
                     <Text style={styles.titleTextArea}>Комментарий исполнителя</Text>
                     <TextInput
                         style={styles.textArea}
@@ -178,7 +187,7 @@ const StartTaskScreen = () => {
                         onBlur={handleBlurCommentClient}
                     />
                 </View>
-                <View style={[styles.containerTextArea, {marginBottom: 19}]}>
+                <View style={[styles.containerTextArea, { marginBottom: 19 }]}>
                     <Text style={styles.titleTextArea}>Пожелания клиента</Text>
                     <TextInput
                         style={styles.textArea}
@@ -192,40 +201,40 @@ const StartTaskScreen = () => {
                 </View>
                 <Footer>
                     <TextButton
-                        text={'Завершить задание'}
+                        text={"Завершить задание"}
                         width={302}
                         height={39}
                         textSize={16}
-                        textColor={'#FFFFFF'}
-                        backgroundColor={'#017EFA'}
+                        textColor={"#FFFFFF"}
+                        backgroundColor={"#017EFA"}
                         enabled={true}
                         onPress={handleSubmit}
                     />
                 </Footer>
             </KeyboardAwareScrollView>
         </>
-    )
-}
+    );
+};
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: "#fff",
     },
     loadingContainer: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
     },
     containerTitleCheckList: {
         paddingHorizontal: 20,
         paddingVertical: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#DADADA',
+        borderBottomColor: "#DADADA",
     },
     titleCheckList: {
         fontSize: 14,
-        fontWeight: '600',
+        fontWeight: "600",
         color: "#1B2B65",
     },
     containerCheckList: {
@@ -234,25 +243,25 @@ const styles = StyleSheet.create({
     },
     containerTask: {
         paddingHorizontal: 8,
-        paddingBottom:10,
+        paddingBottom: 10,
     },
     containerTextArea: {
         paddingHorizontal: 20,
     },
     titleTextArea: {
         marginBottom: 11,
-        color: '#939393',
+        color: "#939393",
         fontSize: 12,
-        fontWeight: '600',
+        fontWeight: "600",
     },
     textArea: {
         height: 63,
         borderRadius: 6,
         padding: 10,
         fontSize: 12,
-        textAlignVertical: 'top',
-        backgroundColor: '#F5F7FB',
+        textAlignVertical: "top",
+        backgroundColor: "#F5F7FB",
     },
-})
+});
 
 export default StartTaskScreen;

@@ -6,6 +6,7 @@ import { storage } from '@/storage/storage';
 type ApiResponse<T> = {
     data?: T[];
     responce?: any;
+    error?: any;
 };
 
 type ReactNativeFile = {

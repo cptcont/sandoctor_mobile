@@ -21,7 +21,11 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.andrewandersonorg.myappandrew"
+      "package": "com.andrewandersonorg.myappandrew",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -47,7 +51,7 @@
     },
     "owner": "andrewanderson-org",
     "updates": {
-      "url": "https://u.expo.dev/0c173ea1-0ac4-495f-928a-3455f795bfcd"
+      "url": "https://u.expo.dev/0ec8419e-5e62-4697-81a1-a4214a4485dc"
     },
     "runtimeVersion": "1.0.5",
     "extra": {
