@@ -122,6 +122,12 @@ const StartTaskScreen = () => {
         }
     };
 
+    const handleUpdateImage = async () => {
+        await fetchDataSaveStorage<Task>(`task/${taskId}`, "task");
+        const updatedTask = (await getDataFromStorage("task")) as Task;
+        setTask(updatedTask);
+    }
+
     const handleSubmit = async () => {
         try {
             await postData(`task/${taskId}/`, { condition_id: 3, cancel_reason: "", cancel_comment: "" });
@@ -174,6 +180,7 @@ const StartTaskScreen = () => {
                     taskId={taskId}
                     initialImages={task.photos}
                     path={`task/${taskId}`}
+                    onImageUploaded={handleUpdateImage}
                 />
                 <View style={[styles.containerTextArea, { marginBottom: 11 }]}>
                     <Text style={styles.titleTextArea}>Комментарий исполнителя</Text>
