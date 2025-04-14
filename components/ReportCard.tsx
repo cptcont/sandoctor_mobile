@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ImageSourcePropType } from 'react-native';
 import type { Photo } from '@/types/Checklist';
+import ImagePickerWithCamera from "@/components/ImagePickerWithCamera";
 
 interface ReportCardProps {
     image: Photo[]; // Новый тип для изображений
@@ -25,17 +26,14 @@ const ReportCard: React.FC<ReportCardProps> = ({
             <View style={styles.cardTitle}>
                 <Text style={styles.title}>{'Отчетные документы'}</Text>
             </View>
+
             <View style={styles.imageContainer}>
-                {image.map((foto: any, index: number) => (
-                    <Image
-                        key={index}
-                        source={{ uri: foto.thumbUrl }}
-                        style={[
-                            styles.image,
-                            index !== 3 && styles.imageMargin,
-                        ]}
-                    />
-                ))}
+                <ImagePickerWithCamera
+                    key={`image`}
+                    initialImages={image || []}
+                    statusVisible={'view'}
+                    paddingHorizontal={0}
+                />
             </View>
             <View style={styles.detailsContainer}>
                 <View style={styles.detailItem}>

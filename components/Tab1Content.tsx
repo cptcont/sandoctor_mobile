@@ -135,7 +135,7 @@ const Tab1Content = memo(({
                             {componentData.options.map((option, optionIndex) => {
                                 if (option.selected) {
                                     return (
-                                        <Text key={`option-${optionIndex}`} style={[styles.title, { color: option.color }]}>
+                                        <Text key={`option-${optionIndex}`} style={[styles.title, { color: option.bgcolor }]}>
                                             {option.text}
                                         </Text>
                                     );

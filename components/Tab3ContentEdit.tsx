@@ -21,7 +21,7 @@ type Tab3ContentEditType = {
     onNextTab?: () => void;
     onPreviousTab?: () => void;
     idCheckList?: string;
-    tabId?: string;
+    tabId?: number;
     isFirstTab?: boolean;
     isLastTab?: boolean;
 };
@@ -40,7 +40,7 @@ const Tab3ContentEdit = ({
                              isLastTab = false,
                          }: Tab3ContentEditType) => {
     // Состояния
-    const [selectedValue, setSelectedValue] = useState(0);
+    const [selectedValue, setSelectedValue] = useState(tabId);
     const [isInitialized, setIsInitialized] = useState(false);
     const [field, setField] = useState<TransferField[]>([]);
     const [checklists, setChecklists] = useState<Checklist[]>([]);
@@ -746,7 +746,7 @@ const Tab3ContentEdit = ({
                                 valueField="value"
                                 value={selectedValue}
                                 onChange={(item) => handleSelectDropdown(item.value, componentData.name)}
-                                placeholder="Выберите элемент"
+                                placeholder="Выбрать"
                                 placeholderStyle={{ color: '#000000', fontSize: 14 }}
                                 selectedTextStyle={{ color: selectedColor, fontSize: 14 }}
                                 containerStyle={{ backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' }}
@@ -823,7 +823,7 @@ const Tab3ContentEdit = ({
                                             onBlur={() => handleBlurTmc(componentData.name, 'v')}
                                             keyboardType="numeric"
                                         />
-                                        
+
                                     </View>
                                 </View>
                             </View>

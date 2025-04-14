@@ -139,8 +139,8 @@ export default function HomeScreen() {
 
     const handleOnPressCard = async (task: any) => {
         console.log('taskId', task.id);
-        await fetchDataSaveStorage<Checklist>(`checklist/${task.id}`, 'checklists');
-        await fetchDataSaveStorage<Task>(`task/${task.id}`, 'task');
+        //await fetchDataSaveStorage<Checklist>(`checklist/${task.id}`, 'checklists');
+        //await fetchDataSaveStorage<Task>(`task/${task.id}`, 'task');
         router.push({
             pathname: '/details',
             params: {

@@ -178,7 +178,7 @@ const Tab3Content = ({
                             {componentData.options.map((option, optionIndex) => {
                                 if (option.selected) {
                                     return (
-                                        <Text key={`option-${optionIndex}`} style={[styles.title, { color: option.color }]}>
+                                        <Text key={`option-${optionIndex}`} style={[styles.title, { color: option.bgcolor }]}>
                                             {option.text}
                                         </Text>
                                     );
@@ -199,27 +199,11 @@ const Tab3Content = ({
                 case 'checkbox':
                     return <View key={`checkbox-${index}`} />;
                 case 'select':
-                    const dropdownItems = Object.entries(componentData.options || {}).map(([key, opt]: [string, any]) => ({
-                        label: opt.value,
-                        value: key,
-                    }));
-                    const defaultValue = Object.entries(componentData.options || {}).find(([key, opt]: [string, any]) => opt.selected)?.[0] || null;
-
+                    const selectedOption = Object.values(componentData.options || {}).find(option => option.selected === true);
                     return (
                         <View key={`select-${index}`} style={[styles.text, { marginBottom: 17 }]}>
                             <Text style={[styles.title, { color: '#1C1F37' }]}>{`${componentData.label}`}</Text>
-                            <Dropdown
-                                style={styles.dropdown}
-                                data={dropdownItems}
-                                labelField="label"
-                                valueField="value"
-                                value={defaultValue}
-                                placeholder="Выберите значение"
-                                placeholderStyle={{ color: '#000000', fontSize: 12 }}
-                                selectedTextStyle={{ color: '#000000', fontSize: 12 }}
-                                itemTextStyle={{ fontSize: 14 }}
-                                disable={true} // Отключаем взаимодействие
-                            />
+                            <Text style={[styles.title, { color: selectedOption.color }]}>{`${selectedOption.value}`}</Text>
                         </View>
                     );
                 case 'tmc':

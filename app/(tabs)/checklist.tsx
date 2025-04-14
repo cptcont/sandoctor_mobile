@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
-import {View, ScrollView, StyleSheet, useWindowDimensions, Text, Button, ActivityIndicator} from 'react-native';
+import { View, ScrollView, StyleSheet, useWindowDimensions, Text, Button, ActivityIndicator } from 'react-native';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
 import { router, useLocalSearchParams } from "expo-router";
 import { NavigationState, SceneMap, SceneRendererProps, TabView } from "react-native-tab-view";
@@ -36,6 +36,7 @@ const ChecklistScreen = memo(() => {
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [index, setIndex] = useState(0);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [isTabLoading, setIsTabLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [routes, setRoutes] = useState<Route[]>([]);
     const [isFirstTab, setIsFirstTab] = useState(true);
@@ -114,41 +115,50 @@ const ChecklistScreen = memo(() => {
 
     const handleNextTab = async () => {
         if (index < routes.length - 1) {
-            await updateCheckList()
+            setIsTabLoading(true);
             const newIndex = index + 1;
             setIndex(newIndex);
             setIsFirstTab(newIndex === 0);
             setIsLastTab(newIndex === routes.length - 1);
             const nextTabId = checkList?.zones[newIndex]?.id;
-            // Обновляем URL без перезагрузки компонента
+            await updateCheckList();
             router.setParams({
                 tabId: nextTabId,
-                tabIdTMC: tabIdTMC
+                tabIdTMC: tabIdTMC,
             });
+            setIsTabLoading(false);
         }
     };
 
     const handlePreviousTab = async () => {
         if (index > 0) {
+            setIsTabLoading(true);
             const newIndex = index - 1;
-            await updateCheckList()
             setIndex(newIndex);
             setIsFirstTab(newIndex === 0);
             setIsLastTab(newIndex === routes.length - 1);
             const prevTabId = checkList?.zones[newIndex]?.id;
-            // Обновляем URL без перезагрузки компонента
+            await updateCheckList();
             router.setParams({
                 tabId: prevTabId,
-                tabIdTMC: tabIdTMC
+                tabIdTMC: tabIdTMC,
             });
+            setIsTabLoading(false);
         }
     };
 
     const handleTabChange = async (newIndex: number) => {
-        await updateCheckList()
+        setIsTabLoading(true);
         setIndex(newIndex);
         setIsFirstTab(newIndex === 0);
         setIsLastTab(newIndex === routes.length - 1);
+        await updateCheckList();
+        const currentTabId = checkList?.zones[newIndex]?.id;
+        router.setParams({
+            tabId: currentTabId,
+            tabIdTMC: tabIdTMC,
+        });
+        setIsTabLoading(false);
     };
 
     const handleFinish = () => {
@@ -166,69 +176,81 @@ const ChecklistScreen = memo(() => {
         return checkList.zones.map((zone: Zone, key: number) => {
             let tabContent = null;
             if (typeCheckList === '1' && statusVisible === 'view') {
-                tabContent = <Tab1Content
-                    itemsTabContent={checkList.zones}
-                    index={index}
-                    onNextTab={handleNextTab}
-                    onPreviousTab={handlePreviousTab}
-                    isFirstTab={isFirstTab}
-                    isLastTab={isLastTab}
-                />;
+                tabContent = (
+                    <Tab1Content
+                        itemsTabContent={checkList.zones}
+                        index={index}
+                        onNextTab={handleNextTab}
+                        onPreviousTab={handlePreviousTab}
+                        isFirstTab={isFirstTab}
+                        isLastTab={isLastTab}
+                    />
+                );
             } else if (typeCheckList === '2' && statusVisible === 'view') {
-                tabContent = <Tab2Content
-                    itemsTabContent={checkList.zones}
-                    index={index}
-                    onNextTab={handleNextTab}
-                    onPreviousTab={handlePreviousTab}
-                    isFirstTab={isFirstTab}
-                    isLastTab={isLastTab}
-                />;
+                tabContent = (
+                    <Tab2Content
+                        itemsTabContent={checkList.zones}
+                        index={index}
+                        onNextTab={handleNextTab}
+                        onPreviousTab={handlePreviousTab}
+                        isFirstTab={isFirstTab}
+                        isLastTab={isLastTab}
+                    />
+                );
             } else if (typeCheckList === '3' && statusVisible === 'view') {
-                tabContent = <Tab3Content
-                    itemsTabContent={checkList.zones}
-                    index={index}
-                    onNextTab={handleNextTab}
-                    onPreviousTab={handlePreviousTab}
-                    isFirstTab={isFirstTab}
-                    isLastTab={isLastTab}
-                />;
+                tabContent = (
+                    <Tab3Content
+                        itemsTabContent={checkList.zones}
+                        index={index}
+                        onNextTab={handleNextTab}
+                        onPreviousTab={handlePreviousTab}
+                        isFirstTab={isFirstTab}
+                        isLastTab={isLastTab}
+                    />
+                );
             } else if (typeCheckList === '1' && statusVisible === 'edit') {
-                tabContent = <Tab1ContentEdit
-                    id={id}
-                    index={index}
-                    idTask={idCheckList}
-                    onNextTab={handleNextTab}
-                    onPreviousTab={handlePreviousTab}
-                    idCheckList={idCheckList}
-                    itemsTabContent={checkList.zones}
-                    isFirstTab={isFirstTab}
-                    isLastTab={isLastTab}
-                />;
+                tabContent = (
+                    <Tab1ContentEdit
+                        id={id}
+                        index={index}
+                        idTask={idCheckList}
+                        onNextTab={handleNextTab}
+                        onPreviousTab={handlePreviousTab}
+                        idCheckList={idCheckList}
+                        itemsTabContent={checkList.zones}
+                        isFirstTab={isFirstTab}
+                        isLastTab={isLastTab}
+                    />
+                );
             } else if (typeCheckList === '2' && statusVisible === 'edit') {
-                tabContent = <Tab2ContentEdit
-                    id={id}
-                    index={index}
-                    idTask={idCheckList}
-                    onNextTab={handleNextTab}
-                    onPreviousTab={handlePreviousTab}
-                    idCheckList={idCheckList}
-                    itemsTabContent={checkList.zones}
-                    isFirstTab={isFirstTab}
-                    isLastTab={isLastTab}
-                />;
+                tabContent = (
+                    <Tab2ContentEdit
+                        id={id}
+                        index={index}
+                        idTask={idCheckList}
+                        onNextTab={handleNextTab}
+                        onPreviousTab={handlePreviousTab}
+                        idCheckList={idCheckList}
+                        itemsTabContent={checkList.zones}
+                        isFirstTab={isFirstTab}
+                        isLastTab={isLastTab}
+                    />
+                );
             } else if (typeCheckList === '3' && statusVisible === 'edit') {
-                tabContent = <Tab3ContentEdit
-                    id={id}
-                    index={index}
-                    idTask={idCheckList}
-                    onNextTab={handleNextTab}
-                    onPreviousTab={handlePreviousTab}
-                    idCheckList={idCheckList}
-                    tabId={tabIdTMC}
-                    itemsTabContent={checkList.zones}
-                    isFirstTab={isFirstTab}
-                    isLastTab={isLastTab}
-                />;
+                tabContent = (
+                    <Tab3ContentEdit
+                        id={id}
+                        index={index}
+                        idTask={idCheckList}
+                        onNextTab={handleNextTab}
+                        onPreviousTab={handlePreviousTab}
+                        idCheckList={idCheckList}
+                        tabId={Number(tabIdTMC)}
+                        itemsTabContent={checkList.zones}
+                        isFirstTab={isFirstTab}
+                        isLastTab={isLastTab}
+                    />
+                );
             }
 
             return { key: `tab${key}`, title: zone.name, content: tabContent, tabColor: zone.badge.color };
@@ -236,9 +258,9 @@ const ChecklistScreen = memo(() => {
     }, [checkList, typeCheckList, statusVisible, index, isFirstTab, isLastTab, id, idCheckList, tabIdTMC]);
 
     const finalTabsData = useMemo(() => {
-        return tabsData.length > 0 ? tabsData : [
-            { key: 'tab0', title: 'Нет данных', content: <View><Text>Нет данных для отображения</Text></View> },
-        ];
+        return tabsData.length > 0
+            ? tabsData
+            : [{ key: 'tab0', title: 'Нет данных', content: <View><Text>Нет данных для отображения</Text></View> }];
     }, [tabsData]);
 
     useEffect(() => {
@@ -255,12 +277,23 @@ const ChecklistScreen = memo(() => {
         });
     }, [finalTabsData]);
 
-    const renderScene = useMemo(() => SceneMap(
-        finalTabsData.reduce((acc, tab) => {
-            acc[tab.key] = () => tab.content;
+    const renderScene = useMemo(() => {
+        const scenes = finalTabsData.reduce((acc, tab) => {
+            acc[tab.key] = () => {
+                // Показываем спиннер для контента вкладки, если идёт загрузка
+                if (initialLoading || isTabLoading) {
+                    return (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color="#017EFA" />
+                        </View>
+                    );
+                }
+                return tab.content;
+            };
             return acc;
-        }, {} as { [key: string]: () => React.ReactNode })
-    ), [finalTabsData]);
+        }, {} as { [key: string]: () => React.ReactNode });
+        return SceneMap(scenes);
+    }, [finalTabsData, initialLoading, isTabLoading]);
 
     const renderLazyPlaceholder = () => (
         <View style={styles.loadingContainer}>
@@ -309,14 +342,6 @@ const ChecklistScreen = memo(() => {
         );
     };
 
-//    if (initialLoading) {
-//        return (
-//            <View style={styles.loadingContainer}>
-//                <ActivityIndicator size="large" color="#017EFA" />
-//            </View>
-//        );
-//    }
-
     if (error && checklists.length === 0) {
         return (
             <View style={styles.container}>
@@ -338,25 +363,23 @@ const ChecklistScreen = memo(() => {
                 />
             )}
             {statusVisible === 'view' && (
-                <CustomHeaderScreen text={`${checkList?.name || 'Checklist'}`} marginBottom={0} onPress={handleFinish} />
-            )}
-
-            {initialLoading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#017EFA" />
-                </View>
-            ) : (
-                <TabView
-                    navigationState={{ index, routes }}
-                    renderScene={renderScene}
-                    onIndexChange={handleTabChange}
-                    initialLayout={{ width: screenWidth }}
-                    renderTabBar={renderTabBar}
-                    swipeEnabled={false}
-                    lazy={true}
-                    renderLazyPlaceholder={renderLazyPlaceholder}
+                <CustomHeaderScreen
+                    text={`${checkList?.name || 'Checklist'}`}
+                    marginBottom={0}
+                    onPress={handleFinish}
                 />
             )}
+
+            <TabView
+                navigationState={{ index, routes }}
+                renderScene={renderScene}
+                onIndexChange={handleTabChange}
+                initialLayout={{ width: screenWidth }}
+                renderTabBar={renderTabBar}
+                swipeEnabled={false}
+                lazy={true}
+                renderLazyPlaceholder={renderLazyPlaceholder}
+            />
         </View>
     );
 });
