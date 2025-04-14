@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, Image, StyleSheet, Alert, Modal } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { Camera, XMarkSolid, Gallery, CheckSolid } from '@/components/icons/Icons';
@@ -28,6 +28,8 @@ interface ImagePickerWithCameraProps {
     onImageRemoved?: (removedImage: ImageObject) => void;
     viewGallery?: boolean;
     selected?: boolean;
+    paddingHorizontal?: number;
+    statusVisible?: 'edit' | 'view';
 }
 
 const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
@@ -38,12 +40,15 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
                                                                          onImageUploaded,
                                                                          onImageRemoved,
                                                                          viewGallery = false,
-                                                                         selected = false
+                                                                         selected = false,
+                                                                         paddingHorizontal = 20,
+                                                                         statusVisible = 'edit',
                                                                      }) => {
     const [selectedImages, setSelectedImages] = useState<ImageObject[]>(initialImages);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
     const [markedImageUrl, setMarkedImageUrl] = useState<string | null>(null);
+    const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
 
     useEffect(() => {
         const isEqual = JSON.stringify(initialImages) === JSON.stringify(selectedImages);
@@ -53,46 +58,68 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
     }, [initialImages]);
 
     const requestPermissions = async (): Promise<boolean> => {
-        const [cameraPermission, mediaLibraryPermission] = await Promise.all([
-            ImagePicker.requestCameraPermissionsAsync(),
-            MediaLibrary.requestPermissionsAsync()
-        ]);
+        try {
+            const [cameraPermission, mediaLibraryPermission] = await Promise.all([
+                ImagePicker.requestCameraPermissionsAsync(),
+                MediaLibrary.requestPermissionsAsync()
+            ]);
 
-        if (cameraPermission.status !== 'granted' || mediaLibraryPermission.status !== 'granted') {
-            Alert.alert('Разрешение не получено', 'Пожалуйста, предоставьте доступ к камере и медиатеке.');
+            if (cameraPermission.status !== 'granted' || mediaLibraryPermission.status !== 'granted') {
+                Alert.alert('Разрешение не получено', 'Пожалуйста, предоставьте доступ к камере и медиатеке.');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Ошибка при запросе разрешений:', error);
+            Alert.alert('Ошибка', 'Не удалось запросить разрешения.');
             return false;
         }
-        return true;
     };
 
     const openCamera = async (): Promise<void> => {
-        const hasPermission = await requestPermissions();
-        if (!hasPermission) return;
+        try {
+            const hasPermission = await requestPermissions();
+            if (!hasPermission) return;
 
-        const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: false,
-            aspect: [1, 1] as [number, number],
-            quality: 0.5,
-        });
+            const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: false,
+                aspect: [1, 1] as [number, number],
+                quality: 0.5,
+            });
 
-        if (!result.canceled && result.assets?.length) {
-            await handleImageSelect(result.assets[0].uri);
+            if (!result.canceled && result.assets?.length) {
+                setIsImageLoading(true);
+                await handleImageSelect(result.assets[0].uri);
+            }
+        } catch (error) {
+            console.error('Ошибка при открытии камеры:', error);
+            Alert.alert('Ошибка', 'Не удалось открыть камеру.');
+        } finally {
+            setIsImageLoading(false);
         }
     };
 
     const pickImageFromGallery = async (): Promise<void> => {
-        const hasPermission = await requestPermissions();
-        if (!hasPermission) return;
+        try {
+            const hasPermission = await requestPermissions();
+            if (!hasPermission) return;
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsMultipleSelection: true,
-            aspect: [1, 1] as [number, number],
-            quality: 0.5,
-        });
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsMultipleSelection: true,
+                aspect: [1, 1] as [number, number],
+                quality: 0.5,
+            });
 
-        if (!result.canceled && result.assets) {
-            await Promise.all(result.assets.map(asset => handleImageSelect(asset.uri)));
+            if (!result.canceled && result.assets) {
+                setIsImageLoading(true);
+                await Promise.all(result.assets.map(asset => handleImageSelect(asset.uri)));
+            }
+        } catch (error) {
+            console.error('Ошибка при выборе изображения из галереи:', error);
+            Alert.alert('Ошибка', 'Не удалось выбрать изображение.');
+        } finally {
+            setIsImageLoading(false);
         }
     };
 
@@ -114,7 +141,6 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
             await addPhotoToJsonInMMKV('task', response);
             console.log('Изображение успешно отправлено:', response);
 
-            // Уведомляем родительский компонент о добавлении изображения
             onImageUploaded?.(response);
         } catch (error) {
             console.error('Ошибка при отправке изображения:', error);
@@ -125,29 +151,41 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
     const removeImage = async (image: ImageObject): Promise<void> => {
         setSelectedImages(prevImages => prevImages.filter(img => img.thumbUrl !== image.thumbUrl));
 
-        const matchResult = image.thumbUrl.match(/thumb_([a-f0-9]+_[0-9]+\.jpe?g)/i);
-        if (matchResult) {
-            const fileName = matchResult[1];
-            await postData(path, {
-                answers: [
-                    { answer: name, value: fileName },
-                ],
-            }, 'DELETE');
-            console.log('ImagePickerWithCamera.removeImage', fileName, name);
-        }
+        try {
+            const matchResult = image.thumbUrl.match(/thumb_([a-f0-9]+_[0-9]+\.jpe?g)/i);
+            if (matchResult) {
+                const fileName = matchResult[1];
+                await postData(path, {
+                    answers: [
+                        { answer: name, value: fileName },
+                    ],
+                }, 'DELETE');
+                console.log('ImagePickerWithCamera.removeImage', fileName, name);
+            }
 
-        // Уведомляем родительский компонент об удалении изображения
-        onImageRemoved?.(image);
+            onImageRemoved?.(image);
+        } catch (error) {
+            console.error('Ошибка при удалении изображения:', error);
+            Alert.alert('Ошибка', 'Не удалось удалить изображение.');
+        }
     };
 
     const openImagePreview = (image: ImageObject): void => {
-        setSelectedImageUrl(image.originalUrl);
-        setIsModalVisible(true);
+        try {
+            setIsImageLoading(true); // Включаем спиннер
+            setSelectedImageUrl(image.originalUrl);
+            setIsModalVisible(true);
+        } catch (error) {
+            console.error('Ошибка при открытии предварительного просмотра:', error);
+            Alert.alert('Ошибка', 'Не удалось открыть изображение.');
+            setIsImageLoading(false);
+        }
     };
 
     const closeImagePreview = (): void => {
         setIsModalVisible(false);
         setSelectedImageUrl(null);
+        setIsImageLoading(false);
     };
 
     const toggleImageMark = (): void => {
@@ -164,7 +202,7 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
     };
 
     return (
-        <View style={styles.container}>
+        <View style={{ paddingHorizontal: paddingHorizontal }}>
             <View style={styles.imageGridContainer}>
                 {selectedImages.map((image, index) => (
                     <View
@@ -177,18 +215,24 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
                         <TouchableOpacity onPress={() => openImagePreview(image)}>
                             <Image source={{ uri: image.thumbUrl }} style={styles.image} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => removeImage(image)} style={styles.removeButton}>
-                            <XMarkSolid />
-                        </TouchableOpacity>
+                        {statusVisible === 'edit' && (
+                            <TouchableOpacity onPress={() => removeImage(image)} style={styles.removeButton}>
+                                <XMarkSolid />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 ))}
-                <TouchableOpacity style={styles.cameraButton} onPress={openCamera}>
-                    <Camera />
-                </TouchableOpacity>
-                {viewGallery && (
-                    <TouchableOpacity style={[styles.cameraButton]} onPress={pickImageFromGallery}>
-                        <Gallery />
-                    </TouchableOpacity>
+                {statusVisible === 'edit' && (
+                    <>
+                        <TouchableOpacity style={styles.cameraButton} onPress={openCamera}>
+                            <Camera />
+                        </TouchableOpacity>
+                        {viewGallery && (
+                            <TouchableOpacity style={[styles.cameraButton]} onPress={pickImageFromGallery}>
+                                <Gallery />
+                            </TouchableOpacity>
+                        )}
+                    </>
                 )}
             </View>
 
@@ -199,19 +243,28 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
                 onRequestClose={closeImagePreview}
             >
                 <View style={styles.modalContainer}>
-                    {selected && (
-                        <TouchableOpacity
-                            style={styles.modalMarkButton}
-                            onPress={toggleImageMark}
-                        >
-                            <CheckSolid
-                                color={markedImageUrl === selectedImageUrl ? '#081A51' : '#fff'}
-                            />
-                        </TouchableOpacity>
+                    {isImageLoading && (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color="#017EFA" />
+                        </View>
                     )}
-                    <TouchableOpacity style={styles.modalCloseButton} onPress={closeImagePreview}>
-                        <XMarkSolid color="#fff" />
-                    </TouchableOpacity>
+                    {!isImageLoading && (
+                        <>
+                            {selected && (
+                                <TouchableOpacity
+                                    style={styles.modalMarkButton}
+                                    onPress={toggleImageMark}
+                                >
+                                    <CheckSolid
+                                        color={markedImageUrl === selectedImageUrl ? '#081A51' : '#fff'}
+                                    />
+                                </TouchableOpacity>
+                            )}
+                            <TouchableOpacity style={styles.modalCloseButton} onPress={closeImagePreview}>
+                                <XMarkSolid color="#fff" />
+                            </TouchableOpacity>
+                        </>
+                    )}
                     {selectedImageUrl && (
                         <Image
                             source={{ uri: selectedImageUrl }}
@@ -220,6 +273,11 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
                                 markedImageUrl === selectedImageUrl && styles.markedFullImage
                             ]}
                             resizeMode="contain"
+                            onLoad={() => setIsImageLoading(false)} // Скрываем спиннер после загрузки
+                            onError={() => {
+                                setIsImageLoading(false); // Скрываем спиннер при ошибке
+                                Alert.alert('Ошибка', 'Не удалось загрузить изображение.');
+                            }}
                         />
                     )}
                 </View>
@@ -300,6 +358,16 @@ const styles = StyleSheet.create({
     markedFullImage: {
         borderWidth: 4,
         borderColor: '#081A51',
+    },
+    loadingContainer: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center' as const,
+        alignItems: 'center' as const,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
 });
 

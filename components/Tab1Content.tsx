@@ -5,6 +5,7 @@ import { Zone, Field } from "@/types/Checklist";
 import Footer from "@/components/Footer";
 import { TextButton } from "@/components/TextButton";
 import { TransferField } from "@/types/Field";
+import ImagePickerWithCamera from "@/components/ImagePickerWithCamera";
 
 type Tab1ContentType = {
     index: number;
@@ -151,20 +152,15 @@ const Tab1Content = memo(({
                         </View>
                     );
                 case 'foto':
-                    const arrayPhoto = componentData.value || [];
+                    //const arrayPhoto = componentData.value || [];
                     return (
-                        <View style={styles.imageContainer}>
-                            {arrayPhoto.map((foto: any, index: number) => (
-                                <Image
-                                    key={index}
-                                    source={{ uri: foto.thumbUrl }}
-                                    style={[
-                                        styles.image,
-                                        index !== 3 && styles.imageMargin,
-                                    ]}
-                                />
-                            ))}
-                        </View>
+                        <ImagePickerWithCamera
+                            key={`image`}
+                            initialImages={componentData.value || []}
+                            name={componentData.name}
+                            statusVisible={'view'}
+                            paddingHorizontal={0}
+                        />
                     );
                 case 'checkbox':
                     return (
