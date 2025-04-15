@@ -1,8 +1,8 @@
 import React, { useEffect, useState, memo, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { MMKV } from 'react-native-mmkv';
+import { Button, } from '@rneui/themed';
 import Footer from '@/components/Footer';
 import { TextButton } from '@/components/TextButton';
 import ImagePickerWithCamera from '@/components/ImagePickerWithCamera';
@@ -759,8 +759,31 @@ const Tab3ContentEdit = ({
                         <View key={`tmc-${idx}`}>
                             {!isHeaderVisibleTmc && (
                                 <>
-                                    <Text style={styles.tmcTitle}>Наличие препаратов в ТК</Text>
-                                    <View style={styles.tmcHeaderContainer}>
+                                    <View style={styles.tmcTitleContainer}>
+                                        <Text style={styles.tmcTitle}>Наличие препаратов в ТК</Text>
+                                        <Button
+                                            TouchableComponent={TouchableOpacity as any}
+                                            icon={{
+                                                name: 'plus',
+                                                type: 'font-awesome',
+                                                size: 10,
+                                                color: '#5D6377',
+                                            }}
+                                            containerStyle={{
+                                                marginLeft: 10,
+                                                backgroundColor: '#CFCFCF',
+                                                borderRadius: 6,
+                                            }}
+                                            buttonStyle={{
+                                                width: 25,
+                                                height: 25,
+                                                paddingHorizontal: 0,
+                                                backgroundColor: '#F5F7FB',
+                                            }}
+
+                                        />
+                                    </View>
+                                        <View style={styles.tmcHeaderContainer}>
                                         <Text style={styles.tmcHeaderText}>Наименование</Text>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                                             <Text style={styles.tmcHeaderText}>В наличии</Text>
@@ -1041,6 +1064,11 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         borderBottomWidth: 1,
         borderBottomColor: '#DADADA',
+    },
+    tmcTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 15,
     },
     tmcTitle: {
         marginTop: 10,
