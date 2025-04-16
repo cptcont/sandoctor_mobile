@@ -421,7 +421,7 @@ const ChecklistScreen = memo(() => {
             <View style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#017EFA" />
-                    <Text style={styles.loadingText}>Загрузка данных...</Text>
+                    {/*<Text style={styles.loadingText}>Загрузка данных...</Text>*/}
                 </View>
             </View>
         );
