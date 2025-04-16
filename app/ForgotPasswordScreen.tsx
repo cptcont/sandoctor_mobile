@@ -56,7 +56,6 @@ const ForgotPasswordScreen = () => {
                         setSubmitting(true); // Устанавливаем состояние отправки
                         try {
                             let usernameToSend = values.username;
-
                             // Если это номер телефона, отправляем только последние 10 цифр
                             const cleanedValue = values.username.replace(/[\s()-]/g, '');
                             if (cleanedValue.match(/^\+7\d{10}$/) || cleanedValue.match(/^8\d{10}$/)) {
@@ -64,17 +63,29 @@ const ForgotPasswordScreen = () => {
                             }
 
                             console.log('forgotpassword', usernameToSend);
-                            await fetch('https://sandoctor.ru/api/v1/forgotpassword/', {
+                            const response = await fetch('https://sandoctor.ru/api/v1/forgotpassword/', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({ username: usernameToSend }),
                             });
+
+                            // Проверяем, успешен ли запрос
+                            if (!response.ok) {
+                                // Извлекаем тело ответа как JSON
+                                const errorData = await response.json();
+                                // Предполагаем, что API возвращает сообщение об ошибке в поле, например, 'message' или 'error'
+                                const errorMessage = errorData.message || errorData.error || 'Неизвестная ошибка';
+                                throw new Error(errorMessage);
+                            }
+
                             showPopup('Cсылка на восстановление успешно отправлена', 'green', 3000);
                             router.push('/LoginScreen');
                         } catch (error) {
-                            showPopup('Ошибка отправки данных', 'red', 2000);
+                            //console.log("error", error);
+                            // Отображаем текст ошибки из ответа API
+                            showPopup(`${error.message}`, 'red', 2000);
                         } finally {
                             setSubmitting(false); // Сбрасываем состояние отправки
                         }

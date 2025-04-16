@@ -1,3 +1,4 @@
+// Импорт необходимых модулей из React и React Native
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
@@ -6,15 +7,18 @@ import { TextButton } from "@/components/TextButton";
 import Footer from "@/components/Footer";
 import { TransferField } from "@/types/Field";
 
+// Типизация пропсов компонента
 type Tab3ContentType = {
     index: number;
     itemsTabContent?: Zone[];
     onNextTab?: () => void;
     onPreviousTab?: () => void;
+    tabId?: string;
     isFirstTab?: boolean;
     isLastTab?: boolean;
 };
 
+// Интерфейс для данных фильтра
 interface FilterData {
     access: { value: string; color: string };
     point_status: { value: string; color: string };
@@ -23,35 +27,45 @@ interface FilterData {
     pests: Pest[];
 }
 
+// Компонент Tab3Content
 const Tab3Content = ({
                          itemsTabContent = [],
                          index,
                          onNextTab,
                          onPreviousTab,
+                         tabId,
                          isFirstTab = true,
                          isLastTab = false,
                      }: Tab3ContentType) => {
+    // Состояние для хранения полей
     const [field, setField] = useState<TransferField[]>([]);
+    // Состояние для индекса вкладки
     const [tabIndex, setTabIndex] = useState('tab0');
+    // Состояние для значений TMC
     const [tmcValues, setTmcValues] = useState<Record<string, { n: string; u: string; v: string }>>({});
+    // Состояние для значений вредителей
     const [pestValues, setPestValues] = useState<Record<string, string>>({});
+    // Состояние для отслеживания инициализации
+    const [isInitialized, setIsInitialized] = useState(false);
 
+    // Формирование элементов выпадающего списка
     const items: { label: string; value: string }[] = itemsTabContent[index].control_points.map((data: Point, index: number) =>
         ({ label: data.name.toString(), value: `tab${index}` })
     );
 
+    // Трансформация объекта TMC в массив
     const transformObjectToArrayTMC = (originalObject: any) => {
         const { name, fields } = originalObject;
-        const fieldName = fields.p.name;
-        const baseName = fieldName.replace(/\[[^\]]+\]$/, "");
+        const fieldName = fields.p.name.replace(/\[[^\]]+\]$/, "");
         return [{
-            name: baseName,
+            name: fieldName,
             label: name,
             type: 'tmc',
             value: fields,
         }];
     };
 
+    // Трансформация объекта Pests в массив
     const transformObjectToArrayPests = (originalObject: any) => {
         const { name, field } = originalObject;
         return [{
@@ -62,21 +76,41 @@ const Tab3Content = ({
         }];
     };
 
+    // Синхронизация значения выпадающего списка с tabId
+    useEffect(() => {
+        if (tabId && items.length > 0 && !isInitialized) {
+            // Поиск индекса контрольной точки по tabId
+            const controlPointIndex = itemsTabContent[index]?.control_points?.findIndex(
+                (cp: any) => cp.id === tabId
+            );
+            // Если индекс найден, устанавливаем соответствующее значение
+            if (controlPointIndex !== -1) {
+                setTabIndex(`tab${controlPointIndex}`);
+                setIsInitialized(true);
+            }
+        }
+    }, [tabId, index, itemsTabContent, isInitialized, items]);
+
+    // Обновление полей при изменении tabIndex или index
     useEffect(() => {
         const updateFields = () => {
+            // Извлечение номера из tabIndex
             const match = tabIndex.match(/\d+$/);
             const num = match ? Number(match[0]) : 0;
 
+            // Получение данных полей, TMC и вредителей
             const fields = itemsTabContent[index]?.control_points[num]?.fields;
             const TMC = itemsTabContent[index]?.control_points[num]?.tmc;
             const pests = itemsTabContent[index]?.control_points[num]?.pests;
 
+            // Трансформация данных
             const fieldsTMC = Array.isArray(TMC) ? TMC.map((data: any) => transformObjectToArrayTMC(data)).flat() : [];
             const fieldsPests = Array.isArray(pests) ? pests.map((data: any) => transformObjectToArrayPests(data)).flat() : [];
             const fieldItem = Array.isArray(fields) ? fields.map((field: any) => field) : [];
             const combinedArray = [...fieldItem, ...fieldsTMC, ...fieldsPests];
             const transformedField = transformData(combinedArray);
 
+            // Инициализация начальных значений TMC и вредителей
             const initialTmcValues: Record<string, { n: string; u: string; v: string }> = {};
             const initialPestValues: Record<string, string> = {};
 
@@ -95,6 +129,7 @@ const Tab3Content = ({
                 });
             }
 
+            // Обновление состояний
             setTmcValues(initialTmcValues);
             setPestValues(initialPestValues);
             setField(transformedField);
@@ -103,6 +138,7 @@ const Tab3Content = ({
         updateFields();
     }, [tabIndex, index, itemsTabContent]);
 
+    // Трансформация данных полей
     const transformData = (data: TransferField[]) => data.map(data => {
         if (data.type === "radio") {
             return {
@@ -139,12 +175,13 @@ const Tab3Content = ({
         }
     });
 
+    // Отображение данных
     const transferDataVisible = (data = [{}]) => {
         if (!data || typeof data !== 'object' || !Array.isArray(data) || data.length === 0) {
             data = [{}];
         }
 
-        // Проверяем, есть ли radio-компонент и все ли его опции не выбраны
+        // Проверка radio-компонента
         let hasRadio = false;
         let allRadioOptionsUnselected = false;
         data.forEach(item => {
@@ -154,7 +191,7 @@ const Tab3Content = ({
             }
         });
 
-        // Если есть radio и все опции не выбраны, показываем только сообщение
+        // Если radio не выбран, показываем сообщение
         if (hasRadio && allRadioOptionsUnselected) {
             return (
                 <View style={[styles.text, { marginBottom: 17 }]}>
@@ -163,10 +200,9 @@ const Tab3Content = ({
             );
         }
 
-        // Иначе отображаем данные как обычно
+        // Отображение данных
         let isHeaderVisibleTmc = false;
         let isHeaderVisiblePest = false;
-
         let isNoSelected = false;
         data.forEach(item => {
             if (item.radio) {
@@ -282,12 +318,14 @@ const Tab3Content = ({
         });
     };
 
+    // Обработчик выбора в выпадающем списке
     const handleSelect = (value: string | null) => {
         if (value !== null) {
             setTabIndex(value);
         }
     };
 
+    // Обработчик перехода к следующей вкладке
     const handleNext = async () => {
         const match = tabIndex.match(/\d+$/);
         const currentIndex = match ? Number(match[0]) : 0;
@@ -301,6 +339,7 @@ const Tab3Content = ({
         }
     };
 
+    // Обработчик перехода к предыдущей вкладке
     const handlePrevious = () => {
         const match = tabIndex.match(/\d+$/);
         const currentIndex = match ? Number(match[0]) : 0;
@@ -314,6 +353,7 @@ const Tab3Content = ({
         }
     };
 
+    // Рендеринг компонента
     return (
         <View style={styles.tab3Container}>
             <View style={styles.text}>
@@ -366,6 +406,7 @@ const Tab3Content = ({
     );
 };
 
+// Стили компонента
 const styles = StyleSheet.create({
     tab3Container: {
         flex: 1,
@@ -434,4 +475,5 @@ const styles = StyleSheet.create({
     },
 });
 
+// Экспорт компонента
 export default Tab3Content;

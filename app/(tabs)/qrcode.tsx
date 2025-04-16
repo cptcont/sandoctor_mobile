@@ -84,16 +84,23 @@ export default function QRCodeScreen() {
                 return;
             }
 
-            console.log('Response', response);
+            console.log('Response GKGKJGHKLJGKJ LHLJHLHLHLHLKHL lkhlhjh', response);
+            let statusVisible = 'view';
+            if (response.responce.task_status === "2") {
+                statusVisible = 'edit'
+            }
+            console.log('statusVisible', statusVisible);
             router.push({
                 pathname: '/checklist',
                 params: {
                     id: '20',
                     idCheckList: response.responce.task,
                     typeCheckList: '3',
-                    statusVisible: 'edit',
+                    statusVisible: statusVisible,
                     tabId: response.responce.zone,
                     tabIdTMC: response.responce.point,
+                    //taskStatus: response.responce.task_status,
+
                 },
             });
         } catch (error) {

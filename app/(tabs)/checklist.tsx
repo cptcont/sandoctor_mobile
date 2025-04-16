@@ -29,7 +29,6 @@ interface Route {
 
 const ChecklistScreen = memo(() => {
     const params = useLocalSearchParams();
-    console.log('ChecklistScreen params:', params);
     const { id, idCheckList, typeCheckList = '1', statusVisible = 'view', tabId, tabIdTMC } = params;
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [index, setIndex] = useState(0);
@@ -59,7 +58,6 @@ const ChecklistScreen = memo(() => {
                 fetchDataSaveStorage<Task>(`task/${idCheckList}`, 'task'),
             ]);
             const loadedChecklists = getDataFromStorage('checklists') || [];
-            console.log('Loaded checklists:', loadedChecklists);
             if (!loadedChecklists.length) {
                 setError('Нет данных для отображения');
             }
@@ -84,12 +82,9 @@ const ChecklistScreen = memo(() => {
                         }
                     }
                     setIndex(newIndex);
-                } else {
-                    console.warn('No zones in checklist');
                 }
             }
         } catch (err) {
-            console.error('Ошибка при загрузке данных:', err);
             setError('Не удалось загрузить данные. Попробуйте ещё раз.');
         } finally {
             setInitialLoading(false);
@@ -108,13 +103,10 @@ const ChecklistScreen = memo(() => {
     );
 
     const updateCheckList = async () => {
-        console.log('Starting updateCheckList');
         await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists');
         const updatedChecklists = getDataFromStorage('checklists') || [];
-        console.log('Updated checklists:', updatedChecklists);
         setChecklists(updatedChecklists);
         setLastFetchTime(Date.now());
-        console.log('Finished updateCheckList');
     };
 
     useEffect(() => {
@@ -125,9 +117,6 @@ const ChecklistScreen = memo(() => {
 
     const checkList = useMemo(() => {
         const found = checklists.find((c) => c.id === id);
-        if (!found) {
-            console.warn('Checklist not found for id:', id);
-        }
         return found;
     }, [checklists, id]);
 
@@ -138,7 +127,6 @@ const ChecklistScreen = memo(() => {
             setIsFirstTab(newIndex === 0);
             setIsLastTab(newIndex === routes.length - 1);
             if (!checkList?.zones?.[newIndex]) {
-                console.warn('No zone data for next tab');
                 return;
             }
             setIsTabLoading(true);
@@ -159,7 +147,6 @@ const ChecklistScreen = memo(() => {
             setIsFirstTab(newIndex === 0);
             setIsLastTab(newIndex === routes.length - 1);
             if (!checkList?.zones?.[newIndex]) {
-                console.warn('No zone data for previous tab');
                 return;
             }
             setIsTabLoading(true);
@@ -178,7 +165,6 @@ const ChecklistScreen = memo(() => {
         setIsFirstTab(newIndex === 0);
         setIsLastTab(newIndex === routes.length - 1);
         if (!checkList?.zones?.[newIndex]) {
-            console.warn('No zone data for tab index:', newIndex);
             return;
         }
         setIsTabLoading(true);
@@ -200,9 +186,7 @@ const ChecklistScreen = memo(() => {
     };
 
     const tabsData = useMemo(() => {
-        console.log('Forming tabsData with:', { checkList, typeCheckList, statusVisible, index });
         if (!checkList || !checkList.zones || checkList.zones.length === 0) {
-            console.warn('checkList or zones is empty');
             return [{ key: 'tab0', title: 'Нет данных', content: <Text>Нет данных для отображения</Text> }];
         }
         return checkList.zones.map((zone: Zone, key: number) => {
@@ -234,6 +218,7 @@ const ChecklistScreen = memo(() => {
                     <Tab3Content
                         itemsTabContent={checkList.zones}
                         index={index}
+                        tabId={tabIdTMC}
                         onNextTab={handleNextTab}
                         onPreviousTab={handlePreviousTab}
                         isFirstTab={isFirstTab}
@@ -284,7 +269,6 @@ const ChecklistScreen = memo(() => {
                     />
                 );
             }
-            console.log(`Tab ${key} content:`, tabContent);
             return {
                 key: `tab${key}`,
                 title: zone.name || 'Без названия',
@@ -295,7 +279,6 @@ const ChecklistScreen = memo(() => {
     }, [checkList, typeCheckList, statusVisible, index, isFirstTab, isLastTab, id, idCheckList, tabIdTMC]);
 
     const finalTabsData = useMemo(() => {
-        console.log('Final tabsData:', tabsData);
         return tabsData.length > 0
             ? tabsData
             : [{ key: 'tab0', title: 'Нет данных', content: <Text>Нет данных для отображения</Text> }];
@@ -320,7 +303,6 @@ const ChecklistScreen = memo(() => {
         const scenes = finalTabsData.reduce((acc, tab) => {
             acc[tab.key] = () => {
                 if (isTabLoading) {
-                    console.log('Showing tab spinner for tab:', tab.key);
                     return (
                         <View style={styles.loadingContainer}>
                             <ActivityIndicator size="large" color="#017EFA" />
@@ -328,7 +310,6 @@ const ChecklistScreen = memo(() => {
                     );
                 }
                 if (!tab.content) {
-                    console.warn(`No content for tab ${tab.key}`);
                     return <Text>Компонент не найден</Text>;
                 }
                 return tab.content;
@@ -352,7 +333,6 @@ const ChecklistScreen = memo(() => {
         setTabWidths((prev) => {
             const newWidths = [...prev];
             newWidths[index] = width;
-            console.log(`Tab ${index} width: ${width}, all widths:`, newWidths);
             return newWidths;
         });
     };
@@ -363,13 +343,9 @@ const ChecklistScreen = memo(() => {
             for (let i = 0; i < index; i++) {
                 offsetX += tabWidths[i] || 0;
             }
-            console.log(`Preparing to scroll to tab ${index}, offsetX: ${offsetX}, tabWidths:`, tabWidths);
             setTimeout(() => {
                 scrollViewRef.current?.scrollTo({ x: offsetX, animated: true });
-                console.log(`Scrolled to tab ${index} at offset ${offsetX}`);
             }, 100);
-        } else {
-            console.warn(`Cannot scroll: scrollViewRef=${!!scrollViewRef.current}, tabWidth=${tabWidths[index]}`);
         }
     }, [index, tabWidths]);
 
@@ -390,7 +366,6 @@ const ChecklistScreen = memo(() => {
                         onLayout={(event) => {
                             const width = event.nativeEvent.layout.width;
                             setTabsWidth(width);
-                            console.log('Tabs container width:', width);
                         }}
                         style={styles.tabsContainer}
                     >
@@ -421,7 +396,6 @@ const ChecklistScreen = memo(() => {
             <View style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#017EFA" />
-                    {/*<Text style={styles.loadingText}>Загрузка данных...</Text>*/}
                 </View>
             </View>
         );
@@ -489,11 +463,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    loadingText: {
-        marginTop: 10,
-        fontSize: 16,
-        color: '#1C1F37',
-    },
     tabBarOuterContainer: {
         height: 30,
     },
@@ -510,12 +479,6 @@ const styles = StyleSheet.create({
         borderBottomColor: '#ECECEC',
         borderLeftColor: '#ECECEC',
         borderLeftWidth: 1,
-    },
-    footerContainer: {
-        paddingHorizontal: 18,
-        width: '100%',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
     },
 });
 
