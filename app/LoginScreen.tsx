@@ -107,7 +107,7 @@ const LoginScreen = () => {
 
                             <View style={styles.buttonContainer}>
                                 <Button
-                                    title={'Отправить'}
+                                    title={'ВоЙти'}
                                     buttonStyle={styles.button}
                                     titleStyle={styles.buttonText}
                                     loading={isSubmitting} // Показываем индикатор загрузки
