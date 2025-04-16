@@ -104,6 +104,26 @@ const Tab1Content = memo(({
             data = [{}];
         }
 
+        // Проверяем, есть ли radio-компонент и все ли его опции не выбраны
+        let hasRadio = false;
+        let allRadioOptionsUnselected = false;
+        data.forEach(item => {
+            if (item.radio) {
+                hasRadio = true;
+                allRadioOptionsUnselected = !item.radio.options.some(option => option.selected);
+            }
+        });
+
+        // Если есть radio и все опции не выбраны, показываем только сообщение
+        if (hasRadio && allRadioOptionsUnselected) {
+            return (
+                <View style={[styles.text, { marginBottom: 17 }]}>
+                    <Text style={[styles.title, { color: '#017EFA' }]}>Данные не заполнены</Text>
+                </View>
+            );
+        }
+
+        // Иначе отображаем данные как обычно
         let isNoSelected = false;
         data.forEach(item => {
             if (item.radio) {
@@ -135,7 +155,7 @@ const Tab1Content = memo(({
                             {componentData.options.map((option, optionIndex) => {
                                 if (option.selected) {
                                     return (
-                                        <Text key={`option-${optionIndex}`} style={[styles.title, { color: option.bgcolor }]}>
+                                        <Text key={`option-${optionIndex}`} style={[styles.title, { color: '#939393' }]}>
                                             {option.text}
                                         </Text>
                                     );
@@ -152,7 +172,6 @@ const Tab1Content = memo(({
                         </View>
                     );
                 case 'foto':
-                    //const arrayPhoto = componentData.value || [];
                     return (
                         <ImagePickerWithCamera
                             key={`image`}
@@ -186,7 +205,7 @@ const Tab1Content = memo(({
                                 placeholderStyle={{ color: '#000000', fontSize: 12 }}
                                 selectedTextStyle={{ color: '#000000', fontSize: 12 }}
                                 itemTextStyle={{ fontSize: 14 }}
-                                disable={true} // Отключаем взаимодействие, так как это режим просмотра
+                                disable={true}
                             />
                         </View>
                     );

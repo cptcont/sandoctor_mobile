@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { ButtonHeader } from '@/components/ButtonHeader';
 import { useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
@@ -66,6 +66,10 @@ export function CustomHeader() {
         router.push('/buildings');
     }
 
+    const handlePressHome = () => {
+        router.push('/');
+    }
+
     const toggleAvatarMenu = () => {
         showModal(
             <AvatarMenu
@@ -83,8 +87,13 @@ export function CustomHeader() {
 
     return (
         <View style={styles.header}>
-            <Image source={require('@/assets/images/logo-header.png')} style={styles.logo} />
-            <IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openQr} />
+            <TouchableOpacity
+                onPress={handlePressHome}
+                activeOpacity={0.9}
+            >
+                <Image source={require('@/assets/images/logo-header.png')} style={styles.logo} />
+            </TouchableOpacity>
+                <IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openQr} />
             {/* <IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openBuilding} /> */}
 
             <View>

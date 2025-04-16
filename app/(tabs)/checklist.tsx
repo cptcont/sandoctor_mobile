@@ -1,22 +1,19 @@
 import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { View, ScrollView, StyleSheet, useWindowDimensions, Text, Button, ActivityIndicator } from 'react-native';
-import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
-import { router, useLocalSearchParams } from "expo-router";
-import { NavigationState, SceneMap, SceneRendererProps, TabView } from "react-native-tab-view";
-import Tab from "@/components/Tab";
-import type { Checklist, Zone } from "@/types/Checklist";
-import Tab1Content from "@/components/Tab1Content";
-import Tab2Content from "@/components/Tab2Content";
-import Tab3Content from "@/components/Tab3Content";
-import Tab2ContentEdit from "@/components/Tab2ContentEdit";
-import Tab1ContentEdit from "@/components/Tab1ContentEdit";
-import Tab3ContentEdit from "@/components/Tab3ContentEdit";
-import {
-    fetchDataSaveStorage,
-    getDataFromStorage,
-} from '@/services/api';
-import type { Task } from "@/types/Task";
-import { useFocusEffect } from "@react-navigation/native";
+import { CustomHeaderScreen } from '@/components/CustomHeaderScreen';
+import { router, useLocalSearchParams } from 'expo-router';
+import { NavigationState, SceneMap, SceneRendererProps, TabView } from 'react-native-tab-view';
+import Tab from '@/components/Tab';
+import type { Checklist, Zone } from '@/types/Checklist';
+import Tab1Content from '@/components/Tab1Content';
+import Tab2Content from '@/components/Tab2Content';
+import Tab3Content from '@/components/Tab3Content';
+import Tab2ContentEdit from '@/components/Tab2ContentEdit';
+import Tab1ContentEdit from '@/components/Tab1ContentEdit';
+import Tab3ContentEdit from '@/components/Tab3ContentEdit';
+import { fetchDataSaveStorage, getDataFromStorage } from '@/services/api';
+import type { Task } from '@/types/Task';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface TabContent {
     key: string;
@@ -32,7 +29,8 @@ interface Route {
 
 const ChecklistScreen = memo(() => {
     const params = useLocalSearchParams();
-    const { id, idCheckList, typeCheckList, statusVisible, tabId, tabIdTMC } = params;
+    console.log('ChecklistScreen params:', params);
+    const { id, idCheckList, typeCheckList = '1', statusVisible = 'view', tabId, tabIdTMC } = params;
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [index, setIndex] = useState(0);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -42,10 +40,14 @@ const ChecklistScreen = memo(() => {
     const [isFirstTab, setIsFirstTab] = useState(true);
     const [isLastTab, setIsLastTab] = useState(false);
     const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
+    const [tabWidths, setTabWidths] = useState<number[]>([]);
+
+    const scrollViewRef = useRef<ScrollView>(null);
+    const tabsContainerRef = useRef<View>(null);
 
     const loadChecklistsTask = async (forceFetch = false) => {
         const now = Date.now();
-        if (!forceFetch && lastFetchTime && (now - lastFetchTime < 5000)) {
+        if (!forceFetch && lastFetchTime && now - lastFetchTime < 5000) {
             return;
         }
 
@@ -57,6 +59,10 @@ const ChecklistScreen = memo(() => {
                 fetchDataSaveStorage<Task>(`task/${idCheckList}`, 'task'),
             ]);
             const loadedChecklists = getDataFromStorage('checklists') || [];
+            console.log('Loaded checklists:', loadedChecklists);
+            if (!loadedChecklists.length) {
+                setError('Нет данных для отображения');
+            }
             setChecklists(loadedChecklists);
             setLastFetchTime(now);
 
@@ -68,8 +74,8 @@ const ChecklistScreen = memo(() => {
                     setIsLastTab(false);
 
                     if (tabId || tabIdTMC) {
-                        const tabIndex = checkList.zones.findIndex((zone: Zone) =>
-                            zone.id === tabId || zone.id === tabIdTMC
+                        const tabIndex = checkList.zones.findIndex(
+                            (zone: Zone) => zone.id === tabId || zone.id === tabIdTMC
                         );
                         if (tabIndex !== -1) {
                             newIndex = tabIndex;
@@ -78,6 +84,8 @@ const ChecklistScreen = memo(() => {
                         }
                     }
                     setIndex(newIndex);
+                } else {
+                    console.warn('No zones in checklist');
                 }
             }
         } catch (err) {
@@ -100,9 +108,13 @@ const ChecklistScreen = memo(() => {
     );
 
     const updateCheckList = async () => {
+        console.log('Starting updateCheckList');
         await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists');
-        setChecklists(getDataFromStorage('checklists') || []);
+        const updatedChecklists = getDataFromStorage('checklists') || [];
+        console.log('Updated checklists:', updatedChecklists);
+        setChecklists(updatedChecklists);
         setLastFetchTime(Date.now());
+        console.log('Finished updateCheckList');
     };
 
     useEffect(() => {
@@ -111,20 +123,30 @@ const ChecklistScreen = memo(() => {
         }
     }, [statusVisible]);
 
-    const checkList = useMemo(() => checklists.find((c) => c.id === id), [checklists, id]);
+    const checkList = useMemo(() => {
+        const found = checklists.find((c) => c.id === id);
+        if (!found) {
+            console.warn('Checklist not found for id:', id);
+        }
+        return found;
+    }, [checklists, id]);
 
     const handleNextTab = async () => {
         if (index < routes.length - 1) {
-            setIsTabLoading(true);
             const newIndex = index + 1;
             setIndex(newIndex);
             setIsFirstTab(newIndex === 0);
             setIsLastTab(newIndex === routes.length - 1);
-            const nextTabId = checkList?.zones[newIndex]?.id;
+            if (!checkList?.zones?.[newIndex]) {
+                console.warn('No zone data for next tab');
+                return;
+            }
+            setIsTabLoading(true);
+            const nextTabId = checkList.zones[newIndex].id;
             await updateCheckList();
             router.setParams({
                 tabId: nextTabId,
-                tabIdTMC: tabIdTMC,
+                tabIdTMC,
             });
             setIsTabLoading(false);
         }
@@ -132,31 +154,39 @@ const ChecklistScreen = memo(() => {
 
     const handlePreviousTab = async () => {
         if (index > 0) {
-            setIsTabLoading(true);
             const newIndex = index - 1;
             setIndex(newIndex);
             setIsFirstTab(newIndex === 0);
             setIsLastTab(newIndex === routes.length - 1);
-            const prevTabId = checkList?.zones[newIndex]?.id;
+            if (!checkList?.zones?.[newIndex]) {
+                console.warn('No zone data for previous tab');
+                return;
+            }
+            setIsTabLoading(true);
+            const prevTabId = checkList.zones[newIndex].id;
             await updateCheckList();
             router.setParams({
                 tabId: prevTabId,
-                tabIdTMC: tabIdTMC,
+                tabIdTMC,
             });
             setIsTabLoading(false);
         }
     };
 
     const handleTabChange = async (newIndex: number) => {
-        setIsTabLoading(true);
         setIndex(newIndex);
         setIsFirstTab(newIndex === 0);
         setIsLastTab(newIndex === routes.length - 1);
+        if (!checkList?.zones?.[newIndex]) {
+            console.warn('No zone data for tab index:', newIndex);
+            return;
+        }
+        setIsTabLoading(true);
+        const currentTabId = checkList.zones[newIndex].id;
         await updateCheckList();
-        const currentTabId = checkList?.zones[newIndex]?.id;
         router.setParams({
             tabId: currentTabId,
-            tabIdTMC: tabIdTMC,
+            tabIdTMC,
         });
         setIsTabLoading(false);
     };
@@ -170,8 +200,10 @@ const ChecklistScreen = memo(() => {
     };
 
     const tabsData = useMemo(() => {
+        console.log('Forming tabsData with:', { checkList, typeCheckList, statusVisible, index });
         if (!checkList || !checkList.zones || checkList.zones.length === 0) {
-            return [];
+            console.warn('checkList or zones is empty');
+            return [{ key: 'tab0', title: 'Нет данных', content: <Text>Нет данных для отображения</Text> }];
         }
         return checkList.zones.map((zone: Zone, key: number) => {
             let tabContent = null;
@@ -245,32 +277,39 @@ const ChecklistScreen = memo(() => {
                         onNextTab={handleNextTab}
                         onPreviousTab={handlePreviousTab}
                         idCheckList={idCheckList}
-                        tabId={Number(tabIdTMC)}
+                        tabId={tabIdTMC}
                         itemsTabContent={checkList.zones}
                         isFirstTab={isFirstTab}
                         isLastTab={isLastTab}
                     />
                 );
             }
-
-            return { key: `tab${key}`, title: zone.name, content: tabContent, tabColor: zone.badge.color };
+            console.log(`Tab ${key} content:`, tabContent);
+            return {
+                key: `tab${key}`,
+                title: zone.name || 'Без названия',
+                content: tabContent || <Text>Компонент не найден</Text>,
+                tabColor: zone.badge?.color,
+            };
         });
     }, [checkList, typeCheckList, statusVisible, index, isFirstTab, isLastTab, id, idCheckList, tabIdTMC]);
 
     const finalTabsData = useMemo(() => {
+        console.log('Final tabsData:', tabsData);
         return tabsData.length > 0
             ? tabsData
-            : [{ key: 'tab0', title: 'Нет данных', content: <View><Text>Нет данных для отображения</Text></View> }];
+            : [{ key: 'tab0', title: 'Нет данных', content: <Text>Нет данных для отображения</Text> }];
     }, [tabsData]);
 
     useEffect(() => {
-        const newRoutes = finalTabsData.map(tab => ({
+        const newRoutes = finalTabsData.map((tab) => ({
             key: tab.key,
             title: tab.title,
             tabColor: tab.tabColor,
         }));
-        setRoutes(prevRoutes => {
+        setRoutes((prevRoutes) => {
             if (JSON.stringify(prevRoutes) !== JSON.stringify(newRoutes)) {
+                setTabWidths(new Array(newRoutes.length).fill(0));
                 return newRoutes;
             }
             return prevRoutes;
@@ -280,20 +319,24 @@ const ChecklistScreen = memo(() => {
     const renderScene = useMemo(() => {
         const scenes = finalTabsData.reduce((acc, tab) => {
             acc[tab.key] = () => {
-                // Показываем спиннер для контента вкладки, если идёт загрузка
-                if (initialLoading || isTabLoading) {
+                if (isTabLoading) {
+                    console.log('Showing tab spinner for tab:', tab.key);
                     return (
                         <View style={styles.loadingContainer}>
                             <ActivityIndicator size="large" color="#017EFA" />
                         </View>
                     );
                 }
+                if (!tab.content) {
+                    console.warn(`No content for tab ${tab.key}`);
+                    return <Text>Компонент не найден</Text>;
+                }
                 return tab.content;
             };
             return acc;
         }, {} as { [key: string]: () => React.ReactNode });
         return SceneMap(scenes);
-    }, [finalTabsData, initialLoading, isTabLoading]);
+    }, [finalTabsData, isTabLoading]);
 
     const renderLazyPlaceholder = () => (
         <View style={styles.loadingContainer}>
@@ -301,9 +344,34 @@ const ChecklistScreen = memo(() => {
         </View>
     );
 
-    const tabsContainerRef = useRef<View>(null);
     const [tabsWidth, setTabsWidth] = useState(0);
     const { width: screenWidth } = useWindowDimensions();
+
+    const handleTabLayout = (index: number, event: any) => {
+        const { width } = event.nativeEvent.layout;
+        setTabWidths((prev) => {
+            const newWidths = [...prev];
+            newWidths[index] = width;
+            console.log(`Tab ${index} width: ${width}, all widths:`, newWidths);
+            return newWidths;
+        });
+    };
+
+    useEffect(() => {
+        if (scrollViewRef.current && tabWidths[index] > 0) {
+            let offsetX = 0;
+            for (let i = 0; i < index; i++) {
+                offsetX += tabWidths[i] || 0;
+            }
+            console.log(`Preparing to scroll to tab ${index}, offsetX: ${offsetX}, tabWidths:`, tabWidths);
+            setTimeout(() => {
+                scrollViewRef.current?.scrollTo({ x: offsetX, animated: true });
+                console.log(`Scrolled to tab ${index} at offset ${offsetX}`);
+            }, 100);
+        } else {
+            console.warn(`Cannot scroll: scrollViewRef=${!!scrollViewRef.current}, tabWidth=${tabWidths[index]}`);
+        }
+    }, [index, tabWidths]);
 
     const renderTabBar = (
         props: SceneRendererProps & { navigationState: NavigationState<Route> }
@@ -312,27 +380,33 @@ const ChecklistScreen = memo(() => {
         return (
             <View style={styles.tabBarOuterContainer}>
                 <ScrollView
+                    ref={scrollViewRef}
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.tabBarContainer}
                 >
                     <View
                         ref={tabsContainerRef}
-                        onLayout={(event) => setTabsWidth(event.nativeEvent.layout.width)}
+                        onLayout={(event) => {
+                            const width = event.nativeEvent.layout.width;
+                            setTabsWidth(width);
+                            console.log('Tabs container width:', width);
+                        }}
                         style={styles.tabsContainer}
                     >
                         {props.navigationState.routes.map((route: Route, i: number) => {
                             const isActive = i === props.navigationState.index;
                             return (
-                                <Tab
-                                    key={route.key}
-                                    label={route.title ?? ""}
-                                    isActive={isActive}
-                                    onPress={() => handleTabChange(i)}
-                                    isLast={i === props.navigationState.routes.length - 1 && !needsEmptyTab}
-                                    showDot={statusVisible === 'edit'}
-                                    color={route.tabColor}
-                                />
+                                <View key={route.key} onLayout={(event) => handleTabLayout(i, event)}>
+                                    <Tab
+                                        label={route.title ?? ''}
+                                        isActive={isActive}
+                                        onPress={() => handleTabChange(i)}
+                                        isLast={i === props.navigationState.routes.length - 1 && !needsEmptyTab}
+                                        showDot={statusVisible === 'edit'}
+                                        color={route.tabColor}
+                                    />
+                                </View>
                             );
                         })}
                     </View>
@@ -342,10 +416,30 @@ const ChecklistScreen = memo(() => {
         );
     };
 
+    if (initialLoading) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#017EFA" />
+                    <Text style={styles.loadingText}>Загрузка данных...</Text>
+                </View>
+            </View>
+        );
+    }
+
     if (error && checklists.length === 0) {
         return (
             <View style={styles.container}>
                 <Text>{error}</Text>
+                <Button title="Повторить загрузку" onPress={retryLoadData} />
+            </View>
+        );
+    }
+
+    if (!checkList) {
+        return (
+            <View style={styles.container}>
+                <Text>Чек-лист не найден</Text>
                 <Button title="Повторить загрузку" onPress={retryLoadData} />
             </View>
         );
@@ -379,6 +473,7 @@ const ChecklistScreen = memo(() => {
                 swipeEnabled={false}
                 lazy={true}
                 renderLazyPlaceholder={renderLazyPlaceholder}
+                animationEnabled={false}
             />
         </View>
     );
@@ -391,15 +486,13 @@ const styles = StyleSheet.create({
     },
     loadingContainer: {
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    text: {
-        marginBottom: 13,
-    },
-    title: {
-        fontSize: 12,
-        fontWeight: 'bold',
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#1C1F37',
     },
     tabBarOuterContainer: {
         height: 30,
@@ -410,40 +503,6 @@ const styles = StyleSheet.create({
     },
     tabsContainer: {
         flexDirection: 'row',
-    },
-    tab1Container: {
-        flex: 1,
-        paddingHorizontal: 12,
-        paddingTop: 14,
-        justifyContent: 'space-between',
-    },
-    tab3Container: {
-        paddingHorizontal: 10,
-        paddingTop: 20,
-    },
-    tab4Container: {
-        padding: 0,
-    },
-    scrollContent: {
-        paddingTop: 14,
-        paddingBottom: 20,
-    },
-    content: {
-        flex: 1,
-        paddingHorizontal: 10,
-    },
-    imageContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
-    image: {
-        width: 60,
-        height: 60,
-        borderRadius: 6,
-    },
-    imageMargin: {
-        marginRight: 14,
-        marginBottom: 14,
     },
     emptyTab: {
         height: 30,
@@ -460,4 +519,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ChecklistScreen;
+export default memo(ChecklistScreen);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, PermissionsAndroid, Platform, Alert } from 'react-native';
 
 type Contact = {
     id: string;
@@ -15,6 +15,55 @@ type ContactCardProps = {
 };
 
 const ContactCard = ({ contacts }: ContactCardProps) => {
+    const cleanPhoneNumber = (phone: string) => {
+        // Удаляем все символы, кроме цифр и знака +
+        return phone.replace(/[^\d+]/g, '');
+    };
+
+    const requestPhonePermission = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+                    {
+                        title: 'Разрешение на звонки',
+                        message: 'Приложению требуется разрешение для совершения звонков.',
+                        buttonNeutral: 'Спросить позже',
+                        buttonNegative: 'Отмена',
+                        buttonPositive: 'Разрешить',
+                    }
+                );
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            } catch (err) {
+                console.warn('Ошибка при запросе разрешения:', err);
+                return false;
+            }
+        }
+        return true; // На iOS разрешение не требуется
+    };
+
+    const handlePhonePress = async (phone: string) => {
+        const cleanedPhone = cleanPhoneNumber(phone);
+        const phoneUrl = `tel:${cleanedPhone}`;
+
+        if (await requestPhonePermission()) {
+            Linking.canOpenURL(phoneUrl)
+                .then((supported) => {
+                    if (supported) {
+                        Linking.openURL(phoneUrl);
+                    } else {
+                        Alert.alert('Ошибка', 'Вызов телефона не поддерживается на этом устройстве');
+                    }
+                })
+                .catch((err) => {
+                    console.error('Ошибка при открытии URL телефона:', err);
+                    Alert.alert('Ошибка', 'Не удалось выполнить звонок');
+                });
+        } else {
+            Alert.alert('Ошибка', 'Разрешение на звонки не предоставлено');
+        }
+    };
+
     return (
         <View style={styles.card}>
             <Text style={styles.title}>{'Контактные лица'}</Text>
@@ -30,10 +79,14 @@ const ContactCard = ({ contacts }: ContactCardProps) => {
                         </View>
                         <View style={{ width: '50%' }}>
                             {contact.phone_1 ? (
-                                <Text style={styles.tel}>{contact.phone_1}</Text>
+                                <TouchableOpacity onPress={() => handlePhonePress(contact.phone_1)}>
+                                    <Text style={[styles.tel, styles.clickable]}>{contact.phone_1}</Text>
+                                </TouchableOpacity>
                             ) : null}
                             {contact.phone_2 ? (
-                                <Text style={styles.tel}>{contact.phone_2}</Text>
+                                <TouchableOpacity onPress={() => handlePhonePress(contact.phone_2)}>
+                                    <Text style={[styles.tel, styles.clickable]}>{contact.phone_2}</Text>
+                                </TouchableOpacity>
                             ) : null}
                         </View>
                     </View>
@@ -89,6 +142,10 @@ const styles = StyleSheet.create({
         fontWeight: 'medium',
         color: '#1B2B65',
         marginBottom: 5,
+    },
+    clickable: {
+        color: '#1B2B65',
+        textDecorationLine: 'underline',
     },
 });
 

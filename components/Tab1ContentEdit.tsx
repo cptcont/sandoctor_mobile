@@ -9,7 +9,7 @@ import ImagePickerWithCamera from '@/components/ImagePickerWithCamera';
 import CustomSwitch from '@/components/CustomSwitch';
 import { Checklist, Zone } from '@/types/Checklist';
 import { FormField, TransferField } from '@/types/Field';
-import { storage } from "@/storage/storage";
+import { storage } from '@/storage/storage';
 import { postData } from '@/services/api';
 
 type Tab1ContentEditType = {
@@ -51,9 +51,13 @@ const Tab1ContentEdit = ({
     const getStorageKey = (key: string) => `checklist_${idCheckList}_${key}`;
 
     useEffect(() => {
+        console.log('Tab1ContentEdit props:', { id, index, idCheckList, itemsTabContent });
         const loadInitialData = async () => {
+            setIsLoading(true);
             const storedChecklists = storage.getString(getStorageKey('checklists'));
             const storedAllFields = storage.getString(getStorageKey('allFields'));
+
+            console.log('Stored data:', { storedChecklists, storedAllFields });
 
             setChecklists(storedChecklists ? JSON.parse(storedChecklists) : []);
             setAllFields(storedAllFields ? JSON.parse(storedAllFields) : {});
@@ -62,38 +66,36 @@ const Tab1ContentEdit = ({
             try {
                 const response = await postData(`checklist/${idCheckList}`, {});
                 if (response?.data) {
+                    console.log('Fetched checklists:', response.data);
                     setChecklists(response.data);
                     storage.set(getStorageKey('checklists'), JSON.stringify(response.data));
                 }
             } catch (error) {
                 console.error('Ошибка при загрузке checklists:', error);
+            } finally {
+                setIsLoading(false);
             }
         };
 
         loadInitialData();
 
-        // Функция очистки для удаления данных MMKV при размонтировании компонента
         return () => {
-            storage.delete(getStorageKey('checklists')); // Удаление данных checklists
-            storage.delete(getStorageKey('allFields'));  // Удаление данных allFields
-            // Опционально: очистка всех данных, если нужно
-            // storage.clearAll();
+            storage.delete(getStorageKey('checklists'));
+            storage.delete(getStorageKey('allFields'));
         };
-    }, []);
+    }, [idCheckList]);
 
-    console.log('Это Tab1ContentEdit')
-
-    const items = useMemo(
-        () =>
-            itemsTabContent[index]?.param?.map((data: any, idx: number) => ({
-                label: data.name?.toString() || `Элемент ${idx}`,
-                value: idx,
-            })) || [],
-        [itemsTabContent, index]
-    );
+    const items = useMemo(() => {
+        const result = itemsTabContent[index]?.param?.map((data: any, idx: number) => ({
+            label: data.name?.toString() || `Элемент ${idx}`,
+            value: idx,
+        })) || [];
+        console.log('Items for Dropdown:', result);
+        return result;
+    }, [itemsTabContent, index]);
 
     const transformData = (data: FormField[]): TransferField[] => {
-        return data
+        const transformed = data
             .map((field) => {
                 if (field.type === 'radio') {
                     return { radio: { label: field.label, name: field.name, options: field.options.map((opt) => ({ ...opt })) } };
@@ -110,27 +112,32 @@ const Tab1ContentEdit = ({
                 return null;
             })
             .filter((item): item is TransferField => item !== null);
+        console.log('Transformed fields:', transformed);
+        return transformed;
     };
 
     const saveCurrentState = (value: number) => {
-        setAllFields(prev => ({
+        setAllFields((prev) => ({
             ...prev,
-            [value]: field
+            [value]: field,
         }));
         storage.set(getStorageKey('allFields'), JSON.stringify({
             ...allFields,
-            [value]: field
+            [value]: field,
         }));
     };
 
     const loadFields = (value: number) => {
-        if (!itemsTabContent[index]?.param?.[value]) return;
+        if (!itemsTabContent[index]?.param?.[value]) {
+            console.warn('No param data for value:', value);
+            setField([]);
+            return;
+        }
 
         const savedFields = allFields[value];
 
         if (savedFields) {
             setField(savedFields);
-
             const updatedInputTexts: Record<string, string> = {};
             const updatedIsEnabled: Record<string, boolean> = {};
             const updatedRadioStates: Record<string, { yes: boolean; no: boolean; isContentVisible: boolean }> = {};
@@ -153,10 +160,10 @@ const Tab1ContentEdit = ({
                 }
             });
 
-            setInputTexts(prev => ({ ...prev, ...updatedInputTexts }));
-            setIsEnabled(prev => ({ ...prev, ...updatedIsEnabled }));
-            setRadioStates(prev => ({ ...prev, ...updatedRadioStates }));
-            setIsTextValid(prev => ({ ...prev, ...updatedTextValid }));
+            setInputTexts((prev) => ({ ...prev, ...updatedInputTexts }));
+            setIsEnabled((prev) => ({ ...prev, ...updatedIsEnabled }));
+            setRadioStates((prev) => ({ ...prev, ...updatedRadioStates }));
+            setIsTextValid((prev) => ({ ...prev, ...updatedTextValid }));
         } else {
             const fields = itemsTabContent[index].param[value]?.fields || [];
             const fieldItem = Array.isArray(fields) ? fields : [];
@@ -628,11 +635,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 5,
     },
-    loadingText: {
-        fontSize: 16,
-        textAlign: 'center',
-        marginTop: 20,
-    },
     footerContainer: {
         paddingHorizontal: 18,
         width: '100%',
@@ -641,8 +643,8 @@ const styles = StyleSheet.create({
     },
     loadingContainer: {
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
 

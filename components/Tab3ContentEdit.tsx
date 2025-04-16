@@ -21,7 +21,7 @@ type Tab3ContentEditType = {
     onNextTab?: () => void;
     onPreviousTab?: () => void;
     idCheckList?: string;
-    tabId?: number;
+    tabId?: string;
     isFirstTab?: boolean;
     isLastTab?: boolean;
 };
@@ -40,7 +40,7 @@ const Tab3ContentEdit = ({
                              isLastTab = false,
                          }: Tab3ContentEditType) => {
     // Состояния
-    const [selectedValue, setSelectedValue] = useState(tabId);
+    const [selectedValue, setSelectedValue] = useState(0);
     const [isInitialized, setIsInitialized] = useState(false);
     const [field, setField] = useState<TransferField[]>([]);
     const [checklists, setChecklists] = useState<Checklist[]>([]);
@@ -885,9 +885,9 @@ const Tab3ContentEdit = ({
                                             onBlur={() => handleBlurPest(componentData.name)}
                                             keyboardType="numeric"
                                         />
-                                        {isMounted && !isFieldValid[componentData.name] && (
+                                        {/*isMounted && !isFieldValid[componentData.name] && (
                                             <Text style={styles.errorText}>Поле обязательно</Text>
-                                        )}
+                                        )*/}
                                     </View>
                                 </View>
                             </View>
