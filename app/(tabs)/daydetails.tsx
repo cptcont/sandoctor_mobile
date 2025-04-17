@@ -1,4 +1,4 @@
-import { View, StyleSheet, Text, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Card from "@/components/Card";
 import DaysCarousel from "@/components/DaysCarousel";
@@ -39,7 +39,8 @@ export default function DayDetailsScreen() {
     const loadTasks = async () => {
         try {
             setIsLoading(true);
-            setTasks(getDataFromStorage('tasks'));
+            const storedTasks = getDataFromStorage('tasks');
+            setTasks(storedTasks || []);
         } catch (error) {
             console.error('Ошибка загрузки задач:', error);
         } finally {
@@ -54,23 +55,27 @@ export default function DayDetailsScreen() {
     useFocusEffect(
         useCallback(() => {
             const loadSavedDate = async () => {
-                const savedDate = await getDataFromStorage('selectedDate');
-                if (typeof savedDate === 'string' || typeof savedDate === 'number' || savedDate instanceof Date) {
-                    const date = new Date(savedDate);
-                    console.log('useFocusEffect DayDetailsScreen', date);
-                    if (!isNaN(date.getTime())) {
-                        setSelectedYear(getYear(date));
-                        setSelectedMonth(getMonth(date) + 1);
-                        setSelectedDay(getDate(date));
-                        setSelectedDate(format(date, 'yyyy-MM-dd'));
-                        return;
+                try {
+                    const savedDate = await getDataFromStorage('selectedDate');
+                    if (typeof savedDate === 'string' || typeof savedDate === 'number' || savedDate instanceof Date) {
+                        const date = new Date(savedDate);
+                        console.log('useFocusEffect DayDetailsScreen', date);
+                        if (!isNaN(date.getTime())) {
+                            setSelectedYear(getYear(date));
+                            setSelectedMonth(getMonth(date) + 1);
+                            setSelectedDay(getDate(date));
+                            setSelectedDate(format(date, 'yyyy-MM-dd'));
+                            return;
+                        }
                     }
+                    const currentDate = new Date();
+                    setSelectedYear(getYear(currentDate));
+                    setSelectedMonth(getMonth(currentDate) + 1);
+                    setSelectedDay(getDate(currentDate));
+                    setSelectedDate(format(currentDate, 'yyyy-MM-dd'));
+                } catch (error) {
+                    console.error('Ошибка загрузки сохраненной даты:', error);
                 }
-                const currentDate = new Date();
-                setSelectedYear(getYear(currentDate));
-                setSelectedMonth(getMonth(currentDate) + 1);
-                setSelectedDay(getDate(currentDate));
-                setSelectedDate(format(currentDate, 'yyyy-MM-dd'));
             };
             loadSavedDate();
             loadTasks();
@@ -79,40 +84,47 @@ export default function DayDetailsScreen() {
 
     useEffect(() => {
         const loadDateBasedOnParams = async () => {
-            if (upLoad === 'upLoadToday') {
-                const today = new Date();
-                setSelectedYear(getYear(today));
-                setSelectedMonth(getMonth(today) + 1);
-                setSelectedDay(getDate(today));
-                setSelectedDate(format(today, 'yyyy-MM-dd'));
-                saveDataToStorage('selectedDate', today.toISOString());
-            } else if (upLoad === 'upLoadTomorrow') {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                setSelectedYear(getYear(tomorrow));
-                setSelectedMonth(getMonth(tomorrow) + 1);
-                setSelectedDay(getDate(tomorrow));
-                setSelectedDate(format(tomorrow, 'yyyy-MM-dd'));
-                saveDataToStorage('selectedDate', tomorrow.toISOString());
-            } else {
-                const savedDate = await getDataFromStorage('selectedDate');
-                if (typeof savedDate === 'string' || typeof savedDate === 'number' || savedDate instanceof Date) {
-                    const date = new Date(savedDate);
-                    if (!isNaN(date.getTime())) {
-                        setSelectedYear(getYear(date));
-                        setSelectedMonth(getMonth(date) + 1);
-                        setSelectedDay(getDate(date));
-                        setSelectedDate(format(date, 'yyyy-MM-dd'));
-                        return;
+            try {
+                setIsLoading(true);
+                if (upLoad === 'upLoadToday') {
+                    const today = new Date();
+                    setSelectedYear(getYear(today));
+                    setSelectedMonth(getMonth(today) + 1);
+                    setSelectedDay(getDate(today));
+                    setSelectedDate(format(today, 'yyyy-MM-dd'));
+                    saveDataToStorage('selectedDate', today.toISOString());
+                } else if (upLoad === 'upLoadTomorrow') {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    setSelectedYear(getYear(tomorrow));
+                    setSelectedMonth(getMonth(tomorrow) + 1);
+                    setSelectedDay(getDate(tomorrow));
+                    setSelectedDate(format(tomorrow, 'yyyy-MM-dd'));
+                    saveDataToStorage('selectedDate', tomorrow.toISOString());
+                } else {
+                    const savedDate = await getDataFromStorage('selectedDate');
+                    if (typeof savedDate === 'string' || typeof savedDate === 'number' || savedDate instanceof Date) {
+                        const date = new Date(savedDate);
+                        if (!isNaN(date.getTime())) {
+                            setSelectedYear(getYear(date));
+                            setSelectedMonth(getMonth(date) + 1);
+                            setSelectedDay(getDate(date));
+                            setSelectedDate(format(date, 'yyyy-MM-dd'));
+                            return;
+                        }
                     }
+                    const currentDate = new Date();
+                    setSelectedYear(getYear(currentDate));
+                    setSelectedMonth(getMonth(currentDate) + 1);
+                    setSelectedDay(getDate(currentDate));
+                    setSelectedDate(format(currentDate, 'yyyy-MM-dd'));
                 }
-                const currentDate = new Date();
-                setSelectedYear(getYear(currentDate));
-                setSelectedMonth(getMonth(currentDate) + 1);
-                setSelectedDay(getDate(currentDate));
-                setSelectedDate(format(currentDate, 'yyyy-MM-dd'));
+                await loadTasks();
+            } catch (error) {
+                console.error('Ошибка загрузки данных по параметрам:', error);
+            } finally {
+                setIsLoading(false);
             }
-            loadTasks();
         };
         loadDateBasedOnParams();
     }, [upLoad]);
@@ -189,8 +201,6 @@ export default function DayDetailsScreen() {
 
     const handleOnPressCard = async (task: any) => {
         console.log('taskId', task.id);
-        await fetchDataSaveStorage<Checklist>(`checklist/${task.id}`, 'checklists');
-        await fetchDataSaveStorage<Task>(`task/${task.id}`, 'task');
         router.push({
             pathname: '/details',
             params: {
@@ -199,56 +209,60 @@ export default function DayDetailsScreen() {
         });
     };
 
-    if (isLoading) {
-        return <Text>Loading...</Text>;
-    }
-
     return (
         <View style={styles.container}>
-            <View style={styles.content}>
-                <View style={styles.containerMonthsCarousel}>
-                    <MonthsCarousel
-                        key={selectedMonth}
-                        month={selectedMonth}
-                        onMonthChange={handleMonthChange}
-                    />
+            {isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#017EFA" />
                 </View>
-                <View style={styles.containerMonthsCarousel}>
-                    <DaysCarousel
-                        key={`${selectedMonth}-${selectedDay}`}
-                        day={selectedDay}
-                        month={selectedMonth}
-                        year={selectedYear}
-                        tasks={formattedTasks}
-                        onDaySelect={handleDaySelect}
-                    />
-                </View>
-                <ScrollView
-                    style={{ width: '100%', paddingHorizontal: 12 }}
-                    contentContainerStyle={{}}
-                >
-                    {filteredTasks.length > 0 ? (
-                        filteredTasks.map((task, index) => (
-                            <Card
-                                key={index}
-                                title={task.point}
-                                colorStyle={task.condition.color}
-                                time={`${task.time_begin_work} - ${task.time_end_work}`}
-                                onPress={() => handleOnPressCard(task)}
-                                address={task.adress}
+            ) : (
+                <>
+                    <View style={styles.content}>
+                        <View style={styles.containerMonthsCarousel}>
+                            <MonthsCarousel
+                                key={selectedMonth}
+                                month={selectedMonth}
+                                onMonthChange={handleMonthChange}
                             />
-                        ))
-                    ) : (
-                        <Card
-                            colorStyle={'#fff'}
-                            noTasks={true}
-                        />
-                    )}
-                </ScrollView>
-            </View>
-            <View style={[styles.footer, { justifyContent: 'center' }]}>
-                <FooterContentIcons />
-            </View>
+                        </View>
+                        <View style={styles.containerMonthsCarousel}>
+                            <DaysCarousel
+                                key={`${selectedMonth}-${selectedDay}`}
+                                day={selectedDay}
+                                month={selectedMonth}
+                                year={selectedYear}
+                                tasks={formattedTasks}
+                                onDaySelect={handleDaySelect}
+                            />
+                        </View>
+                        <ScrollView
+                            style={{ width: '100%', paddingHorizontal: 12 }}
+                            contentContainerStyle={{}}
+                        >
+                            {filteredTasks.length > 0 ? (
+                                filteredTasks.map((task, index) => (
+                                    <Card
+                                        key={index}
+                                        title={task.point}
+                                        colorStyle={task.condition.color}
+                                        time={`${task.time_begin_work} - ${task.time_end_work}`}
+                                        onPress={() => handleOnPressCard(task)}
+                                        address={task.adress}
+                                    />
+                                ))
+                            ) : (
+                                <Card
+                                    colorStyle={'#fff'}
+                                    noTasks={true}
+                                />
+                            )}
+                        </ScrollView>
+                    </View>
+                    <View style={[styles.footer, { justifyContent: 'center' }]}>
+                        <FooterContentIcons />
+                    </View>
+                </>
+            )}
         </View>
     );
 }
@@ -275,5 +289,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderTopWidth: 1,
         borderTopColor: '#E3E3E3',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
     },
 });
