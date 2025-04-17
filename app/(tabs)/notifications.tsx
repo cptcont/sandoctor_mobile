@@ -1,13 +1,12 @@
-import {View, Text, StyleSheet, ScrollView} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
-import React, {useCallback, useEffect, useState} from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { router } from 'expo-router';
 import { useFocusEffect } from "@react-navigation/native";
 import { fetchData } from "@/services/api";
 import { Card } from '@rneui/themed';
 import { format } from 'date-fns';
-import {useNotifications} from "@/context/NotificationContext";
-
+import { useNotifications } from "@/context/NotificationContext";
 
 interface Notification {
     id: number;
@@ -15,11 +14,10 @@ interface Notification {
     body: string;
 }
 
-
 export default function NotificationsScreen() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { notificationsCount, resetNotifications, refreshNotifications } = useNotifications();
-
 
     const getNotifications = async () => {
         try {
@@ -27,16 +25,18 @@ export default function NotificationsScreen() {
             return notifications.responce;
         } catch (error) {
             console.error(error);
-            return []; // Возвращаем пустой массив в случае ошибки
+            return [];
         }
     };
 
     useFocusEffect(
         useCallback(() => {
             const loadNotifications = async () => {
+                setIsLoading(true);
                 const fetchedNotifications = await getNotifications();
-                console.log('fetchedNotifications', fetchedNotifications);
+//                console.log('fetchedNotifications', fetchedNotifications);
                 setNotifications(fetchedNotifications || []);
+                setIsLoading(false);
             };
 
             loadNotifications();
@@ -49,9 +49,11 @@ export default function NotificationsScreen() {
 
     useEffect(() => {
         const loadNotifications = async () => {
+            setIsLoading(true);
             const fetchedNotifications = await getNotifications();
             console.log('fetchedNotifications', fetchedNotifications);
             setNotifications(fetchedNotifications || []);
+            setIsLoading(false);
         };
 
         loadNotifications();
@@ -69,20 +71,24 @@ export default function NotificationsScreen() {
                 marginBottom={0}
                 onPress={handleBack}
             />
-            <ScrollView>
-
-                {notifications.length > 0 ? (
-                    notifications.map((notification: Notification) => (
-                        <Card key={notification.id} containerStyle = {styles.cardContainerStyle}>
-                            <Text style={styles.textTime}>{format(new Date(notification.date), 'dd.MM.yyyy HH:mm')}</Text>
-                            <Text style={styles.textBody}>{notification.body}</Text>
-                        </Card>
-                    ))
-                ) : (
-                    <Text>Уведомлений нет</Text> // Сообщение, если уведомлений нет
-                )}
-
-            </ScrollView>
+            {isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#017EFA" />
+                </View>
+            ) : (
+                <ScrollView>
+                    {notifications.length > 0 ? (
+                        notifications.map((notification: Notification) => (
+                            <Card key={notification.id} containerStyle={styles.cardContainerStyle}>
+                                <Text style={styles.textTime}>{format(new Date(notification.date), 'dd.MM.yyyy HH:mm')}</Text>
+                                <Text style={styles.textBody}>{notification.body}</Text>
+                            </Card>
+                        ))
+                    ) : (
+                        <Text>Уведомлений нет</Text>
+                    )}
+                </ScrollView>
+            )}
         </View>
     );
 }
@@ -92,7 +98,6 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         backgroundColor: '#fff',
-
     },
     cardContainerStyle: {
         borderWidth: 1,
@@ -111,5 +116,10 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '900',
         color: '#1B2B65',
-    }
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
 });
