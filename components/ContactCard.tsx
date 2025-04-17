@@ -16,26 +16,51 @@ type ContactCardProps = {
 
 const ContactCard = ({ contacts }: ContactCardProps) => {
     const cleanPhoneNumber = (phone: string) => {
-        // Удаляем все символы, кроме цифр и знака +
         return phone.replace(/[^\d+]/g, '');
     };
 
     const requestPhonePermission = async () => {
         if (Platform.OS === 'android') {
             try {
+                console.log('Проверка разрешения CALL_PHONE');
+                const alreadyGranted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CALL_PHONE);
+                console.log('alreadyGranted:', alreadyGranted);
+                if (alreadyGranted) {
+                    return true;
+                }
+
+                console.log('Запрос разрешения CALL_PHONE');
                 const granted = await PermissionsAndroid.request(
                     PermissionsAndroid.PERMISSIONS.CALL_PHONE,
                     {
                         title: 'Разрешение на звонки',
-                        message: 'Приложению требуется разрешение для совершения звонков.',
+                        message: 'Приложению Sandoctor требуется разрешение для совершения звонков.',
                         buttonNeutral: 'Спросить позже',
                         buttonNegative: 'Отмена',
                         buttonPositive: 'Разрешить',
                     }
                 );
-                return granted === PermissionsAndroid.RESULTS.GRANTED;
+                console.log('granted:', granted);
+
+                if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+                    return true;
+                } else if (granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+                    Alert.alert(
+                        'Разрешение отклонено',
+                        'Вы отклонили разрешение на звонки и выбрали "Больше не спрашивать". Чтобы включить звонки, перейдите в Настройки → Приложения → Sandoctor → Разрешения и разрешите доступ к телефону.',
+                        [
+                            { text: 'Отмена', style: 'cancel' },
+                            { text: 'Открыть настройки', onPress: () => Linking.openSettings() },
+                        ]
+                    );
+                    return false;
+                } else {
+                    Alert.alert('Ошибка', 'Разрешение на звонки не предоставлено');
+                    return false;
+                }
             } catch (err) {
                 console.warn('Ошибка при запросе разрешения:', err);
+                Alert.alert('Ошибка', 'Не удалось запросить разрешение на звонки');
                 return false;
             }
         }
@@ -46,21 +71,45 @@ const ContactCard = ({ contacts }: ContactCardProps) => {
         const cleanedPhone = cleanPhoneNumber(phone);
         const phoneUrl = `tel:${cleanedPhone}`;
 
-        if (await requestPhonePermission()) {
-            Linking.canOpenURL(phoneUrl)
-                .then((supported) => {
-                    if (supported) {
-                        Linking.openURL(phoneUrl);
-                    } else {
+        const hasPermission = await requestPhonePermission();
+        if (hasPermission) {
+            try {
+                console.log('Проверка поддержки tel:', phoneUrl);
+                const supported = await Linking.canOpenURL(phoneUrl);
+                console.log('supported:', supported);
+                if (supported) {
+                    await Linking.openURL(phoneUrl);
+                } else {
+                    console.log('Попытка открыть tel напрямую');
+                    await Linking.openURL(phoneUrl).catch(() => {
                         Alert.alert('Ошибка', 'Вызов телефона не поддерживается на этом устройстве');
-                    }
-                })
-                .catch((err) => {
-                    console.error('Ошибка при открытии URL телефона:', err);
-                    Alert.alert('Ошибка', 'Не удалось выполнить звонок');
+                    });
+                }
+            } catch (err) {
+                console.error('Ошибка при открытии URL телефона:', err);
+                Alert.alert('Ошибка', 'Не удалось выполнить звонок: ' + err.message);
+            }
+        }
+    };
+
+    const handleEmailPress = async (email: string) => {
+        const emailUrl = `mailto:${email}`;
+
+        try {
+            console.log('Проверка поддержки mailto:', emailUrl);
+            const supported = await Linking.canOpenURL(emailUrl);
+            console.log('supported:', supported);
+            if (supported) {
+                await Linking.openURL(emailUrl);
+            } else {
+                console.log('Попытка открыть mailto напрямую');
+                await Linking.openURL(emailUrl).catch(() => {
+                    Alert.alert('Ошибка', 'Отправка email не поддерживается на этом устройстве');
                 });
-        } else {
-            Alert.alert('Ошибка', 'Разрешение на звонки не предоставлено');
+            }
+        } catch (err) {
+            console.error('Ошибка при открытии URL email:', err);
+            Alert.alert('Ошибка', 'Не удалось открыть почтовый клиент: ' + err.message);
         }
     };
 
@@ -74,7 +123,9 @@ const ContactCard = ({ contacts }: ContactCardProps) => {
                             <Text style={styles.name}>{contact.fio}</Text>
                             <Text style={styles.post}>{contact.position}</Text>
                             {contact.email ? (
-                                <Text style={styles.email}>{contact.email}</Text>
+                                <TouchableOpacity onPress={() => handleEmailPress(contact.email)}>
+                                    <Text style={[styles.email, styles.clickable]}>{contact.email}</Text>
+                                </TouchableOpacity>
                             ) : null}
                         </View>
                         <View style={{ width: '50%' }}>

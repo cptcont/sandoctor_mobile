@@ -23,8 +23,9 @@
       },
       "package": "com.andrewandersonorg.myappandrew",
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.CAMERA"
+        "CAMERA",
+
+        "CALL_PHONE"
       ]
     },
     "web": {

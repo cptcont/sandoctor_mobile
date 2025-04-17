@@ -102,6 +102,8 @@ const ChecklistScreen = memo(() => {
         }, [idCheckList, id, tabId, tabIdTMC])
     );
 
+    // Удаляем useEffect для обработки tabId/tabIdTMC, так как теперь индекс устанавливается в loadChecklistsTask
+
     const updateCheckList = async () => {
         await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists');
         const updatedChecklists = getDataFromStorage('checklists') || [];
