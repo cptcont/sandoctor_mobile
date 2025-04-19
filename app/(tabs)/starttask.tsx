@@ -30,8 +30,6 @@ const StartTaskScreen = () => {
             await fetchDataSaveStorage<Task>(`task/${taskId}`, "task");
             const updatedTask = (await getDataFromStorage("task")) as Task;
             const updatedChecklists = (await getDataFromStorage("checklists")) as Checklist[];
-//            console.log("Updated task:", updatedTask);
-//            console.log("Updated checklists:", updatedChecklists);
             setTask(updatedTask);
             setChecklists(updatedChecklists);
             setTextCommentClient(updatedTask.report.comment_client || "");
@@ -45,13 +43,12 @@ const StartTaskScreen = () => {
 
     useFocusEffect(
         useCallback(() => {
-//            console.log("useFocusEffect triggered for taskId:", taskId);
             fetchData();
             setKeyRandom(`${Math.floor(Math.random() * 1000)}`);
             return () => {
                 // Очистка, если необходимо
             };
-        }, [taskId]) // Добавляем taskId как зависимость
+        }, [taskId])
     );
 
     if (loading) {
@@ -126,7 +123,7 @@ const StartTaskScreen = () => {
         await fetchDataSaveStorage<Task>(`task/${taskId}`, "task");
         const updatedTask = (await getDataFromStorage("task")) as Task;
         setTask(updatedTask);
-    }
+    };
 
     const handleSubmit = async () => {
         try {
@@ -139,6 +136,28 @@ const StartTaskScreen = () => {
             console.error("Ошибка при завершении задания:", error);
         }
     };
+
+    const checklistProgress = () => {
+        return checklists.every((item) => item.progress === 100);
+    };
+
+    const serviceCardStatus = () => {
+        return task.services.every((item) => item.status.id !== '0');
+    };
+
+    const photosCheck = () => {
+        return task.photos.length > 0;
+    };
+
+    const isCommentClientValid = () => {
+        return textCommentClient.length >= 5;
+    };
+
+    const isFormValid = () => {
+        return checklistProgress() && serviceCardStatus() && photosCheck() && isCommentClientValid();
+    };
+
+    console.log('progress', checklistProgress(), serviceCardStatus(), photosCheck(), isCommentClientValid());
 
     return (
         <>
@@ -181,11 +200,12 @@ const StartTaskScreen = () => {
                     initialImages={task.photos}
                     path={`task/${taskId}`}
                     onImageUploaded={handleUpdateImage}
+                    borderColor={photosCheck() ? 'transparent' : 'red'}
                 />
                 <View style={[styles.containerTextArea, { marginBottom: 11 }]}>
                     <Text style={styles.titleTextArea}>Комментарий исполнителя</Text>
                     <TextInput
-                        style={styles.textArea}
+                        style={[styles.textArea, !isCommentClientValid() && styles.errorBorder]}
                         multiline={true}
                         numberOfLines={4}
                         onChangeText={handleChangeTextCommentClient}
@@ -214,7 +234,8 @@ const StartTaskScreen = () => {
                         textSize={16}
                         textColor={"#FFFFFF"}
                         backgroundColor={"#017EFA"}
-                        enabled={true}
+                        enabled={isFormValid()}
+                        touchable={true}
                         onPress={handleSubmit}
                     />
                 </Footer>
@@ -268,6 +289,11 @@ const styles = StyleSheet.create({
         fontSize: 12,
         textAlignVertical: "top",
         backgroundColor: "#F5F7FB",
+    },
+    errorBorder: {
+        borderWidth: 1,
+        borderColor: "red",
+        borderRadius: 6,
     },
 });
 
