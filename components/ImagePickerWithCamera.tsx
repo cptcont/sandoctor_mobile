@@ -30,6 +30,7 @@ interface ImagePickerWithCameraProps {
     selected?: boolean;
     paddingHorizontal?: number;
     statusVisible?: 'edit' | 'view';
+    borderColor?: string;
 }
 
 const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
@@ -43,6 +44,7 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
                                                                          selected = false,
                                                                          paddingHorizontal = 20,
                                                                          statusVisible = 'edit',
+                                                                         borderColor = 'transparent',
                                                                      }) => {
     const [selectedImages, setSelectedImages] = useState<ImageObject[]>(initialImages);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
@@ -224,7 +226,7 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
                 ))}
                 {statusVisible === 'edit' && (
                     <>
-                        <TouchableOpacity style={styles.cameraButton} onPress={openCamera}>
+                        <TouchableOpacity style={[styles.cameraButton, {borderColor: borderColor}]} onPress={openCamera}>
                             <Camera />
                         </TouchableOpacity>
                         {viewGallery && (
@@ -327,6 +329,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center' as const,
         alignItems: 'center' as const,
         marginBottom: 13,
+        borderWidth: 1,
     },
     modalContainer: {
         flex: 1,
