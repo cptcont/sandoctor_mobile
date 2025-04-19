@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { router } from "expo-router";
 import { useDrawerStatus } from '@react-navigation/drawer';
-import { postData } from '@/services/api'
+import { postData } from '@/services/api';
 import { Button } from '@rneui/themed';
 
 interface BarCodeScannedEvent {
@@ -59,7 +59,9 @@ export default function QRCodeScreen() {
     }
 
     const handleBarCodeScanned = async ({ data, bounds }: BarCodeScannedEvent) => {
+        if (scanned) return; // Игнорируем повторные сканирования
         setScanned(true);
+        setIsCameraActive(false); // Отключаем камеру
         console.log("QRCodeScanned handleBarCodeScanned", data);
 
         try {
@@ -67,6 +69,7 @@ export default function QRCodeScreen() {
 
             if (!response) {
                 setScanned(false);
+                setTimeout(() => setIsCameraActive(true), 1000); // Задержка перед включением камеры
                 return;
             }
 
@@ -74,6 +77,7 @@ export default function QRCodeScreen() {
                 setErrorMessage(response.error || 'Произошла неизвестная ошибка');
                 setErrorModalVisible(true);
                 setScanned(false);
+                setTimeout(() => setIsCameraActive(true), 1000);
                 return;
             }
 
@@ -81,16 +85,17 @@ export default function QRCodeScreen() {
                 setErrorMessage('Неверный формат ответа от сервера');
                 setErrorModalVisible(true);
                 setScanned(false);
+                setTimeout(() => setIsCameraActive(true), 1000);
                 return;
             }
 
             console.log('Response GKGKJGHKLJGKJ LHLJHLHLHLHLKHL lkhlhjh', response);
             let statusVisible = 'view';
             if (response.responce.task_status === "2") {
-                statusVisible = 'edit'
+                statusVisible = 'edit';
             }
             console.log('statusVisible', statusVisible);
-            router.push({
+            router.replace({
                 pathname: '/checklist',
                 params: {
                     id: '20',
@@ -99,8 +104,6 @@ export default function QRCodeScreen() {
                     statusVisible: statusVisible,
                     tabId: response.responce.zone,
                     tabIdTMC: response.responce.point,
-                    //taskStatus: response.responce.task_status,
-
                 },
             });
         } catch (error) {
@@ -108,11 +111,14 @@ export default function QRCodeScreen() {
             setErrorMessage('Ошибка при обработке QR-кода');
             setErrorModalVisible(true);
             setScanned(false);
+            setTimeout(() => setIsCameraActive(true), 1000);
         }
     };
 
     const handleCloseModal = () => {
         setErrorModalVisible(false);
+        setScanned(false);
+        setTimeout(() => setIsCameraActive(true), 1000);
         router.push('/');
     };
 
@@ -127,9 +133,7 @@ export default function QRCodeScreen() {
                     key={`${facing}-${cameraKey}`}
                     style={styles.camera}
                     facing={facing}
-                    onBarcodeScanned={
-                        errorModalVisible || scanned ? undefined : handleBarCodeScanned
-                    }
+                    onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
                     barcodeScannerSettings={{
                         barcodeTypes: ["qr"],
                     }}
@@ -201,11 +205,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#017EFA',
         alignSelf: 'flex-end',
         alignItems: 'center',
-
     },
     buttonTitleStyles: {
-      fontSize: 16,
-      fontWeight: '700',
+        fontSize: 16,
+        fontWeight: '700',
     },
     text: {
         fontSize: 24,
