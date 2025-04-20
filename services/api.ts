@@ -105,7 +105,7 @@ export const postData = async <T,>(
     try {
         const token = await getToken();
         if (!token) throw new Error('Токен не найден');
-
+        console.log('pastData body', body);
         const response = await fetch(`https://sandoctor.ru/api/v1/${endpoint}`, {
             method,
             headers: {
