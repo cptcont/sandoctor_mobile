@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Image, Pressable, Text, StyleSheet } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
@@ -9,10 +9,12 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { Input, Button } from '@rneui/themed';
+import Icon from 'react-native-vector-icons/FontAwesome5'; // Импортируем FontAwesome5
 
 const LoginScreen = () => {
     const { login } = useAuth();
     const { showPopup } = usePopup();
+    const [showPassword, setShowPassword] = useState(false); // Состояние для видимости пароля
 
     // Схема валидации
     const validationSchema = Yup.object().shape({
@@ -27,7 +29,7 @@ const LoginScreen = () => {
 
                 // Проверка на телефон (пример: +79991234567 или 89991234567)
                 const phoneRegex = /^\+?[1-9]\d{6,14}$/;
-                const isPhoneValid = phoneRegex.test(value.replace(/[\s()-]/g, '')); // Удаляем пробелы, скобки, дефисы
+                const isPhoneValid = phoneRegex.test(value.replace(/[\s()-]/g, ''));
 
                 return isEmailValid || isPhoneValid;
             }),
@@ -36,6 +38,11 @@ const LoginScreen = () => {
 
     const handleForgotPassword = () => {
         router.push('/ForgotPasswordScreen');
+    };
+
+    // Функция для переключения видимости пароля
+    const toggleShowPassword = () => {
+        setShowPassword(!showPassword);
     };
 
     return (
@@ -80,28 +87,38 @@ const LoginScreen = () => {
                                 value={values.username}
                                 errorMessage={touched.username && errors.username ? String(errors.username) : undefined}
                                 autoComplete="username"
-                                keyboardType="email-address" // Клавиатура для email (английская раскладка)
-                                autoCapitalize="none" // Отключаем автокапитализацию
-                                autoCorrect={false} // Отключаем автокоррекцию
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                autoCorrect={false}
                                 disabled={isSubmitting}
                             />
 
                             <Input
                                 placeholder="Введите пароль"
                                 leftIcon={<KeySolidIcon />}
+                                rightIcon={
+                                    <Pressable onPress={toggleShowPassword}>
+                                        <Icon
+                                            name={showPassword ? 'eye' : 'eye-slash'}
+                                            size={20}
+                                            color="#5D6377"
+                                            style={styles.rightIcon}
+                                        />
+                                    </Pressable>
+                                }
                                 containerStyle={{ paddingHorizontal: 0 }}
                                 inputContainerStyle={styles.inputContainer}
                                 inputStyle={styles.inputStyle}
                                 leftIconContainerStyle={styles.leftIconContainer}
-                                secureTextEntry={true}
+                                secureTextEntry={!showPassword} // Управляем видимостью пароля
                                 onChangeText={handleChange('password')}
                                 onBlur={handleBlur('password')}
                                 value={values.password}
                                 errorMessage={touched.password && errors.password ? String(errors.password) : undefined}
                                 autoComplete="password"
-                                keyboardType="default" // Обычная клавиатура (английская по умолчанию)
-                                autoCapitalize="none" // Отключаем автокапитализацию
-                                autoCorrect={false} // Отключаем автокоррекцию
+                                keyboardType="default"
+                                autoCapitalize="none"
+                                autoCorrect={false}
                                 disabled={isSubmitting}
                             />
 
@@ -110,8 +127,8 @@ const LoginScreen = () => {
                                     title={'Войти'}
                                     buttonStyle={styles.button}
                                     titleStyle={styles.buttonText}
-                                    loading={isSubmitting} // Показываем индикатор загрузки
-                                    disabled={isSubmitting} // Отключаем кнопку во время отправки
+                                    loading={isSubmitting}
+                                    disabled={isSubmitting}
                                     disabledStyle={[styles.button, { opacity: 0.6 }]}
                                     onPress={() => handleSubmit()}
                                 />
@@ -131,7 +148,6 @@ const LoginScreen = () => {
     );
 };
 
-// Стили остаются без изменений
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -160,6 +176,9 @@ const styles = StyleSheet.create({
     },
     leftIconContainer: {
         paddingLeft: 16,
+    },
+    rightIcon: {
+        paddingRight: 16,
     },
     buttonContainer: {
         alignItems: 'center',
@@ -191,7 +210,6 @@ const styles = StyleSheet.create({
         color: '#017EFA',
         textDecorationLine: 'none',
     },
-
 });
 
 export default LoginScreen;
