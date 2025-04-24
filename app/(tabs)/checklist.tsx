@@ -28,7 +28,7 @@ interface Route {
 
 const ChecklistScreen = memo(() => {
     const params = useLocalSearchParams();
-    const { id, idCheckList, typeCheckList = '1', statusVisible = 'view', tabId = '0', tabIdTMC } = params;
+    const { id, idCheckList, typeCheckList = '1', statusVisible = 'view', tabId = '0', tabIdTMC, reload = true } = params;
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [index, setIndex] = useState(0);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -44,6 +44,10 @@ const ChecklistScreen = memo(() => {
     const scrollViewRef = useRef<ScrollView>(null);
     const tabsContainerRef = useRef<View>(null);
     const lastValidIndexRef = useRef<number>(0);
+
+    console.log('This checklists');
+
+    console.log('tabId', tabId, 'tabId', tabIdTMC);
 
     const setIndexWithLog = (newIndex: number, force = false) => {
         if (!force && newIndex === 0 && lastValidIndexRef.current !== 0) {
@@ -107,7 +111,7 @@ const ChecklistScreen = memo(() => {
         React.useCallback(() => {
             loadChecklistsTask();
             return () => {};
-        }, [idCheckList, id, tabId])
+        }, [idCheckList, id, tabId, tabIdTMC, reload])
     );
 
     const updateCheckList = async () => {
@@ -187,6 +191,10 @@ const ChecklistScreen = memo(() => {
             router.push({ pathname: '/details', params: { taskId: idCheckList } });
         }
     };
+
+    const handleReload = async () => {
+        await updateCheckList();
+    }
 
     const tabsData = useMemo(() => {
         if (!checkList || !checkList.zones || checkList.zones.length === 0) {
@@ -269,6 +277,8 @@ const ChecklistScreen = memo(() => {
                         itemsTabContent={checkList.zones}
                         isFirstTab={isFirstTab}
                         isLastTab={isLastTab}
+                        zoneId={zone.id}
+                        onReload={handleReload}
                     />
                 );
             }

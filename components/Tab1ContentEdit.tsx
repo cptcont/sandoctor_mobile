@@ -403,6 +403,8 @@ const Tab1ContentEdit = ({
 
             switch (type) {
                 case 'radio':
+                    // Проверяем, есть ли хотя бы одна выбранная опция
+                    const isAnyOptionSelected = componentData.options.some((option) => option.selected);
                     return (
                         <View key={`radio-${idx}`} style={[styles.fieldContainer, { marginBottom: 17 }]}>
                             <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
@@ -415,7 +417,9 @@ const Tab1ContentEdit = ({
                                         height={29}
                                         textSize={14}
                                         textColor={option.color}
-                                        backgroundColor={option.bgcolor}
+                                        backgroundColor={
+                                            isAnyOptionSelected ? option.bgcolor : '#5D6377'
+                                        }
                                         enabled={option.selected}
                                         onPress={() => handlePressRadioButton(componentData.name, optionIndex)}
                                     />

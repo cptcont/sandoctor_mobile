@@ -1,8 +1,9 @@
 import React, { useEffect, useState, memo, useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, TextInput, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { Button, } from '@rneui/themed';
+import { Button } from '@rneui/themed';
 import Footer from '@/components/Footer';
 import { TextButton } from '@/components/TextButton';
 import ImagePickerWithCamera from '@/components/ImagePickerWithCamera';
@@ -10,7 +11,10 @@ import CustomSwitch from '@/components/CustomSwitch';
 import { Checklist, Zone } from '@/types/Checklist';
 import { FormField, TransferField } from '@/types/Field';
 import { storage } from '@/storage/storage';
-import { postData } from '@/services/api';
+import { fetchData, postData } from '@/services/api';
+import { useModal } from '@/context/ModalContext';
+import { ShowSelectTMC } from "@/components/showSelectTMC";
+import { router } from "expo-router";
 
 type Tab3ContentEditType = {
     id: string | string[];
@@ -20,8 +24,10 @@ type Tab3ContentEditType = {
     idTask?: string;
     onNextTab?: () => void;
     onPreviousTab?: () => void;
+    onReload: () => void;
     idCheckList?: string;
     tabId?: string;
+    zoneId?: string;
     isFirstTab?: boolean;
     isLastTab?: boolean;
 };
@@ -33,14 +39,16 @@ const Tab3ContentEdit = ({
                              idTask = '0',
                              onNextTab,
                              onPreviousTab,
+                             onReload,
                              idCheckList = '0',
                              tabId,
+                             zoneId = '0',
                              itemsTabContent = [],
                              isFirstTab = true,
                              isLastTab = false,
                          }: Tab3ContentEditType) => {
     // Состояния
-    const [selectedValue, setSelectedValue] = useState(0);
+    const [selectedValue, setSelectedValue] = useState<number>(0);
     const [isInitialized, setIsInitialized] = useState(false);
     const [field, setField] = useState<TransferField[]>([]);
     const [checklists, setChecklists] = useState<Checklist[]>([]);
@@ -55,7 +63,8 @@ const Tab3ContentEdit = ({
     const [isFieldValid, setIsFieldValid] = useState<Record<string, boolean>>({});
     const [selectedDropdownValues, setSelectedDropdownValues] = useState<Record<string, number | null>>({});
     const [isMounted, setIsMounted] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const { showModal, hideModal } = useModal();
 
     // Ключ для MMKV
     const getStorageKey = (key: string) => `checklist_${idCheckList}_${key}`;
@@ -63,8 +72,8 @@ const Tab3ContentEdit = ({
     // Загрузка начальных данных
     useEffect(() => {
         const loadInitialData = async () => {
-            //setIsLoading(true);
             try {
+                setIsLoading(true);
                 const storedChecklists = storage.getString(getStorageKey('checklists'));
                 const storedAllFields = storage.getString(getStorageKey('allFields'));
 
@@ -86,14 +95,11 @@ const Tab3ContentEdit = ({
 
         loadInitialData();
 
-        // Функция очистки для удаления данных MMKV при размонтировании компонента
         return () => {
-            storage.delete(getStorageKey('checklists')); // Удаление данных checklists
-            storage.delete(getStorageKey('allFields'));  // Удаление данных allFields
-            // Опционально: очистка всех данных, если нужно
-            // storage.clearAll();
+            storage.delete(getStorageKey('checklists'));
+            storage.delete(getStorageKey('allFields'));
         };
-    }, []);
+    }, [idCheckList]);
 
     // Сохранение состояний в MMKV
     useEffect(() => {
@@ -113,26 +119,32 @@ const Tab3ContentEdit = ({
         [itemsTabContent, index]
     );
 
-    // Инициализация выбранного значения
+    // Инициализация и обновление selectedValue на основе tabId
     useEffect(() => {
-        if (tabId && items.length > 0 && !isInitialized) {
-            const controlPointIndex = itemsTabContent[index]?.control_points?.findIndex(
-                (cp: any) => cp.id === tabId
-            );
-            if (controlPointIndex !== -1) {
-                setSelectedValue(controlPointIndex);
-                setIsInitialized(true);
-            }
+        if (!tabId || items.length === 0) {
+            setSelectedValue(0);
+            return;
         }
-    }, [tabId, index, itemsTabContent, isInitialized, items]);
+        const controlPointIndex = itemsTabContent[index]?.control_points?.findIndex(
+            (cp: any) => cp.id === tabId
+        );
+        console.log('tabId:', tabId, 'controlPointIndex:', controlPointIndex, 'items:', items);
+        if (controlPointIndex !== -1 && controlPointIndex !== selectedValue) {
+            setSelectedValue(controlPointIndex);
+            setIsInitialized(true);
+        } else {
+            setSelectedValue(0);
+        }
+    }, [tabId, index, itemsTabContent, items]);
 
     // Трансформация TMC
     const transformObjectToArrayTMC = (originalObject: any) => {
-        const { name, fields } = originalObject;
+        const { name, fields, id } = originalObject;
         const fieldName = fields.p.name.replace(/\[[^\]]+\]$/, '');
         return [{
             name: fieldName,
             label: name,
+            id: id,
             type: 'tmc',
             value: fields,
         }];
@@ -169,7 +181,13 @@ const Tab3ContentEdit = ({
                     return { select: { label: field.label, options: field.options, name: field.name } };
                 }
                 if (field.type === 'tmc') {
-                    return { tmc: { label: field.label, name: field.name, value: field.value } };
+                    return {
+                        tmc: {
+                            label: field.label || '',
+                            name: field.name,
+                            value: field.value || { n: { value: '' }, u: { value: '' }, v: { value: '' } },
+                        },
+                    };
                 }
                 if (field.type === 'pest') {
                     return { pest: { label: field.label, name: field.name, value: field.value } };
@@ -252,8 +270,17 @@ const Tab3ContentEdit = ({
             const fields = itemsTabContent[index].control_points[value]?.fields || [];
             const TMC = itemsTabContent[index].control_points[value]?.tmc || [];
             const pests = itemsTabContent[index].control_points[value]?.pests || [];
+            const isTmcUsed = itemsTabContent[index].control_points[value]?.tmc_used === "1";
 
-            const fieldsTMC = Array.isArray(TMC) ? TMC.map(transformObjectToArrayTMC).flat() : [];
+            let fieldsTMC: any[] = [];
+            if (isTmcUsed) {
+                if (TMC.length === 0) {
+                    fieldsTMC = [{ type: 'tmc', name: 'placeholder_tmc', label: '' }];
+                } else {
+                    fieldsTMC = Array.isArray(TMC) ? TMC.map(transformObjectToArrayTMC).flat() : [];
+                }
+            }
+
             const fieldsPests = Array.isArray(pests) ? pests.map(transformObjectToArrayPests).flat() : [];
             const fieldItem = Array.isArray(fields) ? fields : [];
             const combinedArray = [...fieldItem, ...fieldsTMC, ...fieldsPests];
@@ -289,7 +316,7 @@ const Tab3ContentEdit = ({
                     initialDropdownValues[item.select.name] = selected ? parseInt(selected[0]) : null;
                     initialFieldValid[item.select.name] = !!selected;
                 }
-                if (item?.tmc) {
+                if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
                     initialTmcValues[item.tmc.name] = {
                         n: item.tmc.value.n.value || '',
                         u: item.tmc.value.u.value || '',
@@ -322,8 +349,10 @@ const Tab3ContentEdit = ({
     };
 
     useEffect(() => {
-        loadFields(selectedValue);
-    }, [selectedValue, itemsTabContent, index]);
+        if (!isLoading) {
+            loadFields(selectedValue);
+        }
+    }, [selectedValue, itemsTabContent, index, isLoading]);
 
     // Валидация полей
     useEffect(() => {
@@ -337,7 +366,7 @@ const Tab3ContentEdit = ({
             if (item?.select) {
                 updatedFieldValid[item.select.name] = selectedDropdownValues[item.select.name] !== null;
             }
-            if (item?.tmc) {
+            if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
                 updatedFieldValid[`${item.tmc.name}_n`] = !!tmcValues[item.tmc.name]?.n;
                 updatedFieldValid[`${item.tmc.name}_u`] = !!tmcValues[item.tmc.name]?.u;
                 updatedFieldValid[`${item.tmc.name}_v`] = !!tmcValues[item.tmc.name]?.v;
@@ -620,6 +649,45 @@ const Tab3ContentEdit = ({
         });
     };
 
+    const handleCloseModalTMC = () => {
+        hideModal();
+    };
+
+    const handleAddModalTmc = () => {
+        const controlPointId = itemsTabContent[index]?.control_points?.[selectedValue]?.id || '';
+        onReload();
+        router.push({
+            pathname: '/checklist',
+            params: {
+                id: '20',
+                idCheckList: idCheckList,
+                typeCheckList: '3',
+                statusVisible: 'edit',
+                tabId: zoneId,
+                tabIdTMC: controlPointId,
+            },
+        });
+        hideModal();
+    };
+
+    const handleLoadTMC = async () => {
+        const controlPointId = itemsTabContent[index]?.control_points?.[selectedValue]?.id || '';
+
+        showModal(
+            <ShowSelectTMC
+                idChecklist={idCheckList}
+                idTMC={controlPointId}
+                onClosePress={handleCloseModalTMC}
+                onAddPress={handleAddModalTmc}
+            />,
+            {
+                overlay: { alignItems: 'center', justifyContent: 'center' },
+                overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                modalContent: { paddingTop: 0, paddingRight: 0 },
+            }
+        );
+    };
+
     // Рендеринг полей
     const transferDataVisible = (data: TransferField[] = []) => {
         if (!Array.isArray(data)) data = [];
@@ -651,6 +719,7 @@ const Tab3ContentEdit = ({
 
             switch (type) {
                 case 'radio':
+                    const isAnyOptionSelected = componentData.options.some((option) => option.selected);
                     return (
                         <View key={`radio-${idx}`} style={[styles.fieldContainer, { marginBottom: 17 }]}>
                             <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
@@ -663,7 +732,9 @@ const Tab3ContentEdit = ({
                                         height={29}
                                         textSize={14}
                                         textColor={option.color}
-                                        backgroundColor={option.bgcolor}
+                                        backgroundColor={
+                                            isAnyOptionSelected ? option.bgcolor : '#5D6377'
+                                        }
                                         enabled={option.selected}
                                         onPress={() => handlePressRadioButton(componentData.name, optionIndex)}
                                     />
@@ -780,10 +851,10 @@ const Tab3ContentEdit = ({
                                                 paddingHorizontal: 0,
                                                 backgroundColor: '#F5F7FB',
                                             }}
-
+                                            onPress={handleLoadTMC}
                                         />
                                     </View>
-                                        <View style={styles.tmcHeaderContainer}>
+                                    <View style={styles.tmcHeaderContainer}>
                                         <Text style={styles.tmcHeaderText}>Наименование</Text>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                                             <Text style={styles.tmcHeaderText}>В наличии</Text>
@@ -794,62 +865,61 @@ const Tab3ContentEdit = ({
                                 </>
                             )}
                             {!isHeaderVisibleTmc && (isHeaderVisibleTmc = true)}
-                            <View style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
-                                <Text style={[styles.tmcText, { width: '50%' }]}>{componentData.label}</Text>
-                                <View style={{ width: '44%', flexDirection: 'row', justifyContent: 'space-between', marginRight: 12 }}>
-                                    <View>
-                                        <TextInput
-                                            style={[
-                                                styles.tmcTextInput,
-                                                isMounted &&
-                                                !isFieldValid[`${componentData.name}_n`] && {
-                                                    borderColor: 'red',
-                                                    borderWidth: 1,
-                                                },
-                                            ]}
-                                            onChangeText={(text) => handleChangeTmc(text, componentData.name, 'n')}
-                                            value={tmcValues[componentData.name]?.n || ''}
-                                            onBlur={() => handleBlurTmc(componentData.name, 'n')}
-                                            keyboardType="numeric"
-                                        />
-
-                                    </View>
-                                    <View>
-                                        <TextInput
-                                            style={[
-                                                styles.tmcTextInput,
-                                                isMounted &&
-                                                !isFieldValid[`${componentData.name}_u`] && {
-                                                    borderColor: 'red',
-                                                    borderWidth: 1,
-                                                },
-                                            ]}
-                                            onChangeText={(text) => handleChangeTmc(text, componentData.name, 'u')}
-                                            value={tmcValues[componentData.name]?.u || ''}
-                                            onBlur={() => handleBlurTmc(componentData.name, 'u')}
-                                            keyboardType="numeric"
-                                        />
-
-                                    </View>
-                                    <View>
-                                        <TextInput
-                                            style={[
-                                                styles.tmcTextInput,
-                                                isMounted &&
-                                                !isFieldValid[`${componentData.name}_v`] && {
-                                                    borderColor: 'red',
-                                                    borderWidth: 1,
-                                                },
-                                            ]}
-                                            onChangeText={(text) => handleChangeTmc(text, componentData.name, 'v')}
-                                            value={tmcValues[componentData.name]?.v || ''}
-                                            onBlur={() => handleBlurTmc(componentData.name, 'v')}
-                                            keyboardType="numeric"
-                                        />
-
+                            {componentData.name !== 'placeholder_tmc' && (
+                                <View style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
+                                    <Text style={[styles.tmcText, { width: '50%' }]}>{componentData.label}</Text>
+                                    <View style={{ width: '44%', flexDirection: 'row', justifyContent: 'space-between', marginRight: 12 }}>
+                                        <View>
+                                            <TextInput
+                                                style={[
+                                                    styles.tmcTextInput,
+                                                    isMounted &&
+                                                    !isFieldValid[`${componentData.name}_n`] && {
+                                                        borderColor: 'red',
+                                                        borderWidth: 1,
+                                                    },
+                                                ]}
+                                                onChangeText={(text) => handleChangeTmc(text, componentData.name, 'n')}
+                                                value={tmcValues[componentData.name]?.n || ''}
+                                                onBlur={() => handleBlurTmc(componentData.name, 'n')}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
+                                        <View>
+                                            <TextInput
+                                                style={[
+                                                    styles.tmcTextInput,
+                                                    isMounted &&
+                                                    !isFieldValid[`${componentData.name}_u`] && {
+                                                        borderColor: 'red',
+                                                        borderWidth: 1,
+                                                    },
+                                                ]}
+                                                onChangeText={(text) => handleChangeTmc(text, componentData.name, 'u')}
+                                                value={tmcValues[componentData.name]?.u || ''}
+                                                onBlur={() => handleBlurTmc(componentData.name, 'u')}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
+                                        <View>
+                                            <TextInput
+                                                style={[
+                                                    styles.tmcTextInput,
+                                                    isMounted &&
+                                                    !isFieldValid[`${componentData.name}_v`] && {
+                                                        borderColor: 'red',
+                                                        borderWidth: 1,
+                                                    },
+                                                ]}
+                                                onChangeText={(text) => handleChangeTmc(text, componentData.name, 'v')}
+                                                value={tmcValues[componentData.name]?.v || ''}
+                                                onBlur={() => handleBlurTmc(componentData.name, 'v')}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
                                     </View>
                                 </View>
-                            </View>
+                            )}
                         </View>
                     );
                 case 'pest':
@@ -885,9 +955,6 @@ const Tab3ContentEdit = ({
                                             onBlur={() => handleBlurPest(componentData.name)}
                                             keyboardType="numeric"
                                         />
-                                        {/*isMounted && !isFieldValid[componentData.name] && (
-                                            <Text style={styles.errorText}>Поле обязательно</Text>
-                                        )*/}
                                     </View>
                                 </View>
                             </View>
@@ -909,7 +976,7 @@ const Tab3ContentEdit = ({
         return requiredFields.every((item) => {
             if (item.text) return isFieldValid[item.text.name];
             if (item.select) return isFieldValid[item.select.name];
-            if (item.tmc) {
+            if (item.tmc && item.tmc.name !== 'placeholder_tmc') {
                 return (
                     isFieldValid[`${item.tmc.name}_n`] &&
                     isFieldValid[`${item.tmc.name}_u`] &&
