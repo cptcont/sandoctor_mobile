@@ -163,21 +163,23 @@ const StartTaskScreen = () => {
         <>
             <CustomHeaderScreen onPress={handleBack} text={`Отчет по заданию №${taskId}`} />
             <KeyboardAwareScrollView>
-                <View style={styles.containerTitleCheckList}>
+                {checklists.length > 0 && (<>
+                    <View style={styles.containerTitleCheckList}>
                     <Text style={styles.titleCheckList}>Чек-лист</Text>
-                </View>
-                <View style={styles.containerCheckList}>
-                    {checklists.map((data, index) => (
-                        <View key={index} style={{ marginBottom: 10 }}>
-                            <TaskCard
-                                onPress={() => handleTaskOnPress(data.id, data.type)}
-                                title={data.name}
-                                idStatus={0}
-                                bgColor={data.badge.color}
-                            />
-                        </View>
-                    ))}
-                </View>
+                    </View>
+                    <View style={styles.containerCheckList}>
+                        {checklists.map((data, index) => (
+                            <View key={index} style={{ marginBottom: 10 }}>
+                                <TaskCard
+                                    onPress={() => handleTaskOnPress(data.id, data.type)}
+                                    title={data.name}
+                                    idStatus={0}
+                                    bgColor={data.badge.color}
+                                />
+                            </View>
+                        ))}
+                    </View>
+                </>)}
                 <View style={styles.containerTitleCheckList}>
                     <Text style={styles.titleCheckList}>Результат выполнения работ</Text>
                 </View>
