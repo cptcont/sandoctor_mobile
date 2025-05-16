@@ -84,7 +84,7 @@ export function CustomHeader() {
             }
         );
     };
-
+    console.log('CustomHeader', notificationsCount);
     return (
         <View style={styles.header}>
             <TouchableOpacity
@@ -94,7 +94,7 @@ export function CustomHeader() {
                 <Image source={require('@/assets/images/logo-header.png')} style={styles.logo} />
             </TouchableOpacity>
                 <IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openQr} />
-            {/* <IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openBuilding} /> */}
+            {/*<IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openBuilding} />*/}
 
             <View>
                 <IconButton

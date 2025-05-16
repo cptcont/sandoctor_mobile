@@ -1,16 +1,16 @@
-import React, { useEffect } from "react";
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
 import { PopupProvider } from '@/context/PopupContext';
-import { Platform, StyleSheet, StatusBar, View, AppState } from 'react-native';
+import {Platform, StyleSheet, StatusBar, View, AppState, Text} from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
 import { ModalProvider, useModal } from '@/context/ModalContext';
 import { CustomModal } from '@/components/CustomModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { removeDataFromStorage } from '@/services/api'; // Импортируем функцию удаления
-import { NotificationProvider } from '@/context/NotificationContext';
+import { removeDataFromStorage } from '@/services/api';
+import {NotificationProvider} from "@/context/NotificationContext";
 
 export default function RootLayout() {
     return (
@@ -40,8 +40,8 @@ function RootLayoutNav() {
 
     useEffect(() => {
         if (Platform.OS === 'android') {
-            NavigationBar.setBackgroundColorAsync("#081A51");
-            NavigationBar.setButtonStyleAsync("light");
+            NavigationBar.setBackgroundColorAsync('#081A51');
+            NavigationBar.setButtonStyleAsync('light');
         }
     }, []);
 
@@ -61,13 +61,12 @@ function RootLayoutNav() {
         };
 
         clearSelectedDateOnStart();
-    }, []); // Пустой массив зависимостей — выполняется только при монтировании
+    }, []);
 
     // Отслеживание состояния приложения (опционально, для отладки)
     useEffect(() => {
         const handleAppStateChange = (nextAppState: string) => {
             console.log('AppState changed to:', nextAppState);
-            // Здесь можно добавить дополнительную логику, если нужно
         };
 
         const subscription = AppState.addEventListener('change', handleAppStateChange);
@@ -81,14 +80,8 @@ function RootLayoutNav() {
             <StatusBar backgroundColor={'#081A51'} barStyle="light-content" />
             {!isAuthenticated && (
                 <Stack>
-                    <Stack.Screen
-                        name="LoginScreen"
-                        options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                        name="ForgotPasswordScreen"
-                        options={{ headerShown: false }}
-                    />
+                    <Stack.Screen name="LoginScreen" options={{ headerShown: false }} />
+                    <Stack.Screen name="ForgotPasswordScreen" options={{ headerShown: false }} />
                 </Stack>
             )}
             {isAuthenticated && (
@@ -104,7 +97,7 @@ function RootLayoutNav() {
                 overlayBackground={overlayBackgroundStyle}
                 modalContent={modalContentStyle}
             >
-                {modalContent}
+                {typeof modalContent === 'string' ? <Text>{modalContent}</Text> : modalContent}
             </CustomModal>
         </View>
     );
