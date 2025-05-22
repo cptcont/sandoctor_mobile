@@ -498,6 +498,7 @@ const Tab2ContentEdit = ({
                             name={componentData.name}
                             onImageUploaded={(newImage) => handleImageUploaded(componentData.name, newImage)}
                             onImageRemoved={(removedImage) => handleImageRemoved(componentData.name, removedImage)}
+                            viewGallery={true}
                         />
                     );
                 case 'checkbox':

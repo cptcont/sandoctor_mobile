@@ -2,7 +2,6 @@ import React, { useEffect, useState, memo, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { MMKV } from 'react-native-mmkv';
 import Footer from '@/components/Footer';
 import { TextButton } from '@/components/TextButton';
 import ImagePickerWithCamera from '@/components/ImagePickerWithCamera';
@@ -461,6 +460,7 @@ const Tab1ContentEdit = ({
                             name={componentData.name}
                             onImageUploaded={(newImage) => handleImageUploaded(componentData.name, newImage)}
                             onImageRemoved={(removedImage) => handleImageRemoved(componentData.name, removedImage)}
+                            viewGallery={true}
                         />
                     );
                 case 'checkbox':

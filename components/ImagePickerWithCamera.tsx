@@ -230,7 +230,7 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
                             <Camera />
                         </TouchableOpacity>
                         {viewGallery && (
-                            <TouchableOpacity style={[styles.cameraButton]} onPress={pickImageFromGallery}>
+                            <TouchableOpacity style={[styles.cameraButton, {borderColor: 'transparent'}]} onPress={pickImageFromGallery}>
                                 <Gallery />
                             </TouchableOpacity>
                         )}
