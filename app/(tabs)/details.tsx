@@ -259,7 +259,7 @@ const DetailsScreen = () => {
                     <ReportCard
                         image={task.photos}
                         workingTime={`${task.report.time_start} - ${task.report.time_end}`}
-                        time={task.report.work_len}
+                        time={`task.report.work_len`}
                         executorComment={task.report.comment_exec}
                         customerComment={task.report.comment_client}
                     />
