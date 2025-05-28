@@ -40,7 +40,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     // Периодический запрос каждые 5 минут
     useEffect(() => {
         getNotificationAvailability(); // Первоначальный вызов
-        const intervalId = setInterval(getNotificationAvailability, 60000); // 5 минут
+        const intervalId = setInterval(getNotificationAvailability, 120000); // 5 минут
 
         return () => clearInterval(intervalId); // Очистка при размонтировании
     }, []);
