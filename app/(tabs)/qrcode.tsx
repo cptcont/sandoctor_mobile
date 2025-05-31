@@ -4,8 +4,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { router } from "expo-router";
 import { useDrawerStatus } from '@react-navigation/drawer';
-import { postData } from '@/services/api';
+import {postData} from '@/services/api';
 import { Button } from '@rneui/themed';
+import {CustomHeaderScreen} from "@/components/CustomHeaderScreen";
 
 interface BarCodeScannedEvent {
     data: string;
@@ -89,7 +90,7 @@ export default function QRCodeScreen() {
                 return;
             }
 
-            console.log('Response GKGKJGHKLJGKJ LHLJHLHLHLHLKHL lkhlhjh', response);
+           // console.log('Response GKGKJGHKLJGKJ LHLJHLHLHLHLKHL lkhlhjh', response);
             let statusVisible = 'view';
             if (response.responce.task_status === "2") {
                 statusVisible = 'edit';
@@ -126,8 +127,14 @@ export default function QRCodeScreen() {
         setFacing(current => (current === 'back' ? 'front' : 'back'));
     }
 
+    const handleBack = async () => {
+        router.back()
+    };
+
     return (
         <View style={styles.container}>
+            <CustomHeaderScreen onPress={handleBack} text={`Сканирование QR`} />
+
             {isCameraActive && (
                 <CameraView
                     key={`${facing}-${cameraKey}`}
