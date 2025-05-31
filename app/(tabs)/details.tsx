@@ -36,10 +36,12 @@ import {
     postData,
 } from '@/services/api';
 
+type AppRoutes = '/' | '/starttask' | '/checklist';
+
 const DetailsScreen = () => {
     const params = useLocalSearchParams();
     const taskId = params.taskId as string;
-    const previousScreen = params.screenPath as string | undefined;
+    const previousScreen = params.screenPath as AppRoutes;
     const [index, setIndex] = useState(0);
     const { width: screenWidth } = useWindowDimensions();
     const tabsContainerRef = useRef<View>(null);
@@ -148,7 +150,7 @@ const DetailsScreen = () => {
 
     const handleFinish = () => {
         console.log('previousScreen',previousScreen);
-        const path = `${previousScreen}`
+        const path: AppRoutes = previousScreen
         router.push(path);
 
     };
