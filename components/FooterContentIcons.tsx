@@ -9,9 +9,10 @@ type FooterContentIconsType = {
     visible?: boolean;
     onTodayPress?: () => void; // Добавляем пропсы для обработки нажатий
     onTomorrowPress?: () => void;
+    screenName?: 'index' | 'daydetails';
 };
 
-const FooterContentIcons = ({ visible = true, onTodayPress, onTomorrowPress }: FooterContentIconsType) => {
+const FooterContentIcons = ({ visible = true, onTodayPress, onTomorrowPress, screenName }: FooterContentIconsType) => {
     if (!visible) return null;
 
     const handleOnPressList = () => {
@@ -61,8 +62,18 @@ const FooterContentIcons = ({ visible = true, onTodayPress, onTomorrowPress }: F
 
     return (
         <View style={styles.container}>
-            <IconButton icon={<ListIcon />} size={35} marginLeft={20} onPress={handleOnPressList} />
-            <IconButton icon={<TableCellsIcon />} size={35} marginLeft={8} onPress={handleOnPressTableCells} />
+            <IconButton
+                icon={<ListIcon color={screenName === 'daydetails' ? '#F5F7FB' : '#5D6377'}/>}
+                size={35}
+                marginLeft={20}
+                backgroundColor={screenName === 'daydetails' ? '#5D6377' : '#F5F7FB'}
+                onPress={handleOnPressList} />
+            <IconButton
+                icon={<TableCellsIcon color={screenName === 'index' ? '#F5F7FB' : '#5D6377'}/>}
+                size={35}
+                marginLeft={8}
+                backgroundColor={screenName === 'index' ? '#5D6377' : '#F5F7FB'}
+                onPress={handleOnPressTableCells} />
             <TextButton
                 text={'Сегодня'}
                 width={112}

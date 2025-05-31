@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
     View,
     ScrollView,
@@ -39,14 +39,8 @@ import {
 const DetailsScreen = () => {
     const params = useLocalSearchParams();
     const taskId = params.taskId as string;
+    const previousScreen = params.screenPath as string | undefined;
     const [index, setIndex] = useState(0);
-    const [routes] = useState([
-        { key: 'tab1', title: 'Детали' },
-        { key: 'tab2', title: 'Услуги' },
-        { key: 'tab3', title: 'Чек-лист' },
-        { key: 'tab4', title: 'Отчет' },
-    ]);
-    const { showModal, isModalVisible, hideModal } = useModal();
     const { width: screenWidth } = useWindowDimensions();
     const tabsContainerRef = useRef<View>(null);
     const [tabsWidth, setTabsWidth] = useState(0);
@@ -55,7 +49,8 @@ const DetailsScreen = () => {
     const [statusEnabledNext, setStatusEnabledNext] = useState<boolean>(true);
     const [task, setTask] = useState<Task | null>(null);
     const [checklists, setChecklists] = useState<Checklist[]>([]);
-    const [isLoading, setIsLoading] = useState(true); // Состояние загрузки
+    const [isLoading, setIsLoading] = useState(true);
+    const { showModal, isModalVisible, hideModal } = useModal();
 
     const loadChecklistsTask = async () => {
         try {
@@ -91,6 +86,7 @@ const DetailsScreen = () => {
 
     useEffect(() => {
         if (task) {
+
             if (task.condition.id === '3' || task.condition.id === '4') {
                 setStatusEnabledCancel(false);
                 setStatusEnabledStart(false);
@@ -151,7 +147,10 @@ const DetailsScreen = () => {
     };
 
     const handleFinish = () => {
-        router.push('/');
+        console.log('previousScreen',previousScreen);
+        const path = `${previousScreen}`
+        router.push(path);
+
     };
 
     const handleStart = () => {
@@ -160,6 +159,28 @@ const DetailsScreen = () => {
             params: { taskId },
         });
     };
+
+    // Формируем список вкладок в зависимости от условий
+    const routes = useMemo(() => {
+        // Если task.condition.id === '4', возвращаем только вкладку "Отчет"
+        if (task?.condition.id === '4') {
+            return [{ key: 'tab4', title: 'Отчет' }];
+        }
+
+        const baseRoutes = [{ key: 'tab1', title: 'Детали' }, { key: 'tab2', title: 'Услуги' }];
+
+        // Если checklists не пустой и task.condition.id !== '2', добавляем вкладку "Чек-лист"
+        if (checklists.length > 0 && task?.condition.id !== '2') {
+            baseRoutes.push({ key: 'tab3', title: 'Чек-лист' });
+        }
+
+        // Если task.condition.id !== '2' и task.condition.id !== '1', добавляем вкладку "Отчет"
+        if (task?.condition.id !== '2' && task?.condition.id !== '1') {
+            baseRoutes.push({ key: 'tab4', title: 'Отчет' });
+        }
+
+        return baseRoutes;
+    }, [task, checklists]);
 
     const renderScene = SceneMap({
         tab1: () => (
@@ -180,9 +201,11 @@ const DetailsScreen = () => {
                                     arrivalTime={`с ${task.time_work} до ${task.time_end_work}`}
                                 />
                             </View>
-                            <View style={{ marginBottom: 15 }}>
-                                <ContactCard contacts={task.contacts} />
-                            </View>
+                            {task.condition.id !== '3' && task.condition.id !== '4' && (
+                                <View style={{ marginBottom: 15 }}>
+                                    <ContactCard contacts={task.contacts} />
+                                </View>
+                            )}
                             <View>
                                 <ActorsCard executors={task.executors} />
                             </View>
@@ -190,7 +213,7 @@ const DetailsScreen = () => {
                                 <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
                                     <View style={{ marginRight: 13 }}>
                                         <TextButton
-                                            text={'Отменить задание'}
+                                            text={'Отменить'}
                                             width={170}
                                             height={52}
                                             textSize={14}
@@ -202,7 +225,7 @@ const DetailsScreen = () => {
                                         />
                                     </View>
                                     <TextButton
-                                        text={'Приступить к выполнению'}
+                                        text={'Приступить'}
                                         width={170}
                                         height={52}
                                         textSize={14}

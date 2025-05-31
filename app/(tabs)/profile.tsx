@@ -348,6 +348,8 @@ const ProfileScreen = () => {
                                 onImageUploaded={handleImageUploaded}
                                 viewGallery={true}
                                 selected={true}
+                                backgroundColor={'#FFF'}
+                                borderColor={'#DADADA'}
                             />
                         </View>
                         <View style={styles.buttonModalContainer}>
@@ -439,7 +441,7 @@ const styles = StyleSheet.create({
     modalContainer: {
         width: '80%', // Фиксированная ширина
         maxWidth: 400, // Ограничение максимальной ширины
-        backgroundColor: '#fff',
+        backgroundColor: '#F5F7FB',
         borderRadius: 10,
         padding: 20,
         alignItems: 'center',

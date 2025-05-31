@@ -4,7 +4,7 @@ import { ButtonHeader } from '@/components/ButtonHeader';
 import { useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
 import { IconButton } from '@/components/IconButton';
-import { BellSolidIcon, QrIcon } from '@/components/icons/Icons';
+import { BellSolidIcon, QrIcon, LogoHeaderLight } from '@/components/icons/Icons';
 import { useModal } from '@/context/ModalContext';
 import { AvatarMenu } from '@/components/AvatarMenu';
 import { Badge } from '@rneui/themed';
@@ -90,11 +90,13 @@ export function CustomHeader() {
             <TouchableOpacity
                 onPress={handlePressHome}
                 activeOpacity={0.9}
+                style={styles.logoContainer}
             >
-                <Image source={require('@/assets/images/logo-header.png')} style={styles.logo} />
+                <View style={styles.logo}>
+                    <LogoHeaderLight/>
+                </View>
             </TouchableOpacity>
                 <IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openQr} />
-            {/* <IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openBuilding} /> */}
 
             <View>
                 <IconButton
@@ -122,8 +124,7 @@ export function CustomHeader() {
                 isCircle={true}
             />
         </View>
-    );
-}
+    );}
 
 const styles = StyleSheet.create({
     header: {
@@ -137,7 +138,17 @@ const styles = StyleSheet.create({
         borderStyle: 'solid',
         borderBottomWidth: 1,
     },
+    logoContainer: {
+        width: 70,
+        height: 70,
+        backgroundColor: '#081A51',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     logo: {
-        resizeMode: 'contain',
+        width: 70,
+        height: 70,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

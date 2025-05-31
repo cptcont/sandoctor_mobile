@@ -145,6 +145,7 @@ export default function HomeScreen() {
             pathname: '/details',
             params: {
                 taskId: task.id,
+                screenPath: '/',
             },
         });
     };
@@ -222,7 +223,11 @@ export default function HomeScreen() {
                 </ScrollView>
             </View>
             <View style={styles.footer}>
-                <FooterContentIcons onTodayPress={handleTodayPress} onTomorrowPress={handleTomorrowPress} />
+                <FooterContentIcons
+                    onTodayPress={handleTodayPress}
+                    onTomorrowPress={handleTomorrowPress}
+                    screenName={'index'}
+                />
             </View>
         </View>
     );

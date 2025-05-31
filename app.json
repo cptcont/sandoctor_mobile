@@ -4,7 +4,7 @@
     "slug": "sandoctor",
     "version": "1.0.5",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-1.5.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -20,12 +20,12 @@
       "googleServicesFile": "./google-services.json",
 
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/adaptive-icon-1.5.png",
         "backgroundColor": "#ffffff"
       },
 
       "notification": {
-        "icon": "./assets/images/notification-icon.png",
+        "icon": "./assets/images/notification-icon-1.5.png",
         "color": "#081A51"
       },
 
@@ -45,7 +45,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-icon-1.5.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -54,7 +54,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/notification-icon.png",
+          "icon": "./assets/images/notification-icon-1.5.png",
           "color": "#081A51"
         }
       ],

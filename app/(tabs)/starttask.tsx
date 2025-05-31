@@ -204,6 +204,7 @@ const StartTaskScreen = () => {
                     onImageUploaded={handleUpdateImage}
                     borderColor={photosCheck() ? 'transparent' : 'red'}
                     viewGallery={true}
+                    backgroundColor={'#ffffff'}
                 />
                 <View style={[styles.containerTextArea, { marginBottom: 11 }]}>
                     <Text style={styles.titleTextArea}>Комментарий исполнителя</Text>

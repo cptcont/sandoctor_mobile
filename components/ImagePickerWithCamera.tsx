@@ -31,21 +31,24 @@ interface ImagePickerWithCameraProps {
     paddingHorizontal?: number;
     statusVisible?: 'edit' | 'view';
     borderColor?: string;
+    backgroundColor?: string;
 }
 
-const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
-                                                                         name = '',
-                                                                         taskId,
-                                                                         initialImages = [],
-                                                                         path = taskId ? `task/${taskId}` : '',
-                                                                         onImageUploaded,
-                                                                         onImageRemoved,
-                                                                         viewGallery = false,
-                                                                         selected = false,
-                                                                         paddingHorizontal = 20,
-                                                                         statusVisible = 'edit',
-                                                                         borderColor = 'transparent',
-                                                                     }) => {
+const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = (
+    {
+        name = '',
+        taskId,
+        initialImages = [],
+        path = taskId ? `task/${taskId}` : '',
+        onImageUploaded,
+        onImageRemoved,
+        viewGallery = false,
+        selected = false,
+        paddingHorizontal = 20,
+        statusVisible = 'edit',
+        borderColor = 'transparent',
+        backgroundColor = 'transparent',
+    }) => {
     const [selectedImages, setSelectedImages] = useState<ImageObject[]>(initialImages);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
@@ -133,7 +136,7 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
 
         try {
             const response = await uploadImage<{ url: string; thumbUrl: string; name: string }>(path, uri);
-            const newImage: ImageObject = {
+            const newImage = {
                 name: response.name,
                 thumbUrl: response.thumbUrl,
                 originalUrl: response.url
@@ -226,11 +229,25 @@ const ImagePickerWithCamera: React.FC<ImagePickerWithCameraProps> = ({
                 ))}
                 {statusVisible === 'edit' && (
                     <>
-                        <TouchableOpacity style={[styles.cameraButton, {borderColor: borderColor}]} onPress={openCamera}>
+                        <TouchableOpacity
+                            style={[styles.cameraButton, {
+                                borderColor: borderColor,
+                                backgroundColor: backgroundColor,
+                                marginRight: viewGallery ? 13 : 0, // Убираем marginRight, если нет галереи
+                            }]}
+                            onPress={openCamera}
+                        >
                             <Camera />
                         </TouchableOpacity>
                         {viewGallery && (
-                            <TouchableOpacity style={[styles.cameraButton, {borderColor: 'transparent'}]} onPress={pickImageFromGallery}>
+                            <TouchableOpacity
+                                style={[styles.cameraButton, {
+                                    borderColor: borderColor,
+                                    backgroundColor: backgroundColor,
+                                    marginRight: 0, // Последний элемент, marginRight: 0
+                                }]}
+                                onPress={pickImageFromGallery}
+                            >
                                 <Gallery />
                             </TouchableOpacity>
                         )}
@@ -324,7 +341,7 @@ const styles = StyleSheet.create({
     cameraButton: {
         width: 60,
         height: 60,
-        backgroundColor: '#F5F7FB',
+        marginRight: 13,
         borderRadius: 6,
         justifyContent: 'center' as const,
         alignItems: 'center' as const,

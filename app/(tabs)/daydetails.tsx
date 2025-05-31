@@ -205,6 +205,8 @@ export default function DayDetailsScreen() {
             pathname: '/details',
             params: {
                 taskId: task.id,
+                screenPath: '/daydetails',
+
             },
         });
     };
@@ -259,7 +261,9 @@ export default function DayDetailsScreen() {
                         </ScrollView>
                     </View>
                     <View style={[styles.footer, { justifyContent: 'center' }]}>
-                        <FooterContentIcons />
+                        <FooterContentIcons
+                            screenName={'daydetails'}
+                        />
                     </View>
                 </>
             )}
