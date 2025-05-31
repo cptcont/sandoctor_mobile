@@ -1,8 +1,12 @@
 import React from 'react';
 import { TouchableOpacity, View, StyleSheet } from 'react-native';
+type IconProps = {
+    width?: number | string;
+    height?: number | string;
+};
 
 type ButtonHeaderProps = {
-    icon: React.ReactNode;
+    icon: React.ReactElement<IconProps>;
     size?: number;
     containerSize?: number;
     onPress?: () => void;
@@ -36,9 +40,8 @@ export function IconButton({
                     },
                 ]}
             >
-                {React.cloneElement(icon as React.ReactElement, {
-                    width: size,
-                    height: size,
+                {React.cloneElement(icon as React.ReactElement<{ size?: number }>, {
+                    size,
                 })}
             </View>
         </TouchableOpacity>
