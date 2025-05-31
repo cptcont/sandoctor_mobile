@@ -7,9 +7,8 @@ import MonthsCarousel from "@/components/MonthsCarousel";
 import React, { useCallback, useEffect, useState } from "react";
 import { format, getDate, getMonth, getYear } from "date-fns";
 import type { Task } from "@/types/Task";
-import { fetchDataSaveStorage, getDataFromStorage, saveDataToStorage } from "@/services/api";
+import { getDataFromStorage, saveDataToStorage } from "@/services/api";
 import { useFocusEffect } from "@react-navigation/native";
-import type { Checklist } from "@/types/Checklist";
 
 interface DayDetailsParamsType {
     day: number;
@@ -39,10 +38,11 @@ export default function DayDetailsScreen() {
     const loadTasks = async () => {
         try {
             setIsLoading(true);
-            const storedTasks = getDataFromStorage('tasks');
-            setTasks(storedTasks || []);
+            const storedTasks = await getDataFromStorage('tasks') as Task[] | null;
+            setTasks(storedTasks ?? []);
         } catch (error) {
             console.error('Ошибка загрузки задач:', error);
+            setTasks([]);
         } finally {
             setIsLoading(false);
         }
@@ -263,6 +263,7 @@ export default function DayDetailsScreen() {
                     <View style={[styles.footer, { justifyContent: 'center' }]}>
                         <FooterContentIcons
                             screenName={'daydetails'}
+
                         />
                     </View>
                 </>
