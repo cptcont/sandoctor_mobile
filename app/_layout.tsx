@@ -15,7 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
     return (
-        <SafeAreaProvider>
+
         <AuthProvider>
             <PopupProvider>
                 <ModalProvider>
@@ -29,7 +29,7 @@ export default function RootLayout() {
                 </ModalProvider>
             </PopupProvider>
         </AuthProvider>
-        </SafeAreaProvider>
+
     );
 }
 
