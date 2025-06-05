@@ -11,9 +11,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { removeDataFromStorage } from '@/services/api';
 import { NotificationProvider } from '@/context/NotificationContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
     return (
+        <SafeAreaProvider>
         <AuthProvider>
             <PopupProvider>
                 <ModalProvider>
@@ -27,6 +29,7 @@ export default function RootLayout() {
                 </ModalProvider>
             </PopupProvider>
         </AuthProvider>
+        </SafeAreaProvider>
     );
 }
 
