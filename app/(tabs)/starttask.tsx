@@ -21,8 +21,10 @@ const StartTaskScreen = () => {
     const [textCommentExec, setTextCommentExec] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(true);
     const taskId = params.taskId as string;
-    const [keyRandom, setKeyRandom] = useState<string>(`${Math.floor(Math.random() * 1000)}`);
+    const [photoKey, setPhotoKey] = useState<string>(task?.photos?.length.toString() || "0");
 
+
+    console.log('StartTaskScreen taskId', taskId);
     const fetchData = async () => {
         try {
             setLoading(true);
@@ -44,7 +46,6 @@ const StartTaskScreen = () => {
     useFocusEffect(
         useCallback(() => {
             fetchData();
-            setKeyRandom(`${Math.floor(Math.random() * 1000)}`);
             return () => {
                 // Очистка, если необходимо
             };
@@ -123,6 +124,7 @@ const StartTaskScreen = () => {
         await fetchDataSaveStorage<Task>(`task/${taskId}`, "task");
         const updatedTask = (await getDataFromStorage("task")) as Task;
         setTask(updatedTask);
+        setPhotoKey(updatedTask.photos.length.toString());
     };
 
     const handleSubmit = async () => {
@@ -197,7 +199,7 @@ const StartTaskScreen = () => {
                     <Text style={styles.titleCheckList}>Отчетный документ по заданию</Text>
                 </View>
                 <ImagePickerWithCamera
-                    key={keyRandom}
+                    key={photoKey}
                     taskId={taskId}
                     initialImages={task.photos}
                     path={`task/${taskId}`}
