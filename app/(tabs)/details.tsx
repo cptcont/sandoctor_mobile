@@ -30,6 +30,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useModal } from '@/context/ModalContext';
 import CancelTaskModal from '@/components/CancelTaskModal';
 import StartTaskModal from '@/components/StartTaskModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     fetchDataSaveStorage,
     getDataFromStorage,
@@ -78,6 +79,20 @@ const DetailsScreen = () => {
         });
     };
 
+    // Сохранение previousScreen в AsyncStorage, если он не пустой
+    useEffect(() => {
+        const savePreviousScreen = async () => {
+            if (previousScreen) {
+                try {
+                    await AsyncStorage.setItem('previousScreen', previousScreen);
+                } catch (error) {
+                    console.error('Error saving previousScreen:', error);
+                }
+            }
+        };
+        savePreviousScreen();
+    }, [previousScreen]);
+
     useFocusEffect(
         useCallback(() => {
             loadChecklistsTask();
@@ -88,7 +103,6 @@ const DetailsScreen = () => {
 
     useEffect(() => {
         if (task) {
-
             if (task.condition.id === '3' || task.condition.id === '4') {
                 setStatusEnabledCancel(false);
                 setStatusEnabledStart(false);
@@ -148,11 +162,16 @@ const DetailsScreen = () => {
         });
     };
 
-    const handleFinish = () => {
-        console.log('previousScreen',previousScreen);
-        const path: AppRoutes = previousScreen
-        router.push(path);
-
+    const handleFinish = async () => {
+        try {
+            // Получаем previousScreen из AsyncStorage
+            const storedScreen = await AsyncStorage.getItem('previousScreen');
+            const path: AppRoutes = storedScreen ? (storedScreen as AppRoutes) : '/';
+            router.push(path);
+        } catch (error) {
+            console.error('Error retrieving previousScreen:', error);
+            router.push('/'); // Запасной вариант, если не удалось получить путь
+        }
     };
 
     const handleStart = () => {
@@ -164,19 +183,16 @@ const DetailsScreen = () => {
 
     // Формируем список вкладок в зависимости от условий
     const routes = useMemo(() => {
-        // Если task.condition.id === '4', возвращаем только вкладку "Отчет"
         if (task?.condition.id === '4') {
             return [{ key: 'tab4', title: 'Отчет' }];
         }
 
         const baseRoutes = [{ key: 'tab1', title: 'Детали' }, { key: 'tab2', title: 'Услуги' }];
 
-        // Если checklists не пустой и task.condition.id !== '2', добавляем вкладку "Чек-лист"
         if (checklists.length > 0 && task?.condition.id !== '2') {
             baseRoutes.push({ key: 'tab3', title: 'Чек-лист' });
         }
 
-        // Если task.condition.id !== '2' и task.condition.id !== '1', добавляем вкладку "Отчет"
         if (task?.condition.id !== '2' && task?.condition.id !== '1') {
             baseRoutes.push({ key: 'tab4', title: 'Отчет' });
         }
@@ -284,7 +300,7 @@ const DetailsScreen = () => {
                     <ReportCard
                         image={task.photos}
                         workingTime={`${task.report.time_start} - ${task.report.time_end}`}
-                        time={`task.report.work_len`}
+                        time={`${task.report.work_len}`}
                         executorComment={task.report.comment_exec}
                         customerComment={task.report.comment_client}
                     />
