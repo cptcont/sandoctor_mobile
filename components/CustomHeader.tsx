@@ -40,7 +40,7 @@ export function CustomHeader() {
     // Обновление уведомлений при монтировании компонента
     //useEffect(() => {
     //    refreshNotifications(); // Обновляем уведомления при отрисовке
-    //}, [refreshNotifications]); // Зависимость от refreshNotifications
+    //}, []); // Зависимость от refreshNotifications
 
     const openQr = () => {
         router.push('/qrcode');
@@ -97,6 +97,7 @@ export function CustomHeader() {
                 </View>
             </TouchableOpacity>
                 <IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openQr} />
+            {/*<IconButton icon={<QrIcon />} size={30} marginLeft={90} onPress={openBuilding} />*/}
 
             <View>
                 <IconButton
