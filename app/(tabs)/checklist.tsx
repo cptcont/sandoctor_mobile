@@ -13,6 +13,7 @@ import Tab1ContentEdit from '@/components/Tab1ContentEdit';
 import Tab3ContentEdit from '@/components/Tab3ContentEdit';
 import { fetchDataSaveStorage, getDataFromStorage } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Для очистки хранилища
 
 interface TabContent {
     key: string;
@@ -27,8 +28,22 @@ interface Route {
 }
 
 const ChecklistScreen = memo(() => {
+    console.log('This checklists');
     const params = useLocalSearchParams();
+
+    if (!params || typeof params !== 'object' || !params.id || !params.idCheckList) {
+        console.log('Invalid or missing params:', params);
+        return (
+            <View style={styles.container}>
+                <Text>Ошибка: некорректные параметры маршрута</Text>
+                <Button title="Вернуться" onPress={() => router.back()} />
+            </View>
+        );
+    }
+
     const { id, idCheckList, typeCheckList = '1', statusVisible = 'view', tabId = '0', tabIdTMC, reload = true } = params;
+    console.log('Извлеченные параметры:', { id, idCheckList, typeCheckList, statusVisible, tabId, tabIdTMC });
+
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [index, setIndex] = useState(0);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -44,10 +59,7 @@ const ChecklistScreen = memo(() => {
     const scrollViewRef = useRef<ScrollView>(null);
     const tabsContainerRef = useRef<View>(null);
     const lastValidIndexRef = useRef<number>(0);
-
-    console.log('This checklists');
-
-    console.log('tabId', tabId, 'tabId', tabIdTMC);
+    const abortControllerRef = useRef<AbortController | null>(null); // Для отмены запросов
 
     const setIndexWithLog = (newIndex: number, force = false) => {
         if (!force && newIndex === 0 && lastValidIndexRef.current !== 0) {
@@ -67,23 +79,19 @@ const ChecklistScreen = memo(() => {
         try {
             setInitialLoading(true);
             setError(null);
-            await Promise.all([
-                fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists'),
-            ]);
-            const loadedChecklists = getDataFromStorage('checklists') || [];
+            abortControllerRef.current = new AbortController(); // Создаём новый контроллер для запроса
+            await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists', abortControllerRef.current.signal);
+            const loadedChecklists = (await getDataFromStorage('checklists')) || [];
             if (!loadedChecklists.length) {
                 setError('Нет данных для отображения');
-            }
-            setChecklists(loadedChecklists);
-            setLastFetchTime(now);
-
-            if (loadedChecklists.length > 0) {
+                setChecklists([]);
+            } else {
+                setChecklists(loadedChecklists);
                 const checkList = loadedChecklists.find((c) => c.id === id);
-                if (checkList?.zones?.length > 0) {
+                if (checkList && checkList.zones?.length > 0) {
                     let newIndex = 0;
                     setIsFirstTab(true);
                     setIsLastTab(false);
-
                     if (tabId) {
                         const tabIndex = checkList.zones.findIndex((zone: Zone) => zone.id === tabId);
                         if (tabIndex !== -1) {
@@ -93,10 +101,20 @@ const ChecklistScreen = memo(() => {
                         }
                     }
                     setIndexWithLog(newIndex);
+                } else {
+                    setIndex(0);
+                    setIsFirstTab(true);
+                    setIsLastTab(true);
                 }
             }
+            setLastFetchTime(now);
         } catch (err) {
-            setError('Не удалось загрузить данные. Попробуйте ещё раз.');
+            if (err.name === 'AbortError') {
+                console.log('Запрос был отменён');
+            } else {
+                setError('Не удалось загрузить данные. Попробуйте ещё раз.');
+                setChecklists([]);
+            }
         } finally {
             setInitialLoading(false);
             setIsInitialRender(false);
@@ -107,18 +125,53 @@ const ChecklistScreen = memo(() => {
         loadChecklistsTask(true);
     };
 
+    const cleanup = async () => {
+        // Отмена активных запросов
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        // Сброс состояния
+        setChecklists([]);
+        setIndex(0);
+        setInitialLoading(true);
+        setIsTabLoading(false);
+        setError(null);
+        setRoutes([]);
+        setIsFirstTab(true);
+        setIsLastTab(false);
+        setLastFetchTime(null);
+        setTabWidths([]);
+        setIsInitialRender(true);
+        // Очистка AsyncStorage (если нужно)
+        await AsyncStorage.removeItem('checklists');
+        console.log('Состояние и данные очищены');
+    };
+
     useFocusEffect(
         React.useCallback(() => {
             loadChecklistsTask();
-            return () => {};
+            return () => {
+                cleanup();
+            };
         }, [idCheckList, id, tabId, tabIdTMC, reload])
     );
 
     const updateCheckList = async () => {
-        await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists');
-        const updatedChecklists = getDataFromStorage('checklists') || [];
-        setChecklists(updatedChecklists);
-        setLastFetchTime(Date.now());
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort(); // Прерываем предыдущий запрос
+        }
+        abortControllerRef.current = new AbortController();
+        try {
+            await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists', abortControllerRef.current.signal);
+            const updatedChecklists = (await getDataFromStorage('checklists')) || [];
+            setChecklists(updatedChecklists);
+            setLastFetchTime(Date.now());
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                setError('Не удалось обновить данные');
+            }
+        }
     };
 
     useEffect(() => {
@@ -194,7 +247,7 @@ const ChecklistScreen = memo(() => {
 
     const handleReload = async () => {
         await updateCheckList();
-    }
+    };
 
     const tabsData = useMemo(() => {
         if (!checkList || !checkList.zones || checkList.zones.length === 0) {
@@ -238,7 +291,7 @@ const ChecklistScreen = memo(() => {
                 );
             } else if (typeCheckList === '1' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab1ContentEdit
+                    <Tab2ContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
