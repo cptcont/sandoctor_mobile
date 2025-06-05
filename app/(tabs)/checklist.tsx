@@ -9,7 +9,7 @@ import Tab1Content from '@/components/Tab1Content';
 import Tab2Content from '@/components/Tab2Content';
 import Tab3Content from '@/components/Tab3Content';
 import Tab2ContentEdit from '@/components/Tab2ContentEdit';
-import Tab1ContentEdit from '@/components/Tab1ContentEdit';
+import TabContentEdit from '@/components/TabContentEdit';
 import Tab3ContentEdit from '@/components/Tab3ContentEdit';
 import { fetchDataSaveStorage, getDataFromStorage } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
@@ -80,7 +80,7 @@ const ChecklistScreen = memo(() => {
             setInitialLoading(true);
             setError(null);
             abortControllerRef.current = new AbortController(); // Создаём новый контроллер для запроса
-            await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists', abortControllerRef.current.signal);
+            await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists');
             const loadedChecklists = (await getDataFromStorage('checklists')) || [];
             if (!loadedChecklists.length) {
                 setError('Нет данных для отображения');
@@ -163,7 +163,7 @@ const ChecklistScreen = memo(() => {
         }
         abortControllerRef.current = new AbortController();
         try {
-            await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists', abortControllerRef.current.signal);
+            await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists');
             const updatedChecklists = (await getDataFromStorage('checklists')) || [];
             setChecklists(updatedChecklists);
             setLastFetchTime(Date.now());
@@ -291,7 +291,7 @@ const ChecklistScreen = memo(() => {
                 );
             } else if (typeCheckList === '1' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab2ContentEdit
+                    <TabContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -301,11 +301,12 @@ const ChecklistScreen = memo(() => {
                         itemsTabContent={checkList.zones}
                         isFirstTab={isFirstTab}
                         isLastTab={isLastTab}
+                        tabType="param"
                     />
                 );
             } else if (typeCheckList === '2' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab2ContentEdit
+                    <TabContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -315,11 +316,12 @@ const ChecklistScreen = memo(() => {
                         itemsTabContent={checkList.zones}
                         isFirstTab={isFirstTab}
                         isLastTab={isLastTab}
+                        tabType="param"
                     />
                 );
             } else if (typeCheckList === '3' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab3ContentEdit
+                    <TabContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -332,6 +334,7 @@ const ChecklistScreen = memo(() => {
                         isLastTab={isLastTab}
                         zoneId={zone.id}
                         onReload={handleReload}
+                        tabType="control_points"
                     />
                 );
             }
