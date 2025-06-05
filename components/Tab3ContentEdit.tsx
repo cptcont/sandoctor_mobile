@@ -1,5 +1,4 @@
 import React, { useEffect, useState, memo, useMemo } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, TextInput, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -140,13 +139,17 @@ const Tab3ContentEdit = ({
     // Трансформация TMC
     const transformObjectToArrayTMC = (originalObject: any) => {
         const { name, fields, id } = originalObject;
-        const fieldName = fields.p.name.replace(/\[[^\]]+\]$/, '');
+        const fieldName = fields?.p?.name?.replace(/\[[^\]]+\]$/, '') || `tmc_${id}`;
         return [{
             name: fieldName,
-            label: name,
-            id: id,
+            label: name || 'Без названия',
+            id: id || '',
             type: 'tmc',
-            value: fields,
+            value: {
+                n: { value: fields?.n?.value || '' },
+                u: { value: fields?.u?.value || '' },
+                v: { value: fields?.v?.value || '' },
+            },
         }];
     };
 
@@ -155,9 +158,9 @@ const Tab3ContentEdit = ({
         const { name, id, field } = originalObject;
         return [{
             type: 'pest',
-            name: field.name,
-            value: field.value,
-            label: name,
+            name: field?.name || `pest_${id}`,
+            value: field?.value || '',
+            label: name || 'Без названия',
         }];
     };
 
@@ -190,7 +193,7 @@ const Tab3ContentEdit = ({
                     };
                 }
                 if (field.type === 'pest') {
-                    return { pest: { label: field.label, name: field.name, value: field.value } };
+                    return { pest: { label: field.label, name: field.name, value: field.value || '' } };
                 }
                 return null;
             })
@@ -245,13 +248,13 @@ const Tab3ContentEdit = ({
                 }
                 if (item?.tmc) {
                     updatedTmcValues[item.tmc.name] = {
-                        n: item.tmc.value.n.value || '',
-                        u: item.tmc.value.u.value || '',
-                        v: item.tmc.value.v.value || '',
+                        n: item.tmc.value.n?.value || '',
+                        u: item.tmc.value.u?.value || '',
+                        v: item.tmc.value.v?.value || '',
                     };
-                    updatedFieldValid[`${item.tmc.name}_n`] = !!item.tmc.value.n.value;
-                    updatedFieldValid[`${item.tmc.name}_u`] = !!item.tmc.value.u.value;
-                    updatedFieldValid[`${item.tmc.name}_v`] = !!item.tmc.value.v.value;
+                    updatedFieldValid[`${item.tmc.name}_n`] = !!item.tmc.value.n?.value;
+                    updatedFieldValid[`${item.tmc.name}_u`] = !!item.tmc.value.u?.value;
+                    updatedFieldValid[`${item.tmc.name}_v`] = !!item.tmc.value.v?.value;
                 }
                 if (item?.pest) {
                     updatedPestValues[item.pest.name] = item.pest.value || '';
@@ -284,6 +287,8 @@ const Tab3ContentEdit = ({
             const fieldsPests = Array.isArray(pests) ? pests.map(transformObjectToArrayPests).flat() : [];
             const fieldItem = Array.isArray(fields) ? fields : [];
             const combinedArray = [...fieldItem, ...fieldsTMC, ...fieldsPests];
+
+            console.log('Combined array for fields:', combinedArray); // Логирование для отладки
 
             const transformedField = transformData(combinedArray);
             setField(transformedField);
@@ -318,19 +323,22 @@ const Tab3ContentEdit = ({
                 }
                 if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
                     initialTmcValues[item.tmc.name] = {
-                        n: item.tmc.value.n.value || '',
-                        u: item.tmc.value.u.value || '',
-                        v: item.tmc.value.v.value || '',
+                        n: item.tmc.value.n?.value || '',
+                        u: item.tmc.value.u?.value || '',
+                        v: item.tmc.value.v?.value || '',
                     };
-                    initialFieldValid[`${item.tmc.name}_n`] = !!item.tmc.value.n.value;
-                    initialFieldValid[`${item.tmc.name}_u`] = !!item.tmc.value.u.value;
-                    initialFieldValid[`${item.tmc.name}_v`] = !!item.tmc.value.v.value;
+                    initialFieldValid[`${item.tmc.name}_n`] = !!item.tmc.value.n?.value;
+                    initialFieldValid[`${item.tmc.name}_u`] = !!item.tmc.value.u?.value;
+                    initialFieldValid[`${item.tmc.name}_v`] = !!item.tmc.value.v?.value;
                 }
                 if (item?.pest) {
                     initialPestValues[item.pest.name] = item.pest.value || '';
                     initialFieldValid[item.pest.name] = !!item.pest.value;
                 }
             });
+
+            console.log('Initial TMC values:', initialTmcValues); // Логирование для отладки
+            console.log('Initial Pest values:', initialPestValues); // Логирование для отладки
 
             setInputTexts((prev) => ({ ...prev, ...initialInputTexts }));
             setIsEnabled((prev) => ({ ...prev, ...initialCheckboxStates }));
@@ -530,10 +538,13 @@ const Tab3ContentEdit = ({
     };
 
     const handleChangeTmc = (text: string, name: string, fieldType: 'n' | 'u' | 'v') => {
-        setTmcValues((prev) => ({
-            ...prev,
-            [name]: { ...prev[name], [fieldType]: text },
-        }));
+        setTmcValues((prev) => {
+            const current = prev[name] || { n: '', u: '', v: '' };
+            return {
+                ...prev,
+                [name]: { ...current, [fieldType]: text },
+            };
+        });
         if (isMounted) {
             setIsFieldValid((prev) => ({ ...prev, [`${name}_${fieldType}`]: !!text }));
         }
@@ -570,7 +581,7 @@ const Tab3ContentEdit = ({
 
         const tmcField = field.find((item) => item.tmc && item.tmc.name === name);
         const fullTmcValue = {
-            p: tmcField?.tmc?.value.p.value || '',
+            p: tmcField?.tmc?.value.p?.value || '',
             n: tmcValues[name]?.n || '',
             u: tmcValues[name]?.u || '',
             v: tmcValues[name]?.v || '',
@@ -826,6 +837,7 @@ const Tab3ContentEdit = ({
                         </View>
                     );
                 case 'tmc':
+                    console.log('Rendering TMC:', componentData); // Логирование для отладки
                     return (
                         <View key={`tmc-${idx}`}>
                             {!isHeaderVisibleTmc && (
@@ -923,6 +935,7 @@ const Tab3ContentEdit = ({
                         </View>
                     );
                 case 'pest':
+                    console.log('Rendering Pest:', componentData); // Логирование для отладки
                     return (
                         <View key={`pest-${idx}`}>
                             {!isHeaderVisiblePest && (
@@ -1159,13 +1172,17 @@ const styles = StyleSheet.create({
         color: '#919191',
     },
     tmcTextInput: {
-        width: 40,
-        height: 20,
+        width: 40, // Увеличена ширина для вмещения текста
+        height: 30, // Увеличена высота для лучшего центрирования
         backgroundColor: '#F5F7FB',
         borderRadius: 4,
-        fontSize: 10,
+        fontSize: 12, // Увеличен размер шрифта для лучшей читаемости
         color: '#1C1F37',
-        textAlign: 'center',
+        textAlign: 'center', // Горизонтальное центрирование
+        textAlignVertical: 'center', // Вертикальное центрирование
+        paddingHorizontal: 4, // Добавлены отступы по горизонтали
+        paddingVertical: 0, // Минимальные отступы по вертикали для компактности
+        lineHeight: 14, // Настройка высоты строки для лучшего выравнивания
     },
     tmcText: {
         fontSize: 10,
