@@ -204,7 +204,7 @@ const StartTaskScreen = () => {
                     initialImages={task.photos}
                     path={`task/${taskId}`}
                     onImageUploaded={handleUpdateImage}
-                    borderColor={photosCheck() ? 'transparent' : 'red'}
+                    borderColor={photosCheck() ? '#DADADA' : 'red'}
                     viewGallery={true}
                     backgroundColor={'#ffffff'}
                 />
