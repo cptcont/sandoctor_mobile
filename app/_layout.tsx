@@ -9,7 +9,6 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { removeDataFromStorage } from '@/services/api';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import {NetworkProvider} from "@/context/NetworkContext";
 import { NotificationProvider } from '@/context/NotificationContext';
