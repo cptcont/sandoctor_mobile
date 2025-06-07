@@ -187,12 +187,16 @@ const DetailsScreen = () => {
             return [{ key: 'tab4', title: 'Отчет' }];
         }
 
-        const baseRoutes = [{ key: 'tab1', title: 'Детали' }, { key: 'tab2', title: 'Услуги' }];
+        const baseRoutes = [
+            { key: 'tab1', title: 'Детали' },
+            { key: 'tab2', title: 'Услуги' }
+        ];
 
-        if (checklists.length > 0 && task?.condition.id !== '2') {
+        if (checklists.length > 0 && task?.condition.id !== '2' && task?.condition.id !== '1') {
             baseRoutes.push({ key: 'tab3', title: 'Чек-лист' });
         }
 
+        // Добавляем вкладку "Отчет" для всех условий кроме '2' и '1'
         if (task?.condition.id !== '2' && task?.condition.id !== '1') {
             baseRoutes.push({ key: 'tab4', title: 'Отчет' });
         }
