@@ -1,43 +1,38 @@
-import '@/global.css'
-import React, { useEffect, useState } from "react";
+import '@/global.css';
+import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
 import { PopupProvider } from '@/context/PopupContext';
 import { Platform, StyleSheet, StatusBar, View, AppState } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
-import { ModalProvider, useModal } from '@/context/ModalContext';
-import { CustomModal } from '@/components/CustomModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { removeDataFromStorage } from '@/services/api';
-import { NotificationProvider } from '@/context/NotificationContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
+import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import {NetworkProvider} from "@/context/NetworkContext";
 
 export default function RootLayout() {
     return (
         <GluestackUIProvider>
-            <AuthProvider>
-                <PopupProvider>
-                    <ModalProvider>
-                        <NotificationProvider>
-                            <GestureHandlerRootView style={{ flex: 1 }}>
-                                <KeyboardProvider preserveEdgeToEdge={false}>
-                                    <RootLayoutNav />
-                                </KeyboardProvider>
-                            </GestureHandlerRootView>
-                        </NotificationProvider>
-                    </ModalProvider>
-                </PopupProvider>
-            </AuthProvider>
+            <NetworkProvider>
+                <AuthProvider>
+                    <PopupProvider>
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                            <KeyboardProvider preserveEdgeToEdge={false}>
+                                <RootLayoutNav />
+                            </KeyboardProvider>
+                        </GestureHandlerRootView>
+                    </PopupProvider>
+                </AuthProvider>
+            </NetworkProvider>
         </GluestackUIProvider>
     );
 }
 
 function RootLayoutNav() {
     const { isAuthenticated, isAppUsageExpired } = useAuth();
-    const { hideModal, isModalVisible, modalContent, overlayStyle, overlayBackgroundStyle, modalContentStyle } = useModal();
     const [isMounted, setIsMounted] = useState(false);
 
     if (Platform.OS === 'android') {
@@ -46,8 +41,8 @@ function RootLayoutNav() {
 
     useEffect(() => {
         if (Platform.OS === 'android') {
-            NavigationBar.setBackgroundColorAsync("#081A51");
-            NavigationBar.setButtonStyleAsync("light");
+            NavigationBar.setBackgroundColorAsync('#081A51');
+            NavigationBar.setButtonStyleAsync('light');
         }
     }, []);
 
@@ -74,7 +69,7 @@ function RootLayoutNav() {
 
         const subscription = AppState.addEventListener('change', handleAppStateChange);
         return () => {
-            subscription.remove();
+            subscription.remove(); // Используем современный метод remove()
         };
     }, []);
 
@@ -99,15 +94,6 @@ function RootLayoutNav() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="+not-found" />
             </Stack>
-            <CustomModal
-                visible={isModalVisible}
-                onClose={hideModal}
-                overlay={overlayStyle}
-                overlayBackground={overlayBackgroundStyle}
-                modalContent={modalContentStyle}
-            >
-                {modalContent}
-            </CustomModal>
         </View>
     );
 }
