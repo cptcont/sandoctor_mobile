@@ -3,7 +3,6 @@ import { Drawer } from 'expo-router/drawer';
 import CustomDrawerContent from '@/components/CustomDrawerContent';
 import { CustomHeader } from '@/components/CustomHeader';
 import { CustomModal } from '@/components/CustomModal';
-import { NotificationProvider } from '@/context/NotificationContext';
 import { ModalProvider, useModal } from '@/context/ModalContext';
 import { PushNotificationProvider } from '@/context/PushNotificationContext';
 import { View, StyleSheet } from 'react-native';
@@ -11,11 +10,9 @@ import { View, StyleSheet } from 'react-native';
 export default function TabsLayout() {
     return (
         <PushNotificationProvider>
-            <NotificationProvider>
-                <ModalProvider>
-                    <DrawerContent />
-                </ModalProvider>
-            </NotificationProvider>
+            <ModalProvider>
+                <DrawerContent />
+            </ModalProvider>
         </PushNotificationProvider>
     );
 }

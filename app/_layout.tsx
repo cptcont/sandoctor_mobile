@@ -12,21 +12,25 @@ import { removeDataFromStorage } from '@/services/api';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import {NetworkProvider} from "@/context/NetworkContext";
+import { NotificationProvider } from '@/context/NotificationContext';
+
 
 export default function RootLayout() {
     return (
         <GluestackUIProvider>
-            <NetworkProvider>
-                <AuthProvider>
-                    <PopupProvider>
-                        <GestureHandlerRootView style={{ flex: 1 }}>
-                            <KeyboardProvider preserveEdgeToEdge={false}>
-                                <RootLayoutNav />
-                            </KeyboardProvider>
-                        </GestureHandlerRootView>
-                    </PopupProvider>
-                </AuthProvider>
-            </NetworkProvider>
+            <NotificationProvider>
+                <NetworkProvider>
+                    <AuthProvider>
+                        <PopupProvider>
+                            <GestureHandlerRootView style={{ flex: 1 }}>
+                                <KeyboardProvider preserveEdgeToEdge={false}>
+                                    <RootLayoutNav />
+                                </KeyboardProvider>
+                            </GestureHandlerRootView>
+                        </PopupProvider>
+                    </AuthProvider>
+                </NetworkProvider>
+            </NotificationProvider>
         </GluestackUIProvider>
     );
 }

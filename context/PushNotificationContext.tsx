@@ -16,8 +16,8 @@ interface PushNotificationProviderProps {
 }
 
 export const PushNotificationProvider: React.FC<PushNotificationProviderProps> = ({ children }) => {
-    const notificationListener = useRef<Notifications.Subscription>();
-    const responseListener = useRef<Notifications.Subscription>();
+    const notificationListener = useRef<Notifications.Subscription | null>(null);
+    const responseListener = useRef<Notifications.Subscription | null>(null);
     const { refreshNotifications } = useNotifications();
 
     // Инициализация push-уведомлений и установка слушателей
@@ -49,12 +49,8 @@ export const PushNotificationProvider: React.FC<PushNotificationProviderProps> =
 
         // Очистка слушателей при размонтировании
         return () => {
-            if (notificationListener.current) {
-                Notifications.removeNotificationSubscription(notificationListener.current);
-            }
-            if (responseListener.current) {
-                Notifications.removeNotificationSubscription(responseListener.current);
-            }
+            notificationListener.current?.remove();
+            responseListener.current?.remove();
         };
     }, [refreshNotifications]);
 
