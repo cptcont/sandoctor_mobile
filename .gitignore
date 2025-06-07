@@ -39,3 +39,6 @@ yarn-error.*
 *.tsbuildinfo
 
 
+/components/NotifTest.tsx
+/google-services.json
+/sandoctor-57ce1-firebase-adminsdk-fbsvc-b16dfd3499.json
