@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CheckSolid, XMarkSolid, Document } from "@/components/icons/Icons";
-//import {usePost} from "@/context/PostApi";
-import { postData, updateDataFromStorage, getDataFromStorage } from '@/services/api'
+import { postData, } from '@/services/api'
 
 
 type ServiceCardProps = {
@@ -32,7 +31,6 @@ const ServiceCard = ({
 
     const [isCheckActive, setIsCheckActive] = useState(true);
     const [isXMarkActive, setIsXMarkActive] = useState(false);
-    //const { postData } = usePost();
 
     // Функция для обновления состояний и вызова callback
     const updateStatus = (newCheckActive: boolean, newXMarkActive: boolean) => {
@@ -86,16 +84,6 @@ const ServiceCard = ({
         }
          await postData(`task/${taskId}/`,
             {services:[{task_services_id: task_services_id, status: 3 }]});
-            updateDataFromStorage('task',{
-                services:[{
-                    task_services_id: task_services_id,
-                    status: {
-                        id: "3",
-                        name: "Выполнена",
-                        color: "#30da88",
-                        bgcolor: "#EFEFF1"}  }]})
-            //console.log('updateDataFromStorage', getDataFromStorage('task').services );
-           // console.log('task_services_id',task_services_id );
     };
 
     const handleXMarkPress = async () => {
@@ -104,16 +92,6 @@ const ServiceCard = ({
         }
          await postData(`task/${taskId}/`,
             {services:[{task_services_id: Number(task_services_id), status: 4 }]});
-            updateDataFromStorage('task',{
-                services:[{
-                    task_services_id: task_services_id,
-                    status: {
-                        id: "4",
-                        name: "Отклонена",
-                        color: "#FD1F9B",
-                        bgcolor: "#FDEED0"}  }]})
-            //console.log('updateDataFromStorage', getDataFromStorage('task').services );
-
     };
 
     const checkColor = isCheckActive ? '#30DA88' : '#5D6377';
