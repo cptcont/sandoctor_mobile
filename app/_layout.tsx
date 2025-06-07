@@ -1,3 +1,4 @@
+import '@/global.css'
 import React, { useEffect, useState } from "react";
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -12,24 +13,25 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { removeDataFromStorage } from '@/services/api';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 
 export default function RootLayout() {
     return (
-
-        <AuthProvider>
-            <PopupProvider>
-                <ModalProvider>
-                    <NotificationProvider>
-                        <GestureHandlerRootView style={{ flex: 1 }}>
-                            <KeyboardProvider preserveEdgeToEdge={false}>
-                                <RootLayoutNav />
-                            </KeyboardProvider>
-                        </GestureHandlerRootView>
-                    </NotificationProvider>
-                </ModalProvider>
-            </PopupProvider>
-        </AuthProvider>
-
+        <GluestackUIProvider>
+            <AuthProvider>
+                <PopupProvider>
+                    <ModalProvider>
+                        <NotificationProvider>
+                            <GestureHandlerRootView style={{ flex: 1 }}>
+                                <KeyboardProvider preserveEdgeToEdge={false}>
+                                    <RootLayoutNav />
+                                </KeyboardProvider>
+                            </GestureHandlerRootView>
+                        </NotificationProvider>
+                    </ModalProvider>
+                </PopupProvider>
+            </AuthProvider>
+        </GluestackUIProvider>
     );
 }
 
