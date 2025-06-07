@@ -668,6 +668,19 @@ const TabContentEdit = ({
         hideModal();
     };
 
+    let arrayPhotos:any[] = [];
+
+    const photosCheck = (arrayPhotos: any[] = []) => {
+        // Проверяем, есть ли вообще поля типа 'foto' в текущем field
+        const hasFotoFields = field.some(item => item?.foto !== undefined);
+
+        // Если нет полей с фото - считаем проверку пройденной (true)
+        if (!hasFotoFields) return true;
+
+        // Если есть поля с фото - проверяем, что хотя бы одно фото загружено
+        return arrayPhotos.length > 0;
+    };
+
     const handleAddModalTmc = () => {
         const controlPointId = tabType === 'control_points' ? itemsTabContent[index]?.[tabType]?.[selectedValue]?.id || '' : '';
         onReload?.();
@@ -786,17 +799,21 @@ const TabContentEdit = ({
             </View>
         );
         case 'foto':
+
+            arrayPhotos = componentData.value || [];
+
             return (
                 <ImagePickerWithCamera
                     key={`image-${idx}`}
-            taskId={idTask}
-            initialImages={componentData.value || []}
-            path={`checklist/${idCheckList}/${componentData.name}`}
-            name={componentData.name}
-            onImageUploaded={(newImage) => handleImageUploaded(componentData.name, newImage)}
-            onImageRemoved={(removedImage) => handleImageRemoved(componentData.name, removedImage)}
-            viewGallery={true}
-            />
+                    taskId={idTask}
+                    initialImages={componentData.value || []}
+                    path={`checklist/${idCheckList}/${componentData.name}`}
+                    name={componentData.name}
+                    onImageUploaded={(newImage) => handleImageUploaded(componentData.name, newImage)}
+                    onImageRemoved={(removedImage) => handleImageRemoved(componentData.name, removedImage)}
+                    viewGallery={true}
+                    borderColor={photosCheck(componentData.value) ? '#DADADA' : 'red'}
+                />
         );
         case 'checkbox':
             return (
@@ -1048,61 +1065,60 @@ const TabContentEdit = ({
             {isLoading ? (
                     <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#017EFA" />
-                    </View>
-    ) : items.length > 0 ? (
-        <>
-            <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Параметр</Text>
-            </View>
-            <View style={{ marginBottom: 23 }}>
-    <Dropdown
-        style={styles.dropdown}
-    data={items}
-    labelField="label"
-    valueField="value"
-    value={selectedValue}
-    onChange={(item) => handleSelect(item.value)}
-    placeholder="Выберите параметр"
-    placeholderStyle={styles.dropdownText}
-    selectedTextStyle={styles.dropdownText}
-    itemTextStyle={styles.dropdownItemText}
-    />
-    </View>
-    <KeyboardAwareScrollView>
-    {transferDataVisible(field).renderedComponents}
-    </KeyboardAwareScrollView>
-    <Footer>
-    <View style={styles.footerContainer}>
-    <TextButton
-        text="Назад"
-    width={125}
-    height={40}
-    textSize={14}
-    textColor="#FFFFFF"
-    backgroundColor="#5D6377"
-    onPress={handlePrevious}
-    enabled={isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
-    touchable={isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
-    />
-    <TextButton
-    text="Далее"
-    width={125}
-    height={40}
-    textSize={14}
-    textColor="#FFFFFF"
-    backgroundColor="#017EFA"
-    onPress={handleNext}
-    enabled={isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
-    touchable={isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
-    />
-    </View>
-    </Footer>
-    </>
-) : (
-        <Text style={styles.errorText}>Данные отсутствуют</Text>
-)}
-    </View>
-);
+                    </View>) : items.length > 0 ? (
+                        <>
+                            <View style={styles.fieldContainer}>
+                                <Text style={styles.label}>Параметр</Text>
+                            </View>
+                            <View style={{ marginBottom: 23 }}>
+                                <Dropdown
+                                    style={styles.dropdown}
+                                    data={items}
+                                    labelField="label"
+                                    valueField="value"
+                                    value={selectedValue}
+                                    onChange={(item) => handleSelect(item.value)}
+                                    placeholder="Выберите параметр"
+                                    placeholderStyle={styles.dropdownText}
+                                    selectedTextStyle={styles.dropdownText}
+                                    itemTextStyle={styles.dropdownItemText}
+                                />
+                            </View>
+                            <KeyboardAwareScrollView>
+                                {transferDataVisible(field).renderedComponents}
+                            </KeyboardAwareScrollView>
+                            <Footer>
+                                <View style={styles.footerContainer}>
+                                    <TextButton
+                                        text="Назад"
+                                        width={125}
+                                        height={40}
+                                        textSize={14}
+                                        textColor="#FFFFFF"
+                                        backgroundColor="#5D6377"
+                                        onPress={handlePrevious}
+                                        enabled={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
+                                        touchable={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
+                                    />
+                                    <TextButton
+                                        text="Далее"
+                                        width={125}
+                                        height={40}
+                                        textSize={14}
+                                        textColor="#FFFFFF"
+                                        backgroundColor="#017EFA"
+                                        onPress={handleNext}
+                                        enabled={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
+                                        touchable={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
+                                    />
+                                </View>
+                            </Footer>
+                        </>
+            ) : (
+                <Text style={styles.errorText}>Данные отсутствуют</Text>
+            )}
+        </View>
+    );
 };
 
 const styles = StyleSheet.create({
