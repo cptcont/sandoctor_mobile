@@ -9,7 +9,6 @@ import ImagePickerWithCamera from '@/components/ImagePickerWithCamera';
 import CustomSwitch from '@/components/CustomSwitch';
 import { Checklist, Zone } from '@/types/Checklist';
 import { FormField, TransferField } from '@/types/Field';
-import { storage } from '@/storage/storage';
 import { postData } from '@/services/api';
 import { useModal } from '@/context/ModalContext';
 import { ShowSelectTMC } from "@/components/showSelectTMC";
@@ -66,22 +65,13 @@ const TabContentEdit = ({
     const [isLoading, setIsLoading] = useState(true);
     const { showModal, hideModal } = useModal();
 
-    const getStorageKey = (key: string) => `checklist_${idCheckList}_${key}`;
-
     useEffect(() => {
         const loadInitialData = async () => {
             try {
                 setIsLoading(true);
-                const storedChecklists = storage.getString(getStorageKey('checklists'));
-                const storedAllFields = storage.getString(getStorageKey('allFields'));
-
-                setChecklists(storedChecklists ? JSON.parse(storedChecklists) : []);
-                setAllFields(storedAllFields ? JSON.parse(storedAllFields) : {});
-
                 const response = await postData(`checklist/${idCheckList}`, {});
                 if (response?.data) {
                     setChecklists(response.data);
-                    storage.set(getStorageKey('checklists'), JSON.stringify(response.data));
                 }
             } catch (error) {
                 console.error('Ошибка при загрузке данных:', error);
@@ -92,19 +82,7 @@ const TabContentEdit = ({
         };
 
         loadInitialData();
-
-        return () => {
-            storage.delete(getStorageKey('checklists'));
-            storage.delete(getStorageKey('allFields'));
-        };
     }, [idCheckList]);
-
-    useEffect(() => {
-        if (isMounted) {
-            storage.set(getStorageKey('checklists'), JSON.stringify(checklists));
-            storage.set(getStorageKey('allFields'), JSON.stringify(allFields));
-        }
-    }, [checklists, allFields, isMounted]);
 
     const items = useMemo(
         () =>
@@ -174,8 +152,16 @@ const TabContentEdit = ({
                 }
                 if (field.type === 'select') {
                     const options = Array.isArray(field.options)
-                        ? field.options
-                        : Object.entries(field.options).map(([key, value]: [string, any]) => ({ ...value, value: parseInt(key) }));
+                        ? field.options.map((opt: any) => ({
+                            label: opt.label || opt.value.toString(),
+                            value: parseInt(opt.value),
+                            color: opt.color || '#000000',
+                        }))
+                        : Object.entries(field.options).map(([key, value]: [string, any]) => ({
+                            label: value.label || value.value.toString(),
+                            value: parseInt(key),
+                            color: value.color || '#000000',
+                        }));
                     return { select: { label: field.label, options, name: field.name } };
                 }
                 if (field.type === 'tmc') {
@@ -196,11 +182,10 @@ const TabContentEdit = ({
     };
 
     const saveCurrentState = (value: number) => {
-        setAllFields((prev) => {
-            const newFields = { ...prev, [value]: field };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [value]: field,
+        }));
     };
 
     const loadFields = (value: number) => {
@@ -237,7 +222,11 @@ const TabContentEdit = ({
                 if (item?.select) {
                     const options = Array.isArray(item.select.options)
                         ? item.select.options
-                        : Object.entries(item.select.options).map(([key, value]: [string, any]) => ({ ...value, value: parseInt(key) }));
+                        : Object.entries(item.select.options).map(([key, value]: [string, any]) => ({
+                            label: value.label || value.value.toString(),
+                            value: parseInt(key),
+                            color: value.color || '#000000',
+                        }));
                     const selected = options.find((opt: any) => opt.selected);
                     updatedDropdownValues[item.select.name] = selected ? parseInt(selected.value) : null;
                     updatedFieldValid[item.select.name] = !!selected;
@@ -315,7 +304,11 @@ const TabContentEdit = ({
                 if (item?.select) {
                     const options = Array.isArray(item.select.options)
                         ? item.select.options
-                        : Object.entries(item.select.options).map(([key, value]: [string, any]) => ({ ...value, value: parseInt(key) }));
+                        : Object.entries(item.select.options).map(([key, value]: [string, any]) => ({
+                            label: value.label || value.value.toString(),
+                            value: parseInt(key),
+                            color: value.color || '#000000',
+                        }));
                     const selected = options.find((opt: any) => opt.selected);
                     initialDropdownValues[item.select.name] = selected ? parseInt(selected.value) : null;
                     initialFieldValid[item.select.name] = !!selected;
@@ -347,11 +340,10 @@ const TabContentEdit = ({
             setSelectedDropdownValues((prev) => ({ ...prev, ...initialDropdownValues }));
             setIsFieldValid((prev) => ({ ...prev, ...initialFieldValid }));
 
-            setAllFields((prev) => {
-                const newFields = { ...prev, [value]: transformedField };
-                storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-                return newFields;
-            });
+            setAllFields((prev) => ({
+                ...prev,
+                [value]: transformedField,
+            }));
         }
     };
 
@@ -446,11 +438,10 @@ const TabContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, selectedOption.value, 'radio');
     };
@@ -482,11 +473,10 @@ const TabContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, textValue, 'text');
     };
@@ -502,11 +492,10 @@ const TabContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, checked, 'checkbox');
     };
@@ -521,7 +510,11 @@ const TabContentEdit = ({
             if (item.select && item.select.name === name) {
                 const options = Array.isArray(item.select.options)
                     ? item.select.options
-                    : Object.entries(item.select.options).map(([key, value]: [string, any]) => ({ ...value, value: parseInt(key) }));
+                    : Object.entries(item.select.options).map(([key, value]: [string, any]) => ({
+                        label: value.label || value.value.toString(),
+                        value: parseInt(key),
+                        color: value.color || '#000000',
+                    }));
                 const updatedOptions = options.map((opt: any) => ({
                     ...opt,
                     selected: parseInt(opt.value) === value,
@@ -532,11 +525,10 @@ const TabContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, value, 'select');
     };
@@ -577,11 +569,10 @@ const TabContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         const tmcField = field.find((item) => item.tmc && item.tmc.name === name);
         const fullTmcValue = {
@@ -614,11 +605,10 @@ const TabContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, pestValue, 'pest');
     };
@@ -635,11 +625,10 @@ const TabContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
     };
 
     const handleImageRemoved = (name: string, removedImage: { name: string; thumbUrl: string; originalUrl: string }) => {
@@ -657,27 +646,21 @@ const TabContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
     };
 
     const handleCloseModalTMC = () => {
         hideModal();
     };
 
-    let arrayPhotos:any[] = [];
+    let arrayPhotos: any[] = [];
 
     const photosCheck = (arrayPhotos: any[] = []) => {
-        // Проверяем, есть ли вообще поля типа 'foto' в текущем field
         const hasFotoFields = field.some(item => item?.foto !== undefined);
-
-        // Если нет полей с фото - считаем проверку пройденной (true)
         if (!hasFotoFields) return true;
-
-        // Если есть поля с фото - проверяем, что хотя бы одно фото загружено
         return arrayPhotos.length > 0;
     };
 
@@ -703,16 +686,16 @@ const TabContentEdit = ({
         showModal(
             <ShowSelectTMC
                 idChecklist={idCheckList}
-        idTMC={controlPointId}
-        onClosePress={handleCloseModalTMC}
-        onAddPress={handleAddModalTmc}
-        />,
-        {
-            overlay: { alignItems: 'center', justifyContent: 'center' },
-            overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-            modalContent: { paddingTop: 0, paddingRight: 0 },
-        }
-    );
+                idTMC={controlPointId}
+                onClosePress={handleCloseModalTMC}
+                onAddPress={handleAddModalTmc}
+            />,
+            {
+                overlay: { alignItems: 'center', justifyContent: 'center' },
+                overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                modalContent: { paddingTop: 0, paddingRight: 0 },
+            }
+        );
     };
 
     const transferDataVisible = (data: TransferField[] = []) => {
@@ -722,7 +705,7 @@ const TabContentEdit = ({
         let isContentHidden = false;
         let isHeaderVisibleTmc = false;
         let isHeaderVisiblePest = false;
-        let selectCounter = 1000; // Начальный zIndex для Dropdown
+        let selectCounter = 1000;
 
         const renderedComponents = data.map((item, idx) => {
             if (!item) return null;
@@ -750,257 +733,255 @@ const TabContentEdit = ({
                     const isAnyOptionSelected = componentData.options.some((option) => option.selected);
                     return (
                         <View key={`radio-${idx}`} style={[styles.fieldContainer, { marginBottom: 17 }]}>
-            <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
-            <View style={styles.buttonContainer}>
-                {componentData.options.map((option, optionIndex) => (
-                        <TextButton
-                            key={optionIndex}
-                    text={option.text}
-                    width={142}
-                    height={29}
-                    textSize={14}
-                    textColor={option.color}
-                    backgroundColor={isAnyOptionSelected ? option.bgcolor : '#5D6377'}
-                    enabled={option.selected}
-                    onPress={() => handlePressRadioButton(componentData.name, optionIndex)}
-            />
-        ))}
-            </View>
-            </View>
-        );
-        case 'text':
-            return (
-                <View key={`text-${idx}`} style={[styles.fieldContainer, { marginBottom: 17 }]}>
-            <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
-            <TextInput
-            style={[
-                        styles.textArea,
-                    isMounted &&
-                !isFieldValid[componentData.name] &&
-                inputTexts[componentData.name] !== undefined && {
-                    borderColor: 'red',
-                    borderWidth: 1,
-                },
-        ]}
-            multiline
-            numberOfLines={4}
-            onChangeText={(text) => handleChangeInputText(text, componentData.name)}
-            textAlignVertical="top"
-            value={inputTexts[componentData.name] || ''}
-            onBlur={() => handleBlurTextInput(componentData.name)}
-            />
-            {isMounted &&
-            !isFieldValid[componentData.name] &&
-            inputTexts[componentData.name] !== undefined && (
-                <Text style={styles.errorText}>
-                {tabType === 'param' ? 'Минимум 5 символов' : 'Поле обязательно'}
-                </Text>
-            )}
-            </View>
-        );
-        case 'foto':
+                            <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
+                            <View style={styles.buttonContainer}>
+                                {componentData.options.map((option, optionIndex) => (
+                                    <TextButton
+                                        key={optionIndex}
+                                        text={option.text}
+                                        width={142}
+                                        height={29}
+                                        textSize={14}
+                                        textColor={option.color}
+                                        backgroundColor={isAnyOptionSelected ? option.bgcolor : '#5D6377'}
+                                        enabled={option.selected}
+                                        onPress={() => handlePressRadioButton(componentData.name, optionIndex)}
+                                    />
+                                ))}
+                            </View>
+                        </View>
+                    );
+                case 'text':
+                    return (
+                        <View key={`text-${idx}`} style={[styles.fieldContainer, { marginBottom: 17 }]}>
+                            <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
+                            <TextInput
+                                style={[
+                                    styles.textArea,
+                                    isMounted &&
+                                    !isFieldValid[componentData.name] &&
+                                    inputTexts[componentData.name] !== undefined && {
+                                        borderColor: 'red',
+                                        borderWidth: 1,
+                                    },
+                                ]}
+                                multiline
+                                numberOfLines={4}
+                                onChangeText={(text) => handleChangeInputText(text, componentData.name)}
+                                textAlignVertical="top"
+                                value={inputTexts[componentData.name] || ''}
+                                onBlur={() => handleBlurTextInput(componentData.name)}
+                            />
+                            {isMounted &&
+                                !isFieldValid[componentData.name] &&
+                                inputTexts[componentData.name] !== undefined && (
+                                    <Text style={styles.errorText}>
+                                        {tabType === 'param' ? 'Минимум 5 символов' : 'Поле обязательно'}
+                                    </Text>
+                                )}
+                        </View>
+                    );
+                case 'foto':
+                    arrayPhotos = componentData.value || [];
+                    return (
+                        <ImagePickerWithCamera
+                            key={`image-${idx}`}
+                            taskId={idTask}
+                            initialImages={componentData.value || []}
+                            path={`checklist/${idCheckList}/${componentData.name}`}
+                            name={componentData.name}
+                            onImageUploaded={(newImage) => handleImageUploaded(componentData.name, newImage)}
+                            onImageRemoved={(removedImage) => handleImageRemoved(componentData.name, removedImage)}
+                            viewGallery={true}
+                            borderColor={photosCheck(componentData.value) ? '#DADADA' : 'red'}
+                        />
+                    );
+                case 'checkbox':
+                    return (
+                        <View key={`checkbox-${idx}`} style={styles.checkboxContainer}>
+                            <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
+                            <CustomSwitch
+                                value={isEnabled[componentData.name] || false}
+                                onValueChange={(checked) => handleChangeCheckBox(checked, componentData.name)}
+                            />
+                        </View>
+                    );
+                case 'select':
+                    const selectedValue = selectedDropdownValues[componentData.name] ?? null;
+                    const options = Array.isArray(componentData.options)
+                        ? componentData.options.map((opt: any) => ({
+                            label: opt.label || opt.value.toString(),
+                            value: parseInt(opt.value),
+                            color: opt.color || '#000000',
+                        }))
+                        : Object.entries(componentData.options).map(([key, value]: [string, any]) => ({
+                            label: value.label || value.value.toString(),
+                            value: parseInt(key),
+                            color: value.color || '#000000',
+                        }));
+                    const selectedOption = options.find((option) => option.value === selectedValue);
+                    const selectedColor = selectedOption ? selectedOption.color : '#000000';
 
-            arrayPhotos = componentData.value || [];
-
-            return (
-                <ImagePickerWithCamera
-                    key={`image-${idx}`}
-                    taskId={idTask}
-                    initialImages={componentData.value || []}
-                    path={`checklist/${idCheckList}/${componentData.name}`}
-                    name={componentData.name}
-                    onImageUploaded={(newImage) => handleImageUploaded(componentData.name, newImage)}
-                    onImageRemoved={(removedImage) => handleImageRemoved(componentData.name, removedImage)}
-                    viewGallery={true}
-                    borderColor={photosCheck(componentData.value) ? '#DADADA' : 'red'}
-                />
-        );
-        case 'checkbox':
-            return (
-                <View key={`checkbox-${idx}`} style={styles.checkboxContainer}>
-            <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
-            <CustomSwitch
-            value={isEnabled[componentData.name] || false}
-            onValueChange={(checked) => handleChangeCheckBox(checked, componentData.name)}
-            />
-            </View>
-        );
-        case 'select':
-            const selectedValue = selectedDropdownValues[componentData.name] ?? null;
-            const options = Array.isArray(componentData.options)
-                ? componentData.options.map((opt: any) => ({
-                    label: opt.value,
-                    value: parseInt(opt.value),
-                    color: opt.color || '#000000',
-                }))
-                : Object.entries(componentData.options).map(([key, value]: [string, any]) => ({
-                    label: value.value,
-                    value: parseInt(key),
-                    color: value.color || '#000000',
-                }));
-            const selectedOption = options.find((option) => option.value === selectedValue);
-            const selectedColor = selectedOption ? selectedOption.color : '#000000';
-
-            return (
-                <View key={`select-${idx}`} style={[styles.selectContainer]}>
-            <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
-            <Dropdown
-            style={[
-                    styles.dropdownTMC,
-            { width: '40%', zIndex: selectCounter-- },
-            isMounted && selectedValue === null && { borderColor: 'red', borderWidth: 1 },
-        ]}
-            data={options}
-            labelField="label"
-            valueField="value"
-            value={selectedValue}
-            onChange={(item) => handleSelectDropdown(item.value, componentData.name)}
-            placeholder="Выбрать"
-            placeholderStyle={{ color: '#000000', fontSize: 14 }}
-            selectedTextStyle={{ color: selectedColor, fontSize: 14 }}
-            containerStyle={{ backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' }}
-            itemTextStyle={{ fontSize: 14 }}
-            />
-            </View>
-        );
-        case 'tmc':
-            return (
-                <View key={`tmc-${idx}`}>
-            {!isHeaderVisibleTmc && (
-                <>
-                    <View style={styles.tmcTitleContainer}>
-                <Text style={styles.tmcTitle}>Наличие препаратов в ТК</Text>
-            <Button
-                TouchableComponent={TouchableOpacity}
-                icon={{
-                name: 'plus',
-                    type: 'font-awesome',
-                    size: 10,
-                    color: '#5D6377',
-            }}
-                containerStyle={{
-                marginLeft: 10,
-                    backgroundColor: '#CFCFCF',
-                    borderRadius: 6,
-            }}
-                buttonStyle={{
-                width: 25,
-                    height: 25,
-                    paddingHorizontal: 0,
-                    backgroundColor: '#F5F7FB',
-            }}
-                onPress={handleLoadTMC}
-                />
-                </View>
-                <View style={styles.tmcHeaderContainer}>
-            <Text style={styles.tmcHeaderText}>Наименование</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={styles.tmcHeaderText}>В наличии</Text>
-            <Text style={styles.tmcHeaderText}>Утилизировано</Text>
-                <Text style={styles.tmcHeaderText}>Внесено</Text>
-                </View>
-                </View>
-                </>
-            )}
-            {!isHeaderVisibleTmc && (isHeaderVisibleTmc = true)}
-            {componentData.name !== 'placeholder_tmc' && (
-                <View style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
-                <Text style={[styles.tmcText, { width: '50%' }]}>{componentData.label}</Text>
-            <View style={{ width: '44%', flexDirection: 'row', justifyContent: 'space-between', marginRight: 12 }}>
-                <View>
-                    <TextInput
-                        style={[
-                            styles.tmcTextInput,
-                        isMounted &&
-                    !isFieldValid[`${componentData.name}_n`] && {
-                        borderColor: 'red',
-                        borderWidth: 1,
-                    },
-            ]}
-                onChangeText={(text) => handleChangeTmc(text, componentData.name, 'n')}
-                value={tmcValues[componentData.name]?.n || ''}
-                onBlur={() => handleBlurTmc(componentData.name, 'n')}
-                keyboardType="numeric"
-                />
-                </View>
-                <View>
-                <TextInput
-                    style={[
-                            styles.tmcTextInput,
-                        isMounted &&
-                    !isFieldValid[`${componentData.name}_u`] && {
-                        borderColor: 'red',
-                        borderWidth: 1,
-                    },
-            ]}
-                onChangeText={(text) => handleChangeTmc(text, componentData.name, 'u')}
-                value={tmcValues[componentData.name]?.u || ''}
-                onBlur={() => handleBlurTmc(componentData.name, 'u')}
-                keyboardType="numeric"
-                />
-                </View>
-                <View>
-                <TextInput
-                    style={[
-                            styles.tmcTextInput,
-                        isMounted &&
-                    !isFieldValid[`${componentData.name}_v`] && {
-                        borderColor: 'red',
-                        borderWidth: 1,
-                    },
-            ]}
-                onChangeText={(text) => handleChangeTmc(text, componentData.name, 'v')}
-                value={tmcValues[componentData.name]?.v || ''}
-                onBlur={() => handleBlurTmc(componentData.name, 'v')}
-                keyboardType="numeric"
-                    />
-                    </View>
-                    </View>
-                    </View>
-            )}
-            </View>
-        );
-        case 'pest':
-            return (
-                <View key={`pest-${idx}`}>
-            {!isHeaderVisiblePest && (
-                <>
-                    <Text style={styles.tmcTitle}>Поймано вредителей</Text>
-            <View style={styles.tmcHeaderContainer}>
-            <Text style={styles.tmcHeaderText}>Наименование</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={styles.tmcHeaderText}>Количество</Text>
-                    </View>
-                    </View>
-                    </>
-            )}
-            {!isHeaderVisiblePest && (isHeaderVisiblePest = true)}
-            <View style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
-            <Text style={[styles.tmcText, { width: '50%' }]}>{componentData.label}</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginRight: 20 }}>
-            <View>
-                <TextInput
-                    style={[
-                        styles.tmcTextInput,
-                    isMounted &&
-                !isFieldValid[componentData.name] && {
-                    borderColor: 'red',
-                    borderWidth: 1,
-                },
-        ]}
-            onChangeText={(text) => handleChangePest(text, componentData.name)}
-            value={pestValues[componentData.name] || ''}
-            onBlur={() => handleBlurPest(componentData.name)}
-            keyboardType="numeric"
-                />
-                </View>
-                </View>
-                </View>
-                </View>
-        );
-        default:
-            return null;
-        }
+                    return (
+                        <View key={`select-${idx}`} style={[styles.selectContainer]}>
+                            <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
+                            <Dropdown
+                                style={[
+                                    styles.dropdownTMC,
+                                    { width: '50%', zIndex: selectCounter-- },
+                                    isMounted && !isFieldValid[componentData.name] && { borderColor: 'red', borderWidth: 1 },
+                                ]}
+                                data={options}
+                                labelField="label"
+                                valueField="value"
+                                value={selectedValue}
+                                onChange={(item) => handleSelectDropdown(item.value, componentData.name)}
+                                placeholder="Выбрать"
+                                placeholderStyle={{ color: '#000000', fontSize: 12 }}
+                                selectedTextStyle={{ color: selectedColor, fontSize: 12 }}
+                                containerStyle={{ backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' }}
+                                itemTextStyle={{ fontSize: 12 }}
+                            />
+                        </View>
+                    );
+                case 'tmc':
+                    return (
+                        <View key={`tmc-${idx}`}>
+                            {!isHeaderVisibleTmc && (
+                                <>
+                                    <View style={styles.tmcTitleContainer}>
+                                        <Text style={styles.tmcTitle}>Наличие препаратов в ТК</Text>
+                                        <Button
+                                            TouchableComponent={TouchableOpacity}
+                                            icon={{
+                                                name: 'plus',
+                                                type: 'font-awesome',
+                                                size: 10,
+                                                color: '#5D6377',
+                                            }}
+                                            containerStyle={{
+                                                marginLeft: 10,
+                                                backgroundColor: '#CFCFCF',
+                                                borderRadius: 6,
+                                            }}
+                                            buttonStyle={{
+                                                width: 25,
+                                                height: 25,
+                                                paddingHorizontal: 0,
+                                                backgroundColor: '#F5F7FB',
+                                            }}
+                                            onPress={handleLoadTMC}
+                                        />
+                                    </View>
+                                    <View style={styles.tmcHeaderContainer}>
+                                        <Text style={styles.tmcHeaderText}>Наименование</Text>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                            <Text style={styles.tmcHeaderText}>В наличии</Text>
+                                            <Text style={styles.tmcHeaderText}>Утилизировано</Text>
+                                            <Text style={styles.tmcHeaderText}>Внесено</Text>
+                                        </View>
+                                    </View>
+                                </>
+                            )}
+                            {!isHeaderVisibleTmc && (isHeaderVisibleTmc = true)}
+                            {componentData.name !== 'placeholder_tmc' && (
+                                <View style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
+                                    <Text style={[styles.tmcText, { width: '50%' }]}>{componentData.label}</Text>
+                                    <View style={{ width: '44%', flexDirection: 'row', justifyContent: 'space-between', marginRight: 12 }}>
+                                        <View>
+                                            <TextInput
+                                                style={[
+                                                    styles.tmcTextInput,
+                                                    isMounted &&
+                                                    !isFieldValid[`${componentData.name}_n`] && {
+                                                        borderColor: 'red',
+                                                        borderWidth: 1,
+                                                    },
+                                                ]}
+                                                onChangeText={(text) => handleChangeTmc(text, componentData.name, 'n')}
+                                                value={tmcValues[componentData.name]?.n || ''}
+                                                onBlur={() => handleBlurTmc(componentData.name, 'n')}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
+                                        <View>
+                                            <TextInput
+                                                style={[
+                                                    styles.tmcTextInput,
+                                                    isMounted &&
+                                                    !isFieldValid[`${componentData.name}_u`] && {
+                                                        borderColor: 'red',
+                                                        borderWidth: 1,
+                                                    },
+                                                ]}
+                                                onChangeText={(text) => handleChangeTmc(text, componentData.name, 'u')}
+                                                value={tmcValues[componentData.name]?.u || ''}
+                                                onBlur={() => handleBlurTmc(componentData.name, 'u')}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
+                                        <View>
+                                            <TextInput
+                                                style={[
+                                                    styles.tmcTextInput,
+                                                    isMounted &&
+                                                    !isFieldValid[`${componentData.name}_v`] && {
+                                                        borderColor: 'red',
+                                                        borderWidth: 1,
+                                                    },
+                                                ]}
+                                                onChangeText={(text) => handleChangeTmc(text, componentData.name, 'v')}
+                                                value={tmcValues[componentData.name]?.v || ''}
+                                                onBlur={() => handleBlurTmc(componentData.name, 'v')}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    );
+                case 'pest':
+                    return (
+                        <View key={`pest-${idx}`}>
+                            {!isHeaderVisiblePest && (
+                                <>
+                                    <Text style={styles.tmcTitle}>Поймано вредителей</Text>
+                                    <View style={styles.tmcHeaderContainer}>
+                                        <Text style={styles.tmcHeaderText}>Наименование</Text>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                            <Text style={styles.tmcHeaderText}>Количество</Text>
+                                        </View>
+                                    </View>
+                                </>
+                            )}
+                            {!isHeaderVisiblePest && (isHeaderVisiblePest = true)}
+                            <View style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
+                                <Text style={[styles.tmcText, { width: '50%' }]}>{componentData.label}</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginRight: 20 }}>
+                                    <View>
+                                        <TextInput
+                                            style={[
+                                                styles.tmcTextInput,
+                                                isMounted &&
+                                                !isFieldValid[componentData.name] && {
+                                                    borderColor: 'red',
+                                                    borderWidth: 1,
+                                                },
+                                            ]}
+                                            onChangeText={(text) => handleChangePest(text, componentData.name)}
+                                            value={pestValues[componentData.name] || ''}
+                                            onBlur={() => handleBlurPest(componentData.name)}
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+                    );
+                default:
+                    return null;
+            }
         });
 
         return { renderedComponents, isContentHidden };
@@ -1063,57 +1044,58 @@ const TabContentEdit = ({
     return (
         <View style={styles.tab1Container}>
             {isLoading ? (
-                    <View style={styles.loadingContainer}>
+                <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#017EFA" />
-                    </View>) : items.length > 0 ? (
-                        <>
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.label}>Параметр</Text>
-                            </View>
-                            <View style={{ marginBottom: 23 }}>
-                                <Dropdown
-                                    style={styles.dropdown}
-                                    data={items}
-                                    labelField="label"
-                                    valueField="value"
-                                    value={selectedValue}
-                                    onChange={(item) => handleSelect(item.value)}
-                                    placeholder="Выберите параметр"
-                                    placeholderStyle={styles.dropdownText}
-                                    selectedTextStyle={styles.dropdownText}
-                                    itemTextStyle={styles.dropdownItemText}
-                                />
-                            </View>
-                            <KeyboardAwareScrollView>
-                                {transferDataVisible(field).renderedComponents}
-                            </KeyboardAwareScrollView>
-                            <Footer>
-                                <View style={styles.footerContainer}>
-                                    <TextButton
-                                        text="Назад"
-                                        width={125}
-                                        height={40}
-                                        textSize={14}
-                                        textColor="#FFFFFF"
-                                        backgroundColor="#5D6377"
-                                        onPress={handlePrevious}
-                                        enabled={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
-                                        touchable={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
-                                    />
-                                    <TextButton
-                                        text="Далее"
-                                        width={125}
-                                        height={40}
-                                        textSize={14}
-                                        textColor="#FFFFFF"
-                                        backgroundColor="#017EFA"
-                                        onPress={handleNext}
-                                        enabled={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
-                                        touchable={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
-                                    />
-                                </View>
-                            </Footer>
-                        </>
+                </View>
+            ) : items.length > 0 ? (
+                <>
+                    <View style={styles.fieldContainer}>
+                        <Text style={styles.label}>Параметр</Text>
+                    </View>
+                    <View style={{ marginBottom: 23 }}>
+                        <Dropdown
+                            style={styles.dropdown}
+                            data={items}
+                            labelField="label"
+                            valueField="value"
+                            value={selectedValue}
+                            onChange={(item) => handleSelect(item.value)}
+                            placeholder="Выберите параметр"
+                            placeholderStyle={styles.dropdownText}
+                            selectedTextStyle={styles.dropdownText}
+                            itemTextStyle={styles.dropdownItemText}
+                        />
+                    </View>
+                    <KeyboardAwareScrollView>
+                        {transferDataVisible(field).renderedComponents}
+                    </KeyboardAwareScrollView>
+                    <Footer>
+                        <View style={styles.footerContainer}>
+                            <TextButton
+                                text="Назад"
+                                width={125}
+                                height={40}
+                                textSize={14}
+                                textColor="#FFFFFF"
+                                backgroundColor="#5D6377"
+                                onPress={handlePrevious}
+                                enabled={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
+                                touchable={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
+                            />
+                            <TextButton
+                                text="Далее"
+                                width={125}
+                                height={40}
+                                textSize={14}
+                                textColor="#FFFFFF"
+                                backgroundColor="#017EFA"
+                                onPress={handleNext}
+                                enabled={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
+                                touchable={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
+                            />
+                        </View>
+                    </Footer>
+                </>
             ) : (
                 <Text style={styles.errorText}>Данные отсутствуют</Text>
             )}
