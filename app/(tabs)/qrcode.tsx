@@ -1,12 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { StyleSheet, Text, View, Dimensions, Modal } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { router } from "expo-router";
 import { useDrawerStatus } from '@react-navigation/drawer';
-import {postData} from '@/services/api';
+import { postData } from '@/services/api';
 import { Button } from '@rneui/themed';
-import {CustomHeaderScreen} from "@/components/CustomHeaderScreen";
+import { CustomHeaderScreen } from "@/components/CustomHeaderScreen";
+import { MaterialIcons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider'; // Импортируем Slider из новой библиотеки
 
 interface BarCodeScannedEvent {
     data: string;
@@ -23,6 +25,9 @@ export default function QRCodeScreen() {
     const [cameraKey, setCameraKey] = useState(0);
     const [errorModalVisible, setErrorModalVisible] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [zoom, setZoom] = useState(0);
+    const [flashlight, setFlashlight] = useState(false);
+    const cameraRef = useRef<any>(null);
 
     const isDrawerOpen = useDrawerStatus();
     const { width, height } = Dimensions.get('window');
@@ -36,11 +41,10 @@ export default function QRCodeScreen() {
             setScanned(false);
             return () => {
                 setIsCameraActive(false);
+                setFlashlight(false);
             };
         }, [])
     );
-
-    console.log('qr scanned', scanned);
 
     useEffect(() => {
         if (isDrawerOpen === 'closed') {
@@ -48,6 +52,7 @@ export default function QRCodeScreen() {
             setIsCameraActive(true);
         } else {
             setIsCameraActive(false);
+            setFlashlight(false);
         }
     }, [isDrawerOpen]);
 
@@ -60,9 +65,9 @@ export default function QRCodeScreen() {
     }
 
     const handleBarCodeScanned = async ({ data, bounds }: BarCodeScannedEvent) => {
-        if (scanned) return; // Игнорируем повторные сканирования
+        if (scanned) return;
         setScanned(true);
-        setIsCameraActive(false); // Отключаем камеру
+        setIsCameraActive(false);
         console.log("QRCodeScanned handleBarCodeScanned", data);
 
         try {
@@ -70,7 +75,7 @@ export default function QRCodeScreen() {
 
             if (!response) {
                 setScanned(false);
-                setTimeout(() => setIsCameraActive(true), 1000); // Задержка перед включением камеры
+                setTimeout(() => setIsCameraActive(true), 1000);
                 return;
             }
 
@@ -90,7 +95,6 @@ export default function QRCodeScreen() {
                 return;
             }
 
-           // console.log('Response GKGKJGHKLJGKJ LHLJHLHLHLHLKHL lkhlhjh', response);
             let statusVisible = 'view';
             if (response.responce.task_status === "2") {
                 statusVisible = 'edit';
@@ -123,12 +127,21 @@ export default function QRCodeScreen() {
         router.push('/');
     };
 
-    function toggleCameraFacing() {
+    const toggleCameraFacing = () => {
         setFacing(current => (current === 'back' ? 'front' : 'back'));
-    }
+        setZoom(0); // Сбрасываем зум при переключении камеры
+    };
+
+    const toggleFlashlight = () => {
+        setFlashlight(!flashlight);
+    };
+
+    const handleZoomChange = (value: number) => {
+        setZoom(value);
+    };
 
     const handleBack = async () => {
-        router.back()
+        router.back();
     };
 
     return (
@@ -137,9 +150,12 @@ export default function QRCodeScreen() {
 
             {isCameraActive && (
                 <CameraView
+                    ref={cameraRef}
                     key={`${facing}-${cameraKey}`}
                     style={styles.camera}
                     facing={facing}
+                    zoom={zoom}
+                    enableTorch={flashlight}
                     onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
                     barcodeScannerSettings={{
                         barcodeTypes: ["qr"],
@@ -147,6 +163,44 @@ export default function QRCodeScreen() {
                 >
                     <View style={styles.overlay}>
                         <View style={styles.square} />
+                        <View style={styles.controlsContainer}>
+                            <Button
+                                buttonStyle={styles.controlButton}
+                                icon={
+                                    <MaterialIcons
+                                        name={flashlight ? "flash-on" : "flash-off"}
+                                        size={24}
+                                        color="white"
+                                    />
+                                }
+                                onPress={toggleFlashlight}
+                            />
+                            <View style={styles.zoomContainer}>
+                                <Text style={styles.zoomText}>Зум: {Math.round(zoom * 100)}%</Text>
+                                <Slider
+                                    style={styles.zoomSlider}
+                                    minimumValue={0}
+                                    maximumValue={1}
+                                    step={0.1}
+                                    value={zoom}
+                                    onValueChange={handleZoomChange}
+                                    minimumTrackTintColor="#017EFA"
+                                    maximumTrackTintColor="#ffffff"
+                                    thumbTintColor="#017EFA"
+                                />
+                            </View>
+                            <Button
+                                buttonStyle={styles.controlButton}
+                                icon={
+                                    <MaterialIcons
+                                        name="flip-camera-ios"
+                                        size={24}
+                                        color="white"
+                                    />
+                                }
+                                onPress={toggleCameraFacing}
+                            />
+                        </View>
                     </View>
                 </CameraView>
             )}
@@ -200,11 +254,34 @@ const styles = StyleSheet.create({
         borderColor: 'white',
         backgroundColor: 'transparent',
     },
-    buttonContainer: {
-        flex: 1,
+    controlsContainer: {
+        position: 'absolute',
+        bottom: 20,
         flexDirection: 'row',
-        backgroundColor: 'transparent',
-        margin: 64,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '90%',
+    },
+    controlButton: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        borderRadius: 50,
+        width: 50,
+        height: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    zoomContainer: {
+        alignItems: 'center',
+        width: '60%',
+    },
+    zoomSlider: {
+        width: '100%',
+        height: 40,
+    },
+    zoomText: {
+        color: 'white',
+        fontSize: 16,
+        marginBottom: 5,
     },
     button: {
         width: 120,
