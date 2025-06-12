@@ -177,3 +177,9 @@ export const LogoHeaderLight = () => (
         </G>
     </Svg>
 )
+
+export const DotSolid = ({color = "#30DA88"}) => (
+    <Svg width="7" height="7" viewBox="0 0 8 8" fill="none">
+        <Path d="M0 3.5C0 1.567 1.567 0 3.5 0C5.433 0 7 1.567 7 3.5C7 5.433 5.433 7 3.5 7C1.567 7 0 5.433 0 3.5Z" fill= {color}/>
+    </Svg>
+)
