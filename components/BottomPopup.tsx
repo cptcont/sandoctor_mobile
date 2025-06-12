@@ -48,6 +48,7 @@ const styles = StyleSheet.create({
     },
     message: {
         color: 'white',
+        textAlign: 'center',
         fontSize: 16,
     },
 });
