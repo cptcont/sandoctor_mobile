@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, useWindowDimensions, Text, Button, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, memo } from 'react';
+import { View, StyleSheet, useWindowDimensions, Text, Button, ActivityIndicator } from 'react-native';
 import { CustomHeaderScreen } from '@/components/CustomHeaderScreen';
 import { router, useLocalSearchParams } from 'expo-router';
 import { NavigationState, SceneMap, SceneRendererProps, TabView } from 'react-native-tab-view';
@@ -9,11 +9,10 @@ import Tab1Content from '@/components/Tab1Content';
 import Tab2Content from '@/components/Tab2Content';
 import Tab3Content from '@/components/Tab3Content';
 import Tab2ContentEdit from '@/components/Tab2ContentEdit';
-import TabContentEdit from '@/components/TabContentEdit';
 import Tab3ContentEdit from '@/components/Tab3ContentEdit';
 import { fetchDataSaveStorage, getDataFromStorage } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Для очистки хранилища
+import { usePopup } from '@/context/PopupContext';
 
 interface TabContent {
     key: string;
@@ -28,270 +27,139 @@ interface Route {
 }
 
 const ChecklistScreen = memo(() => {
-    console.log('This checklists');
     const params = useLocalSearchParams();
-
-    if (!params || typeof params !== 'object' || !params.id || !params.idCheckList) {
-        console.log('Invalid or missing params:', params);
-        return (
-            <View style={styles.container}>
-                <Text>Ошибка: некорректные параметры маршрута</Text>
-                <Button title="Вернуться" onPress={() => router.back()} />
-            </View>
-        );
-    }
-
-    const { id, idCheckList, typeCheckList = '1', statusVisible = 'view', tabId = '0', tabIdTMC, reload = true } = params;
-    console.log('Извлеченные параметры:', { id, idCheckList, typeCheckList, statusVisible, tabId, tabIdTMC });
-
+    const { id, idCheckList, typeCheckList = '1', statusVisible = 'view', tabId = '0', tabIdTMC } = params;
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [index, setIndex] = useState(0);
-    const [initialLoading, setInitialLoading] = useState(true);
-    const [isTabLoading, setIsTabLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [routes, setRoutes] = useState<Route[]>([]);
     const [isFirstTab, setIsFirstTab] = useState(true);
     const [isLastTab, setIsLastTab] = useState(false);
-    const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
-    const [tabWidths, setTabWidths] = useState<number[]>([]);
-    const [isInitialRender, setIsInitialRender] = useState(true);
+    const { showPopup } = usePopup();
+    const { width: screenWidth } = useWindowDimensions();
 
-    const scrollViewRef = useRef<ScrollView>(null);
-    const tabsContainerRef = useRef<View>(null);
-    const lastValidIndexRef = useRef<number>(0);
-    const abortControllerRef = useRef<AbortController | null>(null); // Для отмены запросов
-
-    const setIndexWithLog = (newIndex: number, force = false) => {
-        if (!force && newIndex === 0 && lastValidIndexRef.current !== 0) {
-            return false;
-        }
-        lastValidIndexRef.current = newIndex;
-        setIndex(newIndex);
-        return true;
-    };
-
-    const loadChecklistsTask = async (forceFetch = false) => {
-        const now = Date.now();
-        if (!forceFetch && lastFetchTime && now - lastFetchTime < 5000) {
-            return;
-        }
-
+    // Загрузка данных чек-листа
+    const loadChecklists = async () => {
         try {
-            setInitialLoading(true);
+            setIsLoading(true);
             setError(null);
-            abortControllerRef.current = new AbortController(); // Создаём новый контроллер для запроса
             await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists');
             const loadedChecklists = (await getDataFromStorage('checklists')) || [];
             if (!loadedChecklists.length) {
                 setError('Нет данных для отображения');
                 setChecklists([]);
-            } else {
-                setChecklists(loadedChecklists);
-                const checkList = loadedChecklists.find((c) => c.id === id);
-                if (checkList && checkList.zones?.length > 0) {
-                    let newIndex = 0;
-                    setIsFirstTab(true);
-                    setIsLastTab(false);
-                    if (tabId) {
-                        const tabIndex = checkList.zones.findIndex((zone: Zone) => zone.id === tabId);
-                        if (tabIndex !== -1) {
-                            newIndex = tabIndex;
-                            setIsFirstTab(tabIndex === 0);
-                            setIsLastTab(tabIndex === checkList.zones.length - 1);
-                        }
-                    }
-                    setIndexWithLog(newIndex);
-                } else {
-                    setIndex(0);
-                    setIsFirstTab(true);
-                    setIsLastTab(true);
+                return;
+            }
+
+            setChecklists(loadedChecklists);
+            const checkList = loadedChecklists.find((c) => c.id === id);
+            if (checkList?.zones?.length) {
+                let newIndex = 0;
+                if (tabId) {
+                    const tabIndex = checkList.zones.findIndex((zone: Zone) => zone.id === tabId);
+                    if (tabIndex !== -1) newIndex = tabIndex;
                 }
-            }
-            setLastFetchTime(now);
-        } catch (err) {
-            if (err.name === 'AbortError') {
-                console.log('Запрос был отменён');
+                console.log('loadChecklists:', {
+                    newIndex,
+                    zonesLength: checkList.zones.length,
+                    isFirstTab: newIndex === 0,
+                    isLastTab: newIndex === checkList.zones.length - 1,
+                }); // Отладка
+                setIndex(newIndex);
+                setIsFirstTab(newIndex === 0);
+                setIsLastTab(newIndex === checkList.zones.length - 1);
+                setRoutes(checkList.zones.map((zone, i) => ({
+                    key: `tab${i}`,
+                    title: zone.name || 'Без названия',
+                    tabColor: zone.badge?.color,
+                })));
             } else {
-                setError('Не удалось загрузить данные. Попробуйте ещё раз.');
-                setChecklists([]);
+                setIndex(0);
+                setIsFirstTab(true);
+                setIsLastTab(true);
+                setRoutes([]);
             }
+        } catch (err) {
+            setError('Не удалось загрузить данные');
+            setChecklists([]);
         } finally {
-            setInitialLoading(false);
-            setIsInitialRender(false);
+            setIsLoading(false);
         }
-    };
-
-    const retryLoadData = () => {
-        loadChecklistsTask(true);
-    };
-
-    const cleanup = async () => {
-        // Отмена активных запросов
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-            abortControllerRef.current = null;
-        }
-        // Сброс состояния
-        setChecklists([]);
-        setIndex(0);
-        setInitialLoading(true);
-        setIsTabLoading(false);
-        setError(null);
-        setRoutes([]);
-        setIsFirstTab(true);
-        setIsLastTab(false);
-        setLastFetchTime(null);
-        setTabWidths([]);
-        setIsInitialRender(true);
-        // Очистка AsyncStorage (если нужно)
-        await AsyncStorage.removeItem('checklists');
-        console.log('Состояние и данные очищены');
     };
 
     useFocusEffect(
         React.useCallback(() => {
-            loadChecklistsTask();
+            loadChecklists();
             return () => {
-                cleanup();
+                setChecklists([]);
+                setIndex(0);
+                setIsLoading(true);
+                setError(null);
+                setRoutes([]);
             };
-        }, [idCheckList, id, tabId, tabIdTMC, reload])
+        }, [idCheckList, id, tabId, tabIdTMC])
     );
 
+    const checkList = useMemo(() => checklists.find((c) => c.id === id), [checklists, id]);
+
+    // Обновление данных чек-листа
     const updateCheckList = async () => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort(); // Прерываем предыдущий запрос
-        }
-        abortControllerRef.current = new AbortController();
         try {
             await fetchDataSaveStorage<Checklist>(`checklist/${idCheckList}`, 'checklists');
             const updatedChecklists = (await getDataFromStorage('checklists')) || [];
             setChecklists(updatedChecklists);
-            setLastFetchTime(Date.now());
         } catch (err) {
-            if (err.name !== 'AbortError') {
-                setError('Не удалось обновить данные');
-            }
+            setError('Не удалось обновить данные');
         }
     };
 
-    useEffect(() => {
-        if (statusVisible === 'edit') {
-            updateCheckList();
-        }
-    }, [statusVisible]);
-
-    const checkList = useMemo(() => {
-        return checklists.find((c) => c.id === id);
-    }, [checklists, id]);
-
-    const handleNextTab = async () => {
-        if (index < routes.length - 1) {
-            const newIndex = index + 1;
-            if (setIndexWithLog(newIndex)) {
-                setIsFirstTab(newIndex === 0);
-                setIsLastTab(newIndex === routes.length - 1);
-                if (!checkList?.zones?.[newIndex]) {
-                    return;
-                }
-                setIsTabLoading(true);
-                const nextTabId = checkList.zones[newIndex].id;
-                await updateCheckList();
-                setIsTabLoading(false);
-            }
-        }
+    // Переключение вкладок
+    const handleTabChange = async (newIndex: number) => {
+        if (newIndex === index || !checkList?.zones?.[newIndex] || newIndex < 0 || newIndex >= routes.length) return;
+        console.log('handleTabChange:', {
+            newIndex,
+            routesLength: routes.length,
+            isFirstTab: newIndex === 0,
+            isLastTab: newIndex === routes.length - 1,
+        }); // Отладка
+        setIndex(newIndex);
+        setIsFirstTab(newIndex === 0);
+        setIsLastTab(newIndex === routes.length - 1);
+        setIsLoading(true);
+        showPopup(`Зона ${checkList.zones[newIndex].name || 'Без названия'}`, 'green', 2000);
+        await updateCheckList();
+        setIsLoading(false);
     };
 
-    const handlePreviousTab = async () => {
-        if (index > 0) {
-            const newIndex = index - 1;
-            if (setIndexWithLog(newIndex)) {
-                setIsFirstTab(newIndex === 0);
-                setIsLastTab(newIndex === routes.length - 1);
-                if (!checkList?.zones?.[newIndex]) {
-                    return;
-                }
-                setIsTabLoading(true);
-                const prevTabId = checkList.zones[newIndex].id;
-                await updateCheckList();
-                setIsTabLoading(false);
-            }
-        }
-    };
-
-    const handleTabChange = async (newIndex: number, isManual = false) => {
-        if (!isManual && isInitialRender && newIndex === 0 && lastValidIndexRef.current !== 0) {
-            return;
-        }
-        if (newIndex !== lastValidIndexRef.current && routes[newIndex]) {
-            if (setIndexWithLog(newIndex, isManual)) {
-                setIsFirstTab(newIndex === 0);
-                setIsLastTab(newIndex === routes.length - 1);
-                if (!checkList?.zones?.[newIndex]) {
-                    return;
-                }
-                setIsTabLoading(true);
-                const newTabId = checkList.zones[newIndex].id;
-                await updateCheckList();
-                setIsTabLoading(false);
-            }
-        }
-    };
+    const handleNextTab = () => handleTabChange(index + 1);
+    const handlePreviousTab = () => handleTabChange(index - 1);
 
     const handleFinish = () => {
-        if (statusVisible === 'edit') {
-            router.push({ pathname: '/starttask', params: { taskId: idCheckList } });
-        } else {
-            router.push({ pathname: '/details', params: { taskId: idCheckList } });
-        }
+        router.push({
+            pathname: statusVisible === 'edit' ? '/starttask' : '/details',
+            params: { taskId: idCheckList },
+        });
     };
 
-    const handleReload = async () => {
-        await updateCheckList();
-    };
+    const retryLoadData = () => loadChecklists();
 
+    // Формирование данных для вкладок
     const tabsData = useMemo(() => {
-        if (!checkList || !checkList.zones || checkList.zones.length === 0) {
+        if (!checkList?.zones?.length) {
             return [{ key: 'tab0', title: 'Нет данных', content: <Text>Нет данных для отображения</Text> }];
         }
         return checkList.zones.map((zone: Zone, key: number) => {
             let tabContent = null;
             if (typeCheckList === '1' && statusVisible === 'view') {
-                tabContent = (
-                    <Tab1Content
-                        itemsTabContent={checkList.zones}
-                        index={index}
-                        onNextTab={handleNextTab}
-                        onPreviousTab={handlePreviousTab}
-                        isFirstTab={isFirstTab}
-                        isLastTab={isLastTab}
-                    />
-                );
+                tabContent = <Tab1Content itemsTabContent={checkList.zones} index={index} />;
             } else if (typeCheckList === '2' && statusVisible === 'view') {
-                tabContent = (
-                    <Tab2Content
-                        itemsTabContent={checkList.zones}
-                        index={index}
-                        onNextTab={handleNextTab}
-                        onPreviousTab={handlePreviousTab}
-                        isFirstTab={isFirstTab}
-                        isLastTab={isLastTab}
-                    />
-                );
+                tabContent = <Tab2Content itemsTabContent={checkList.zones} index={index} />;
             } else if (typeCheckList === '3' && statusVisible === 'view') {
-                tabContent = (
-                    <Tab3Content
-                        itemsTabContent={checkList.zones}
-                        index={index}
-                        tabId={tabIdTMC}
-                        onNextTab={handleNextTab}
-                        onPreviousTab={handlePreviousTab}
-                        isFirstTab={isFirstTab}
-                        isLastTab={isLastTab}
-                    />
-                );
+                tabContent = <Tab3Content itemsTabContent={checkList.zones} index={index} tabId={tabIdTMC} />;
             } else if (typeCheckList === '1' && statusVisible === 'edit') {
                 tabContent = (
-                    <TabContentEdit
+                    <Tab2ContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -301,12 +169,11 @@ const ChecklistScreen = memo(() => {
                         itemsTabContent={checkList.zones}
                         isFirstTab={isFirstTab}
                         isLastTab={isLastTab}
-                        tabType="param"
                     />
                 );
             } else if (typeCheckList === '2' && statusVisible === 'edit') {
                 tabContent = (
-                    <TabContentEdit
+                    <Tab2ContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -316,12 +183,11 @@ const ChecklistScreen = memo(() => {
                         itemsTabContent={checkList.zones}
                         isFirstTab={isFirstTab}
                         isLastTab={isLastTab}
-                        tabType="param"
                     />
                 );
             } else if (typeCheckList === '3' && statusVisible === 'edit') {
                 tabContent = (
-                    <TabContentEdit
+                    <Tab3ContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -333,11 +199,11 @@ const ChecklistScreen = memo(() => {
                         isFirstTab={isFirstTab}
                         isLastTab={isLastTab}
                         zoneId={zone.id}
-                        onReload={handleReload}
-                        tabType="control_points"
+                        onReload={updateCheckList}
                     />
                 );
             }
+            console.log('tabsData:', { key, isLastTab: key === checkList.zones.length - 1 }); // Отладка
             return {
                 key: `tab${key}`,
                 title: zone.name || 'Без названия',
@@ -347,125 +213,41 @@ const ChecklistScreen = memo(() => {
         });
     }, [checkList, typeCheckList, statusVisible, index, isFirstTab, isLastTab, id, idCheckList, tabIdTMC]);
 
-    const finalTabsData = useMemo(() => {
-        return tabsData.length > 0
-            ? tabsData
-            : [{ key: 'tab0', title: 'Нет данных', content: <Text>Нет данных для отображения</Text> }];
-    }, [tabsData]);
+    const computedRoutes = useMemo(() =>
+            tabsData.map((tab) => ({ key: tab.key, title: tab.title, tabColor: tab.tabColor })),
+        [tabsData]
+    );
 
-    const computedRoutes = useMemo(() => {
-        return finalTabsData.map((tab) => ({
-            key: tab.key,
-            title: tab.title,
-            tabColor: tab.tabColor,
-        }));
-    }, [finalTabsData]);
-
-    useEffect(() => {
-        if (JSON.stringify(routes) !== JSON.stringify(computedRoutes)) {
-            setRoutes(computedRoutes);
-            if (lastValidIndexRef.current < computedRoutes.length) {
-                setIndex(lastValidIndexRef.current);
-            }
-            setTabWidths(new Array(computedRoutes.length).fill(0));
-        }
-    }, [computedRoutes]);
-
+    // Рендеринг сцен для TabView
     const renderScene = useMemo(() => {
-        const scenes = finalTabsData.reduce((acc, tab) => {
-            acc[tab.key] = () => {
-                if (isTabLoading) {
-                    return (
-                        <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#017EFA" />
-                        </View>
-                    );
-                }
-                if (!tab.content) {
-                    return <Text>Компонент не найден</Text>;
-                }
-                return tab.content;
-            };
+        const scenes = tabsData.reduce((acc, tab) => {
+            acc[tab.key] = () => (isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#017EFA" />
+                </View>
+            ) : tab.content);
             return acc;
         }, {} as { [key: string]: () => React.ReactNode });
         return SceneMap(scenes);
-    }, [finalTabsData, isTabLoading]);
+    }, [tabsData, isLoading]);
 
-    const renderLazyPlaceholder = () => {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#017EFA" />
-            </View>
-        );
-    };
+    // Кастомный рендеринг панели вкладок
+    const renderTabBar = (props: SceneRendererProps & { navigationState: NavigationState<Route> }) => (
+        <View style={styles.tabBarContainer}>
+            {props.navigationState.routes.map((route: Route, i: number) => (
+                <Tab
+                    key={route.key}
+                    label={route.title ?? ''}
+                    isActive={i === index}
+                    onPress={() => handleTabChange(i)}
+                    showDot={statusVisible === 'edit'}
+                    color={route.tabColor}
+                />
+            ))}
+        </View>
+    );
 
-    const [tabsWidth, setTabsWidth] = useState(0);
-    const { width: screenWidth } = useWindowDimensions();
-
-    const handleTabLayout = (index: number, event: any) => {
-        const { width } = event.nativeEvent.layout;
-        setTabWidths((prev) => {
-            const newWidths = [...prev];
-            newWidths[index] = width;
-            return newWidths;
-        });
-    };
-
-    useEffect(() => {
-        if (scrollViewRef.current && tabWidths[index] > 0) {
-            let offsetX = 0;
-            for (let i = 0; i < index; i++) {
-                offsetX += tabWidths[i] || 0;
-            }
-            setTimeout(() => {
-                scrollViewRef.current?.scrollTo({ x: offsetX, animated: true });
-            }, 100);
-        }
-    }, [index, tabWidths]);
-
-    const renderTabBar = (
-        props: SceneRendererProps & { navigationState: NavigationState<Route> }
-    ) => {
-        const needsEmptyTab = tabsWidth < screenWidth;
-        return (
-            <View style={styles.tabBarOuterContainer}>
-                <ScrollView
-                    ref={scrollViewRef}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.tabBarContainer}
-                >
-                    <View
-                        ref={tabsContainerRef}
-                        onLayout={(event) => {
-                            const width = event.nativeEvent.layout.width;
-                            setTabsWidth(width);
-                        }}
-                        style={styles.tabsContainer}
-                    >
-                        {props.navigationState.routes.map((route: Route, i: number) => {
-                            const isActive = i === props.navigationState.index;
-                            return (
-                                <View key={route.key} onLayout={(event) => handleTabLayout(i, event)}>
-                                    <Tab
-                                        label={route.title ?? ''}
-                                        isActive={isActive}
-                                        onPress={() => handleTabChange(i, true)}
-                                        isLast={i === props.navigationState.routes.length - 1 && !needsEmptyTab}
-                                        showDot={statusVisible === 'edit'}
-                                        color={route.tabColor}
-                                    />
-                                </View>
-                            );
-                        })}
-                    </View>
-                    {needsEmptyTab && <View style={[styles.emptyTab, { width: screenWidth - tabsWidth }]} />}
-                </ScrollView>
-            </View>
-        );
-    };
-
-    if (initialLoading) {
+    if (isLoading) {
         return (
             <View style={styles.container}>
                 <View style={styles.loadingContainer}>
@@ -475,19 +257,10 @@ const ChecklistScreen = memo(() => {
         );
     }
 
-    if (error && checklists.length === 0) {
+    if (error || !checkList) {
         return (
             <View style={styles.container}>
-                <Text>{error}</Text>
-                <Button title="Повторить загрузку" onPress={retryLoadData} />
-            </View>
-        );
-    }
-
-    if (!checkList) {
-        return (
-            <View style={styles.container}>
-                <Text>Чек-лист не найден</Text>
+                <Text>{error || 'Чек-лист не найден'}</Text>
                 <Button title="Повторить загрузку" onPress={retryLoadData} />
             </View>
         );
@@ -495,32 +268,21 @@ const ChecklistScreen = memo(() => {
 
     return (
         <View style={styles.container}>
-            {statusVisible === 'edit' && (
-                <CustomHeaderScreen
-                    text={`${checkList?.name || 'Checklist'}`}
-                    marginBottom={0}
-                    onPress={handleFinish}
-                    progress={checkList?.progress}
-                    progressVisible={true}
-                />
-            )}
-            {statusVisible === 'view' && (
-                <CustomHeaderScreen
-                    text={`${checkList?.name || 'Checklist'}`}
-                    marginBottom={0}
-                    onPress={handleFinish}
-                />
-            )}
-
+            <CustomHeaderScreen
+                text={checkList?.name || 'Checklist'}
+                marginBottom={0}
+                onPress={handleFinish}
+                progress={statusVisible === 'edit' ? checkList?.progress : undefined}
+                progressVisible={statusVisible === 'edit'}
+            />
             <TabView
-                navigationState={{ index, routes }}
+                navigationState={{ index, routes: computedRoutes }}
                 renderScene={renderScene}
-                onIndexChange={(newIndex) => handleTabChange(newIndex, false)}
+                onIndexChange={handleTabChange}
                 initialLayout={{ width: screenWidth }}
                 renderTabBar={renderTabBar}
                 swipeEnabled={false}
                 lazy={false}
-                renderLazyPlaceholder={renderLazyPlaceholder}
                 animationEnabled={false}
             />
         </View>
@@ -537,22 +299,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    tabBarOuterContainer: {
-        height: 30,
-    },
     tabBarContainer: {
         flexDirection: 'row',
         backgroundColor: '#fff',
-    },
-    tabsContainer: {
-        flexDirection: 'row',
-    },
-    emptyTab: {
         height: 30,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ECECEC',
-        borderLeftColor: '#ECECEC',
-        borderLeftWidth: 1,
     },
 });
 
