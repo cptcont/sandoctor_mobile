@@ -2,15 +2,14 @@ import React, { useEffect, useState, memo, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { MMKV } from 'react-native-mmkv';
 import Footer from '@/components/Footer';
 import { TextButton } from '@/components/TextButton';
 import ImagePickerWithCamera from '@/components/ImagePickerWithCamera';
 import CustomSwitch from '@/components/CustomSwitch';
 import { Checklist, Zone } from '@/types/Checklist';
 import { FormField, TransferField } from '@/types/Field';
-import { storage } from '@/storage/storage';
 import { postData } from '@/services/api';
+import { DotSolid } from "@/components/icons/Icons";
 
 type Tab2ContentEditType = {
     id: string | string[];
@@ -48,46 +47,33 @@ const Tab2ContentEdit = ({
     const [isMounted, setIsMounted] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    const getStorageKey = (key: string) => `checklist_${idCheckList}_${key}`;
-
     useEffect(() => {
-        const loadInitialData = async () => {
-            const storedChecklists = storage.getString(getStorageKey('checklists'));
-            const storedAllFields = storage.getString(getStorageKey('allFields'));
+        //const loadInitialData = async () => {
+        //    setIsLoading(true);
+        //    try {
+        //        const response = await postData(`checklist/${idCheckList}`, {});
+        //        if (response?.data) {
+        //            setChecklists(response.data);
+        //        }
+        //    } catch (error) {
+        //        console.error('Ошибка при загрузке checklists:', error);
+        //    } finally {
+        //        setIsLoading(false);
+        //        setIsMounted(true);
+        //    }
+        //};
 
-            setChecklists(storedChecklists ? JSON.parse(storedChecklists) : []);
-            setAllFields(storedAllFields ? JSON.parse(storedAllFields) : {});
-            setIsMounted(true);
-
-            try {
-                const response = await postData(`checklist/${idCheckList}`, {});
-                if (response?.data) {
-                    setChecklists(response.data);
-                    storage.set(getStorageKey('checklists'), JSON.stringify(response.data));
-                }
-            } catch (error) {
-                console.error('Ошибка при загрузке checklists:', error);
-            }
-        };
-
-        loadInitialData();
-
-        // Функция очистки для удаления данных MMKV при размонтировании компонента
-        return () => {
-            storage.delete(getStorageKey('checklists')); // Удаление данных checklists
-            storage.delete(getStorageKey('allFields'));  // Удаление данных allFields
-            // Опционально: очистка всех данных, если нужно
-            // storage.clearAll();
-        };
+        //loadInitialData();
     }, []);
 
-    console.log('Это Tab2ContentEdit')
+    console.log('Это Tab2ContentEdit');
 
     const items = useMemo(
         () =>
             itemsTabContent[index]?.param?.map((data: any, idx: number) => ({
-                label: data.name?.toString() || `Элемент ${idx}`,
+                label: data.name.toString() || `Элемент ${idx + 1}`,
                 value: idx,
+                dotColor: "red",
             })) || [],
         [itemsTabContent, index]
     );
@@ -117,13 +103,9 @@ const Tab2ContentEdit = ({
     };
 
     const saveCurrentState = (value: number) => {
-        setAllFields(prev => ({
+        setAllFields((prev) => ({
             ...prev,
-            [value]: field
-        }));
-        storage.set(getStorageKey('allFields'), JSON.stringify({
-            ...allFields,
-            [value]: field
+            [value]: field,
         }));
     };
 
@@ -157,17 +139,17 @@ const Tab2ContentEdit = ({
                 }
                 if (item?.select) {
                     const options = Array.isArray(item.select.options) ? item.select.options : [];
-                    const selected = options.find((opt: any) => opt.selected);
+                    const selected = options.find((opt: any) => opt.selected); // Fixed line
                     if (selected) {
                         updatedInputTexts[item.select.name] = selected.value.toString();
                     }
                 }
             });
 
-            setInputTexts(prev => ({ ...prev, ...updatedInputTexts }));
-            setIsEnabled(prev => ({ ...prev, ...updatedIsEnabled }));
-            setRadioStates(prev => ({ ...prev, ...updatedRadioStates }));
-            setIsTextValid(prev => ({ ...prev, ...updatedTextValid }));
+            setInputTexts((prev) => ({ ...prev, ...updatedInputTexts }));
+            setIsEnabled((prev) => ({ ...prev, ...updatedIsEnabled }));
+            setRadioStates((prev) => ({ ...prev, ...updatedRadioStates }));
+            setIsTextValid((prev) => ({ ...prev, ...updatedTextValid }));
         } else {
             const fields = itemsTabContent[index].param[value]?.fields || [];
             const fieldItem = Array.isArray(fields) ? fields : [];
@@ -209,11 +191,10 @@ const Tab2ContentEdit = ({
             setRadioStates((prev) => ({ ...prev, ...initialRadioStates }));
             setIsTextValid((prev) => ({ ...prev, ...initialTextValid }));
 
-            setAllFields((prev) => {
-                const newFields = { ...prev, [value]: transformedField };
-                storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-                return newFields;
-            });
+            setAllFields((prev) => ({
+                ...prev,
+                [value]: transformedField,
+            }));
         }
     };
 
@@ -289,11 +270,10 @@ const Tab2ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, selectedOption.value, 'radio');
     };
@@ -319,11 +299,10 @@ const Tab2ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, textValue, 'text');
     };
@@ -339,11 +318,10 @@ const Tab2ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, checked, 'checkbox');
     };
@@ -363,11 +341,10 @@ const Tab2ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, value.toString(), 'select');
     };
@@ -384,11 +361,10 @@ const Tab2ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
     };
 
     const handleImageRemoved = (name: string, removedImage: { name: string; thumbUrl: string; originalUrl: string }) => {
@@ -406,11 +382,10 @@ const Tab2ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
     };
 
     const transferDataVisible = (data: TransferField[] = []) => {
@@ -440,8 +415,6 @@ const Tab2ContentEdit = ({
 
             switch (type) {
                 case 'radio':
-                    // Проверяем, есть ли хотя бы одна выбранная опция
-                    const isAnyOptionSelected = componentData.options.some((option) => option.selected);
                     return (
                         <View key={`radio-${idx}`} style={[styles.fieldContainer, { marginBottom: 17 }]}>
                             <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
@@ -454,9 +427,7 @@ const Tab2ContentEdit = ({
                                         height={29}
                                         textSize={14}
                                         textColor={option.color}
-                                        backgroundColor={
-                                            isAnyOptionSelected ? option.bgcolor : '#5D6377'
-                                        }
+                                        backgroundColor={option.selected ? option.bgcolor : '#5D6377'}
                                         enabled={option.selected}
                                         onPress={() => handlePressRadioButton(componentData.name, optionIndex)}
                                     />
@@ -561,14 +532,22 @@ const Tab2ContentEdit = ({
 
     const handleNext = async () => {
         const { isContentHidden } = transferDataVisible(field);
-        if (!areAllTextFieldsValid(isContentHidden)) return;
+        if (!areAllTextFieldsValid(isContentHidden)) {
+            console.log('handleNext: Text fields validation failed', { isTextValid });
+            return;
+        }
 
         saveCurrentState(selectedValue);
+
+        console.log('handleNext:', { selectedValue, itemsLength: items.length, isLastTab });
 
         if (selectedValue < items.length - 1) {
             setSelectedValue((prev) => prev + 1);
         } else if (!isLastTab) {
+            console.log('handleNext: Calling onNextTab');
             onNextTab?.();
+        } else {
+            console.log('handleNext: No action (last parameter and last tab)');
         }
     };
 
@@ -587,6 +566,37 @@ const Tab2ContentEdit = ({
 
     const { isContentHidden } = transferDataVisible(field);
     const isNavigationEnabled = areAllTextFieldsValid(isContentHidden);
+
+    // Кастомизация правой иконки (добавляем стрелку и точку)
+    const renderRightIcon = () => {
+        const selectedItem = items.find((item) => item.value === selectedValue);
+        return (
+            <View style={styles.rightIconContainer}>
+                {selectedItem && (
+                    <View style={styles.dot}>
+                        <DotSolid color={selectedItem.dotColor} />
+                    </View>
+                )}
+                {/* Стандартная стрелка */}
+                <Text style={styles.arrow}>▼</Text>
+            </View>
+        );
+    };
+
+// Кастомизация элементов выпадающего списка
+    const renderItem = item => {
+        const selectedItem = items.find((item) => item.value === selectedValue);
+        return (
+            <View style={styles.item}>
+                <Text style={styles.textItem}>{item.label}</Text>
+                {selectedItem && (
+                    <View style={styles.dot}>
+                        <DotSolid color={item.dotColor} />
+                    </View>
+                )}
+            </View>
+        );
+    };
 
     return (
         <View style={styles.tab1Container}>
@@ -611,6 +621,8 @@ const Tab2ContentEdit = ({
                             placeholderStyle={styles.dropdownText}
                             selectedTextStyle={styles.dropdownText}
                             itemTextStyle={styles.dropdownItemText}
+                            renderRightIcon={renderRightIcon}
+                            renderItem={renderItem}
                         />
                     </View>
                     <KeyboardAwareScrollView>
@@ -719,6 +731,27 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
+    },
+    rightIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    dot: {
+        marginRight: 8, // Отступ перед стрелкой
+    },
+    arrow: {
+        fontSize: 14,
+        color: '#5D6377',
+    },
+    item: {
+        padding: 17,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    textItem: {
+        flex: 1,
+        fontSize: 14,
     },
 });
 

@@ -9,11 +9,11 @@ import ImagePickerWithCamera from '@/components/ImagePickerWithCamera';
 import CustomSwitch from '@/components/CustomSwitch';
 import { Checklist, Zone } from '@/types/Checklist';
 import { FormField, TransferField } from '@/types/Field';
-import { storage } from '@/storage/storage';
-import { fetchData, postData } from '@/services/api';
+import { postData } from '@/services/api';
 import { useModal } from '@/context/ModalContext';
-import { ShowSelectTMC } from "@/components/showSelectTMC";
-import { router } from "expo-router";
+import { ShowSelectTMC } from '@/components/showSelectTMC';
+import { router } from 'expo-router';
+import { DotSolid } from "@/components/icons/Icons";
 
 type Tab3ContentEditType = {
     id: string | string[];
@@ -62,59 +62,44 @@ const Tab3ContentEdit = ({
     const [isFieldValid, setIsFieldValid] = useState<Record<string, boolean>>({});
     const [selectedDropdownValues, setSelectedDropdownValues] = useState<Record<string, number | null>>({});
     const [isMounted, setIsMounted] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const { showModal, hideModal } = useModal();
-
-    // Ключ для MMKV
-    const getStorageKey = (key: string) => `checklist_${idCheckList}_${key}`;
 
     // Загрузка начальных данных
     useEffect(() => {
-        const loadInitialData = async () => {
-            try {
-                setIsLoading(true);
-                const storedChecklists = storage.getString(getStorageKey('checklists'));
-                const storedAllFields = storage.getString(getStorageKey('allFields'));
+        //const loadInitialData = async () => {
+        //    try {
+        //        setIsLoading(true);
+        //        const response = await postData(`checklist/${idCheckList}`, {});
+        //        if (response?.data) {
+        //            setChecklists(response.data);
+        //        }
+        //    } catch (error) {
+        //        console.error('Ошибка при загрузке данных:', error);
+        //    } finally {
+        //        setIsMounted(true);
+        //        setIsLoading(false);
+        //    }
+        //};
 
-                setChecklists(storedChecklists ? JSON.parse(storedChecklists) : []);
-                setAllFields(storedAllFields ? JSON.parse(storedAllFields) : {});
-
-                const response = await postData(`checklist/${idCheckList}`, {});
-                if (response?.data) {
-                    setChecklists(response.data);
-                    storage.set(getStorageKey('checklists'), JSON.stringify(response.data));
-                }
-            } catch (error) {
-                console.error('Ошибка при загрузке данных:', error);
-            } finally {
-                setIsMounted(true);
-                setIsLoading(false);
-            }
-        };
-
-        loadInitialData();
-
-        return () => {
-            storage.delete(getStorageKey('checklists'));
-            storage.delete(getStorageKey('allFields'));
-        };
-    }, [idCheckList]);
-
-    // Сохранение состояний в MMKV
-    useEffect(() => {
-        if (isMounted) {
-            storage.set(getStorageKey('checklists'), JSON.stringify(checklists));
-            storage.set(getStorageKey('allFields'), JSON.stringify(allFields));
-        }
-    }, [checklists, allFields, isMounted]);
+        //loadInitialData();
+    }, []);
 
     // Элементы выпадающего списка
     const items = useMemo(
         () =>
-            itemsTabContent[index]?.control_points?.map((data: any, idx: number) => ({
-                label: data.name?.toString() || `Элемент ${idx}`,
-                value: idx,
-            })) || [],
+            itemsTabContent[index]?.control_points?.map((data: any, idx: number) => {
+                    if (!data?.name) {
+                        console.warn(`Missing name in control_points[${idx}]`, data);
+                        return null;
+                    }
+                    return {
+                        label: data.name.toString() || `Элемент ${idx + 1}`,
+                        value: idx,
+                        dotColor: "red",
+                    };
+                })
+                .filter((item): item is { label: string; value: number; dotColor: string } => !!item) || [],
         [itemsTabContent, index]
     );
 
@@ -202,11 +187,10 @@ const Tab3ContentEdit = ({
 
     // Сохранение текущего состояния
     const saveCurrentState = (value: number) => {
-        setAllFields((prev) => {
-            const newFields = { ...prev, [value]: field };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [value]: field,
+        }));
     };
 
     // Загрузка полей
@@ -288,7 +272,7 @@ const Tab3ContentEdit = ({
             const fieldItem = Array.isArray(fields) ? fields : [];
             const combinedArray = [...fieldItem, ...fieldsTMC, ...fieldsPests];
 
-            console.log('Combined array for fields:', combinedArray); // Логирование для отладки
+            console.log('Combined array for fields:', combinedArray);
 
             const transformedField = transformData(combinedArray);
             setField(transformedField);
@@ -337,8 +321,8 @@ const Tab3ContentEdit = ({
                 }
             });
 
-            console.log('Initial TMC values:', initialTmcValues); // Логирование для отладки
-            console.log('Initial Pest values:', initialPestValues); // Логирование для отладки
+            console.log('Initial TMC values:', initialTmcValues);
+            console.log('Initial Pest values:', initialPestValues);
 
             setInputTexts((prev) => ({ ...prev, ...initialInputTexts }));
             setIsEnabled((prev) => ({ ...prev, ...initialCheckboxStates }));
@@ -348,11 +332,10 @@ const Tab3ContentEdit = ({
             setSelectedDropdownValues((prev) => ({ ...prev, ...initialDropdownValues }));
             setIsFieldValid((prev) => ({ ...prev, ...initialFieldValid }));
 
-            setAllFields((prev) => {
-                const newFields = { ...prev, [value]: transformedField };
-                storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-                return newFields;
-            });
+            setAllFields((prev) => ({
+                ...prev,
+                [value]: transformedField,
+            }));
         }
     };
 
@@ -448,11 +431,10 @@ const Tab3ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, selectedOption.value, 'radio');
     };
@@ -478,11 +460,10 @@ const Tab3ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, textValue, 'text');
     };
@@ -498,11 +479,10 @@ const Tab3ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, checked, 'checkbox');
     };
@@ -528,11 +508,10 @@ const Tab3ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, value, 'select');
     };
@@ -573,11 +552,10 @@ const Tab3ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         const tmcField = field.find((item) => item.tmc && item.tmc.name === name);
         const fullTmcValue = {
@@ -610,11 +588,10 @@ const Tab3ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
 
         sendFieldUpdate(name, pestValue, 'pest');
     };
@@ -631,11 +608,10 @@ const Tab3ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
     };
 
     const handleImageRemoved = (name: string, removedImage: { name: string; thumbUrl: string; originalUrl: string }) => {
@@ -653,11 +629,10 @@ const Tab3ContentEdit = ({
         });
 
         setField(updatedField);
-        setAllFields((prev) => {
-            const newFields = { ...prev, [selectedValue]: updatedField };
-            storage.set(getStorageKey('allFields'), JSON.stringify(newFields));
-            return newFields;
-        });
+        setAllFields((prev) => ({
+            ...prev,
+            [selectedValue]: updatedField,
+        }));
     };
 
     const handleCloseModalTMC = () => {
@@ -730,7 +705,6 @@ const Tab3ContentEdit = ({
 
             switch (type) {
                 case 'radio':
-                    const isAnyOptionSelected = componentData.options.some((option) => option.selected);
                     return (
                         <View key={`radio-${idx}`} style={[styles.fieldContainer, { marginBottom: 17 }]}>
                             <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
@@ -743,9 +717,7 @@ const Tab3ContentEdit = ({
                                         height={29}
                                         textSize={14}
                                         textColor={option.color}
-                                        backgroundColor={
-                                            isAnyOptionSelected ? option.bgcolor : '#5D6377'
-                                        }
+                                        backgroundColor={option.selected ? option.bgcolor : '#5D6377'}
                                         enabled={option.selected}
                                         onPress={() => handlePressRadioButton(componentData.name, optionIndex)}
                                     />
@@ -837,7 +809,7 @@ const Tab3ContentEdit = ({
                         </View>
                     );
                 case 'tmc':
-                    console.log('Rendering TMC:', componentData); // Логирование для отладки
+                    console.log('Rendering TMC:', componentData);
                     return (
                         <View key={`tmc-${idx}`}>
                             {!isHeaderVisibleTmc && (
@@ -885,8 +857,7 @@ const Tab3ContentEdit = ({
                                             <TextInput
                                                 style={[
                                                     styles.tmcTextInput,
-                                                    isMounted &&
-                                                    !isFieldValid[`${componentData.name}_n`] && {
+                                                    isMounted && !isFieldValid[`${componentData.name}_n`] && {
                                                         borderColor: 'red',
                                                         borderWidth: 1,
                                                     },
@@ -901,8 +872,7 @@ const Tab3ContentEdit = ({
                                             <TextInput
                                                 style={[
                                                     styles.tmcTextInput,
-                                                    isMounted &&
-                                                    !isFieldValid[`${componentData.name}_u`] && {
+                                                    isMounted && !isFieldValid[`${componentData.name}_u`] && {
                                                         borderColor: 'red',
                                                         borderWidth: 1,
                                                     },
@@ -915,14 +885,15 @@ const Tab3ContentEdit = ({
                                         </View>
                                         <View>
                                             <TextInput
-                                                style={[
-                                                    styles.tmcTextInput,
-                                                    isMounted &&
-                                                    !isFieldValid[`${componentData.name}_v`] && {
-                                                        borderColor: 'red',
-                                                        borderWidth: 1,
-                                                    },
-                                                ]}
+                                                style={
+                                                    [
+                                                        styles.tmcTextInput,
+                                                        isMounted && !isFieldValid[`${componentData.name}_v`] && {
+                                                            borderColor: 'red',
+                                                            borderWidth: 1,
+                                                        }
+                                                    ]
+                                                }
                                                 onChangeText={(text) => handleChangeTmc(text, componentData.name, 'v')}
                                                 value={tmcValues[componentData.name]?.v || ''}
                                                 onBlur={() => handleBlurTmc(componentData.name, 'v')}
@@ -935,7 +906,7 @@ const Tab3ContentEdit = ({
                         </View>
                     );
                 case 'pest':
-                    console.log('Rendering Pest:', componentData); // Логирование для отладки
+                    console.log('Rendering Pest:', componentData);
                     return (
                         <View key={`pest-${idx}`}>
                             {!isHeaderVisiblePest && (
@@ -1031,6 +1002,36 @@ const Tab3ContentEdit = ({
     const { isContentHidden } = transferDataVisible(field);
     const isNavigationEnabled = areAllFieldsValid(isContentHidden);
 
+    // Кастомизация правой иконки (добавляем стрелку и точку)
+    const renderRightIcon = () => {
+        const selectedItem = items.find((item) => item.value === selectedValue);
+        return (
+            <View style={styles.rightIconContainer}>
+                {selectedItem && (
+                    <View style={styles.dot}>
+                        <DotSolid color={selectedItem.dotColor} />
+                    </View>
+                )}
+                {/* Стандартная стрелка */}
+                <Text style={styles.arrow}>▼</Text>
+            </View>
+        );
+    };
+
+// Кастомизация элементов выпадающего списка
+    const renderItem = item => {
+        const selectedItem = items.find((item) => item.value === selectedValue);
+        return (
+            <View style={styles.item}>
+                <Text style={styles.textItem}>{item.label}</Text>
+                {selectedItem && (
+                    <View style={styles.dot}>
+                        <DotSolid color={item.dotColor} />
+                    </View>
+                )}
+            </View>
+        );
+    };
     // Рендеринг
     return (
         <View style={styles.tab1Container}>
@@ -1055,6 +1056,8 @@ const Tab3ContentEdit = ({
                             placeholderStyle={styles.dropdownText}
                             selectedTextStyle={styles.dropdownText}
                             itemTextStyle={styles.dropdownItemText}
+                            renderRightIcon={renderRightIcon}
+                            renderItem={renderItem}
                         />
                     </View>
                     <KeyboardAwareScrollView>
@@ -1172,17 +1175,17 @@ const styles = StyleSheet.create({
         color: '#919191',
     },
     tmcTextInput: {
-        width: 40, // Увеличена ширина для вмещения текста
-        height: 30, // Увеличена высота для лучшего центрирования
+        width: 40,
+        height: 30,
         backgroundColor: '#F5F7FB',
         borderRadius: 4,
-        fontSize: 12, // Увеличен размер шрифта для лучшей читаемости
+        fontSize: 12,
         color: '#1C1F37',
-        textAlign: 'center', // Горизонтальное центрирование
-        textAlignVertical: 'center', // Вертикальное центрирование
-        paddingHorizontal: 4, // Добавлены отступы по горизонтали
-        paddingVertical: 0, // Минимальные отступы по вертикали для компактности
-        lineHeight: 14, // Настройка высоты строки для лучшего выравнивания
+        textAlign: 'center',
+        textAlignVertical: 'center',
+        paddingHorizontal: 4,
+        paddingVertical: 0,
+        lineHeight: 14,
     },
     tmcText: {
         fontSize: 10,
@@ -1202,10 +1205,12 @@ const styles = StyleSheet.create({
     },
     dropdownText: {
         color: '#000000',
-        fontSize: 12,
+        fontSize: 14,
     },
     dropdownItemText: {
+        color: '#1C1F37', // Темный цвет для текста в списке
         fontSize: 14,
+        fontWeight: '400',
     },
     errorText: {
         color: 'red',
@@ -1222,6 +1227,27 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         justifyContent: 'space-between',
+    },
+    rightIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    dot: {
+        marginRight: 8, // Отступ перед стрелкой
+    },
+    arrow: {
+        fontSize: 14,
+        color: '#5D6377',
+    },
+    item: {
+        padding: 17,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    textItem: {
+        flex: 1,
+        fontSize: 14,
     },
 });
 
