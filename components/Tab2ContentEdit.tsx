@@ -73,7 +73,7 @@ const Tab2ContentEdit = ({
             itemsTabContent[index]?.param?.map((data: any, idx: number) => ({
                 label: data.name.toString() || `Элемент ${idx + 1}`,
                 value: idx,
-                dotColor: "red",
+                dotColor: data.badge.color,
             })) || [],
         [itemsTabContent, index]
     );
