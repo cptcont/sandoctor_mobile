@@ -65,7 +65,7 @@ const ChecklistScreen = memo(() => {
                     zonesLength: checkList.zones.length,
                     isFirstTab: newIndex === 0,
                     isLastTab: newIndex === checkList.zones.length - 1,
-                }); // Отладка
+                });
                 setIndex(newIndex);
                 setIsFirstTab(newIndex === 0);
                 setIsLastTab(newIndex === checkList.zones.length - 1);
@@ -122,7 +122,7 @@ const ChecklistScreen = memo(() => {
             routesLength: routes.length,
             isFirstTab: newIndex === 0,
             isLastTab: newIndex === routes.length - 1,
-        }); // Отладка
+        });
         setIndex(newIndex);
         setIsFirstTab(newIndex === 0);
         setIsLastTab(newIndex === routes.length - 1);
@@ -203,7 +203,7 @@ const ChecklistScreen = memo(() => {
                     />
                 );
             }
-            console.log('tabsData:', { key, isLastTab: key === checkList.zones.length - 1 }); // Отладка
+            console.log('tabsData:', { key, isLastTab: key === checkList.zones.length - 1 });
             return {
                 key: `tab${key}`,
                 title: zone.name || 'Без названия',
@@ -235,14 +235,16 @@ const ChecklistScreen = memo(() => {
     const renderTabBar = (props: SceneRendererProps & { navigationState: NavigationState<Route> }) => (
         <View style={styles.tabBarContainer}>
             {props.navigationState.routes.map((route: Route, i: number) => (
-                <Tab
-                    key={route.key}
-                    label={route.title ?? ''}
-                    isActive={i === index}
-                    onPress={() => handleTabChange(i)}
-                    showDot={statusVisible === 'edit'}
-                    color={route.tabColor}
-                />
+                <View key={route.key} style={styles.tabWrapper}>
+                    <Tab
+                        label={route.title ?? ''}
+                        isActive={i === index}
+                        onPress={() => handleTabChange(i)}
+                        showDot={statusVisible === 'edit'}
+                        color={route.tabColor}
+                    />
+                    <View style={styles.tabSeparator} />
+                </View>
             ))}
         </View>
     );
@@ -303,6 +305,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         backgroundColor: '#fff',
         height: 30,
+        borderBottomWidth: 1, // Добавляем горизонтальную полоску под панелью вкладок
+        borderBottomColor: '#ccc', // Цвет горизонтальной полоски
+    },
+    tabWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    tabSeparator: {
+        width: 1,
+        height: '100%',
+        backgroundColor: '#ccc', // Цвет вертикальной полоски
     },
 });
 
