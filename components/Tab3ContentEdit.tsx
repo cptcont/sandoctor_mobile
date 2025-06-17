@@ -88,7 +88,7 @@ const Tab3ContentEdit = ({
     // Элементы выпадающего списка
     const items = useMemo(
         () =>
-            itemsTabContent[index]?.control_points?.map((data: any, idx: number) => {
+            itemsTabContent[index]?.param?.map((data: any, idx: number) => {
                     if (!data?.name) {
                         console.warn(`Missing name in control_points[${idx}]`, data);
                         return null;
@@ -96,7 +96,7 @@ const Tab3ContentEdit = ({
                     return {
                         label: data.name.toString() || `Элемент ${idx + 1}`,
                         value: idx,
-                        dotColor: "red",
+                        dotColor: data.badge.color,
                     };
                 })
                 .filter((item): item is { label: string; value: number; dotColor: string } => !!item) || [],
@@ -109,12 +109,12 @@ const Tab3ContentEdit = ({
             setSelectedValue(0);
             return;
         }
-        const controlPointIndex = itemsTabContent[index]?.control_points?.findIndex(
+        const paramIndex = itemsTabContent[index]?.param?.findIndex(
             (cp: any) => cp.id === tabId
         );
-        console.log('tabId:', tabId, 'controlPointIndex:', controlPointIndex, 'items:', items);
-        if (controlPointIndex !== -1 && controlPointIndex !== selectedValue) {
-            setSelectedValue(controlPointIndex);
+        console.log('tabId:', tabId, 'controlPointIndex:', paramIndex, 'items:', items);
+        if (paramIndex !== -1 && paramIndex !== selectedValue) {
+            setSelectedValue(paramIndex);
             setIsInitialized(true);
         } else {
             setSelectedValue(0);
@@ -195,7 +195,7 @@ const Tab3ContentEdit = ({
 
     // Загрузка полей
     const loadFields = (value: number) => {
-        if (!itemsTabContent[index]?.control_points?.[value]) return;
+        if (!itemsTabContent[index]?.param?.[value]) return;
 
         const savedFields = allFields[value];
 
@@ -254,10 +254,10 @@ const Tab3ContentEdit = ({
             setSelectedDropdownValues((prev) => ({ ...prev, ...updatedDropdownValues }));
             setIsFieldValid((prev) => ({ ...prev, ...updatedFieldValid }));
         } else {
-            const fields = itemsTabContent[index].control_points[value]?.fields || [];
-            const TMC = itemsTabContent[index].control_points[value]?.tmc || [];
-            const pests = itemsTabContent[index].control_points[value]?.pests || [];
-            const isTmcUsed = itemsTabContent[index].control_points[value]?.tmc_used === "1";
+            const fields = itemsTabContent[index].param[value]?.fields || [];
+            const TMC = itemsTabContent[index].param[value]?.tmc || [];
+            const pests = itemsTabContent[index].param[value]?.pests || [];
+            const isTmcUsed = itemsTabContent[index].param[value]?.tmc_used === "1";
 
             let fieldsTMC: any[] = [];
             if (isTmcUsed) {
@@ -657,12 +657,12 @@ const Tab3ContentEdit = ({
     };
 
     const handleLoadTMC = async () => {
-        const controlPointId = itemsTabContent[index]?.control_points?.[selectedValue]?.id || '';
+        const paramId = itemsTabContent[index]?.param?.[selectedValue]?.id || '';
 
         showModal(
             <ShowSelectTMC
                 idChecklist={idCheckList}
-                idTMC={controlPointId}
+                idTMC={paramId}
                 onClosePress={handleCloseModalTMC}
                 onAddPress={handleAddModalTmc}
             />,
