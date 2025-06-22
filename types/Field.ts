@@ -1,45 +1,75 @@
-export type RadioField = {
-    label: string;
+type checkbox = {
     name: string;
-    no: boolean;
-    yes: boolean;
-};
+    checked: boolean;
+}
 
-export type TextField = {
+type text  = {
+    name: string;
+    value: string;
+}
+
+type radio = {
+    name: string;
+    options: any[];
+}
+
+type foto = {
+    name: string;
+    value: any[];
+}
+
+type select = {
+    name: string;
+    options: any[];
+    value: string;
+}
+
+type tmc = {
+    name: string;
+    value: {
+        n: {
+            value: string;
+        };
+        u: {
+            value: string;
+        };
+        v: {
+            value: string;
+        };
+        p: {
+            value: string;
+        };
+    }
+}
+
+type pest = {
+    name: string;
+    value: string;
+}
+
+export type TransferField = {
+    text: text;
+    radio: radio;
+    foto: foto;
+    select: select;
+    tmc: tmc;
+    pest: pest;
+    type: string;
     label: string;
     name: string;
     value: string;
-
-};
-
-export type CheckboxField = {
     checked: boolean;
-    label: string;
-    name: string;
-};
+    checkbox: checkbox;
+    options: any[];
+}
 
-export type SelectField = {
-    label: string;
-    name: string;
-    options: any[]; // Здесь можно уточнить тип, если известна структура объекта options
-
-};
-
-export type TransferField = {
-    text: string;
+export type FormField = {
     type: string;
     label: string;
     name: string;
     value: string;
     checked: boolean;
     options: any[];
-}
-
-export type FormField = {
-    radio: RadioField;
-    text: TextField;
-    checkbox: CheckboxField;
-    select: SelectField;
 
 }
 
