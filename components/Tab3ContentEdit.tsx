@@ -89,16 +89,16 @@ const Tab3ContentEdit = ({
     const items = useMemo(
         () =>
             itemsTabContent[index]?.param?.map((data: any, idx: number) => {
-                    if (!data?.name) {
-                        console.warn(`Missing name in control_points[${idx}]`, data);
-                        return null;
-                    }
-                    return {
-                        label: data.name.toString() || `Элемент ${idx + 1}`,
-                        value: idx,
-                        dotColor: data.badge.color,
-                    };
-                })
+                if (!data?.name) {
+                    console.warn(`Missing name in control_points[${idx}]`, data);
+                    return null;
+                }
+                return {
+                    label: data.name.toString() || `Элемент ${idx + 1}`,
+                    value: idx,
+                    dotColor: data.badge.color,
+                };
+            })
                 .filter((item): item is { label: string; value: number; dotColor: string } => !!item) || [],
         [itemsTabContent, index]
     );
@@ -112,7 +112,7 @@ const Tab3ContentEdit = ({
         const paramIndex = itemsTabContent[index]?.param?.findIndex(
             (cp: any) => cp.id === tabId
         );
-        console.log('tabId:', tabId, 'controlPointIndex:', paramIndex, 'items:', items);
+        console.log('tabId:', tabId, 'paramIndex:', paramIndex, 'items:', items);
         if (paramIndex !== -1 && paramIndex !== selectedValue) {
             setSelectedValue(paramIndex);
             setIsInitialized(true);
@@ -230,7 +230,7 @@ const Tab3ContentEdit = ({
                     updatedDropdownValues[item.select.name] = selected ? parseInt(selected[0]) : null;
                     updatedFieldValid[item.select.name] = !!selected;
                 }
-                if (item?.tmc) {
+                if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
                     updatedTmcValues[item.tmc.name] = {
                         n: item.tmc.value.n?.value || '',
                         u: item.tmc.value.u?.value || '',
@@ -640,7 +640,7 @@ const Tab3ContentEdit = ({
     };
 
     const handleAddModalTmc = () => {
-        const controlPointId = itemsTabContent[index]?.control_points?.[selectedValue]?.id || '';
+        const paramId = itemsTabContent[index]?.param?.[selectedValue]?.id || '';
         onReload();
         router.push({
             pathname: '/checklist',
@@ -650,7 +650,7 @@ const Tab3ContentEdit = ({
                 typeCheckList: '3',
                 statusVisible: 'edit',
                 tabId: zoneId,
-                tabIdTMC: controlPointId,
+                tabIdTMC: paramId,
             },
         });
         hideModal();
@@ -674,7 +674,7 @@ const Tab3ContentEdit = ({
         );
     };
 
-    // Рендеринг полей
+    // Рендеринг полей с фильтрацией только незаполненных
     const transferDataVisible = (data: TransferField[] = []) => {
         if (!Array.isArray(data)) data = [];
         let isNoSelected = false;
@@ -684,7 +684,28 @@ const Tab3ContentEdit = ({
         let isHeaderVisiblePest = false;
         let selectCounter = 0;
 
-        const renderedComponents = data.map((item, idx) => {
+        // Фильтруем поля, отображая только radio или незаполненные обязательные поля
+        const filteredData = data.filter((item) => {
+            if (!item) return false;
+            const type = Object.keys(item)[0];
+            const componentData = item[type];
+
+            if (type === 'radio') return true; // Всегда показываем radio, так как они управляют видимостью
+            if (type === 'foto' || type === 'checkbox') return true; // Показываем foto и checkbox независимо от заполненности
+            if (type === 'text' && !isFieldValid[componentData.name]) return true;
+            if (type === 'select' && !isFieldValid[componentData.name]) return true;
+            if (type === 'tmc' && componentData.name !== 'placeholder_tmc') {
+                return (
+                    !isFieldValid[`${componentData.name}_n`] ||
+                    !isFieldValid[`${componentData.name}_u`] ||
+                    !isFieldValid[`${componentData.name}_v`]
+                );
+            }
+            if (type === 'pest' && !isFieldValid[componentData.name]) return true;
+            return false;
+        });
+
+        const renderedComponents = filteredData.map((item, idx) => {
             if (!item) return null;
 
             const type = Object.keys(item)[0];
@@ -885,15 +906,13 @@ const Tab3ContentEdit = ({
                                         </View>
                                         <View>
                                             <TextInput
-                                                style={
-                                                    [
-                                                        styles.tmcTextInput,
-                                                        isMounted && !isFieldValid[`${componentData.name}_v`] && {
-                                                            borderColor: 'red',
-                                                            borderWidth: 1,
-                                                        }
-                                                    ]
-                                                }
+                                                style={[
+                                                    styles.tmcTextInput,
+                                                    isMounted && !isFieldValid[`${componentData.name}_v`] && {
+                                                        borderColor: 'red',
+                                                        borderWidth: 1,
+                                                    },
+                                                ]}
                                                 onChangeText={(text) => handleChangeTmc(text, componentData.name, 'v')}
                                                 value={tmcValues[componentData.name]?.v || ''}
                                                 onBlur={() => handleBlurTmc(componentData.name, 'v')}
@@ -1012,26 +1031,23 @@ const Tab3ContentEdit = ({
                         <DotSolid color={selectedItem.dotColor} />
                     </View>
                 )}
-                {/* Стандартная стрелка */}
                 <Text style={styles.arrow}>▼</Text>
             </View>
         );
     };
 
-// Кастомизация элементов выпадающего списка
-    const renderItem = item => {
-        const selectedItem = items.find((item) => item.value === selectedValue);
+    // Кастомизация элементов выпадающего списка
+    const renderItem = (item: { label: string; value: number; dotColor: string }) => {
         return (
             <View style={styles.item}>
                 <Text style={styles.textItem}>{item.label}</Text>
-                {selectedItem && (
-                    <View style={styles.dot}>
-                        <DotSolid color={item.dotColor} />
-                    </View>
-                )}
+                <View style={styles.dot}>
+                    <DotSolid color={item.dotColor} />
+                </View>
             </View>
         );
     };
+
     // Рендеринг
     return (
         <View style={styles.tab1Container}>
@@ -1208,7 +1224,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     dropdownItemText: {
-        color: '#1C1F37', // Темный цвет для текста в списке
+        color: '#1C1F37',
         fontSize: 14,
         fontWeight: '400',
     },
@@ -1233,7 +1249,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     dot: {
-        marginRight: 8, // Отступ перед стрелкой
+        marginRight: 8,
     },
     arrow: {
         fontSize: 14,

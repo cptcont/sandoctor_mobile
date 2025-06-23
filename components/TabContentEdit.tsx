@@ -11,8 +11,9 @@ import { Checklist, Zone } from '@/types/Checklist';
 import { FormField, TransferField } from '@/types/Field';
 import { postData } from '@/services/api';
 import { useModal } from '@/context/ModalContext';
-import { ShowSelectTMC } from "@/components/showSelectTMC";
-import { router } from "expo-router";
+import { ShowSelectTMC } from '@/components/showSelectTMC';
+import { router } from 'expo-router';
+import { DotSolid } from "@/components/icons/Icons";
 
 type TabContentEditType = {
     id: string | string[];
@@ -28,7 +29,6 @@ type TabContentEditType = {
     zoneId?: string;
     isFirstTab?: boolean;
     isLastTab?: boolean;
-    tabType?: 'param' | 'control_points';
 };
 
 const TabContentEdit = ({
@@ -45,7 +45,6 @@ const TabContentEdit = ({
                             itemsTabContent = [],
                             isFirstTab = true,
                             isLastTab = false,
-                            tabType = 'param',
                         }: TabContentEditType) => {
     const [selectedValue, setSelectedValue] = useState<number>(0);
     const [isInitialized, setIsInitialized] = useState(false);
@@ -62,53 +61,55 @@ const TabContentEdit = ({
     const [isFieldValid, setIsFieldValid] = useState<Record<string, boolean>>({});
     const [selectedDropdownValues, setSelectedDropdownValues] = useState<Record<string, number | null>>({});
     const [isMounted, setIsMounted] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const { showModal, hideModal } = useModal();
 
+    // Инициализация isMounted
     useEffect(() => {
-        const loadInitialData = async () => {
-            try {
-                setIsLoading(true);
-                const response = await postData(`checklist/${idCheckList}`, {});
-                if (response?.data) {
-                    setChecklists(response.data);
-                }
-            } catch (error) {
-                console.error('Ошибка при загрузке данных:', error);
-            } finally {
-                setIsMounted(true);
-                setIsLoading(false);
-            }
-        };
+        setIsMounted(true);
+        console.log('Component mounted, isMounted set to true');
+    }, []);
 
-        loadInitialData();
-    }, [idCheckList]);
-
+    // Элементы выпадающего списка
     const items = useMemo(
         () =>
-            itemsTabContent[index]?.[tabType]?.map((data: any, idx: number) => ({
-                label: data.name?.toString() || `Элемент ${idx}`,
-                value: idx,
-            })) || [],
-        [itemsTabContent, index, tabType]
+            itemsTabContent[index]?.param?.map((data: any, idx: number) => {
+                if (!data?.name) {
+                    console.warn(`Missing name in control_points[${idx}]`, data);
+                    return null;
+                }
+                return {
+                    label: data.name.toString() || `Элемент ${idx + 1}`,
+                    value: idx,
+                    dotColor: data.badge.color,
+                };
+            })
+                .filter((item): item is { label: string; value: number; dotColor: string } => !!item) || [],
+        [itemsTabContent, index]
     );
 
+    // Инициализация selectedValue на основе tabId
     useEffect(() => {
         if (!tabId || items.length === 0) {
             setSelectedValue(0);
+            setIsInitialized(true);
+            console.log('No tabId or empty items, selectedValue set to 0');
             return;
         }
-        const itemIndex = itemsTabContent[index]?.[tabType]?.findIndex(
-            (item: any) => item.id === tabId
-        );
-        if (itemIndex !== -1 && itemIndex !== selectedValue) {
-            setSelectedValue(itemIndex);
+        const paramIndex = itemsTabContent[index]?.param?.findIndex((cp: any) => cp.id === tabId);
+        console.log('tabId:', tabId, 'paramIndex:', paramIndex, 'items:', items);
+        if (paramIndex !== -1 && paramIndex !== selectedValue) {
+            setSelectedValue(paramIndex);
             setIsInitialized(true);
+            console.log('SelectedValue set to', paramIndex);
         } else {
             setSelectedValue(0);
+            setIsInitialized(true);
+            console.log('SelectedValue set to 0 (default)');
         }
-    }, [tabId, index, itemsTabContent, items, tabType]);
+    }, [tabId, index, itemsTabContent, items]);
 
+    // Трансформация TMC
     const transformObjectToArrayTMC = (originalObject: any) => {
         const { name, fields, id } = originalObject;
         const fieldName = fields?.p?.name?.replace(/\[[^\]]+\]$/, '') || `tmc_${id}`;
@@ -125,6 +126,7 @@ const TabContentEdit = ({
         }];
     };
 
+    // Трансформация Pests
     const transformObjectToArrayPests = (originalObject: any) => {
         const { name, id, field } = originalObject;
         return [{
@@ -135,11 +137,18 @@ const TabContentEdit = ({
         }];
     };
 
-    const transformData = (data: any[]): TransferField[] => {
+    // Трансформация данных
+    const transformData = (data: FormField[]): TransferField[] => {
         return data
             .map((field) => {
                 if (field.type === 'radio') {
-                    return { radio: { label: field.label, name: field.name, options: field.options.map((opt: any) => ({ ...opt })) } };
+                    return {
+                        radio: {
+                            label: field.label,
+                            name: field.name,
+                            options: field.options.map((opt: any) => ({ ...opt })),
+                        },
+                    };
                 }
                 if (field.type === 'text') {
                     return { text: { label: field.label, value: field.value, name: field.name } };
@@ -148,21 +157,32 @@ const TabContentEdit = ({
                     return { foto: { value: field.value || [], name: field.name } };
                 }
                 if (field.type === 'checkbox') {
-                    return { checkbox: { label: field.label, checked: field.checked, name: field.name } };
+                    return {
+                        checkbox: { label: field.label, checked: field.checked, name: field.name },
+                    };
                 }
                 if (field.type === 'select') {
                     const options = Array.isArray(field.options)
                         ? field.options.map((opt: any) => ({
-                            label: opt.label || opt.value.toString(),
-                            value: parseInt(opt.value),
+                            value: opt.value,
+                            text: opt.text,
+                            selected: opt.selected || false,
                             color: opt.color || '#000000',
                         }))
-                        : Object.entries(field.options).map(([key, value]: [string, any]) => ({
-                            label: value.label || value.value.toString(),
-                            value: parseInt(key),
-                            color: value.color || '#000000',
+                        : Object.entries(field.options).map(([key, opt]: [string, any]) => ({
+                            value: key,
+                            text: opt.text || opt.value,
+                            selected: opt.selected || false,
+                            color: opt.color || '#000000',
                         }));
-                    return { select: { label: field.label, options, name: field.name } };
+                    return {
+                        select: {
+                            label: field.label,
+                            options,
+                            name: field.name,
+                            value: options.find((opt) => opt.selected)?.value || null,
+                        },
+                    };
                 }
                 if (field.type === 'tmc') {
                     return {
@@ -174,40 +194,56 @@ const TabContentEdit = ({
                     };
                 }
                 if (field.type === 'pest') {
-                    return { pest: { label: field.label, name: field.name, value: field.value || '' } };
+                    return {
+                        pest: { label: field.label, name: field.name, value: field.value || '' },
+                    };
                 }
                 return null;
             })
             .filter((item): item is TransferField => item !== null);
     };
 
+    // Сохранение текущего состояния
     const saveCurrentState = (value: number) => {
         setAllFields((prev) => ({
             ...prev,
             [value]: field,
         }));
+        console.log('Saved state for value:', value, 'Fields:', field);
     };
 
+    // Загрузка полей
     const loadFields = (value: number) => {
-        if (!itemsTabContent[index]?.[tabType]?.[value]) return;
+        if (!itemsTabContent[index]?.param?.[value]) {
+            console.log('No params found for value:', value);
+            return;
+        }
 
         const savedFields = allFields[value];
 
         if (savedFields) {
             setField(savedFields);
+            console.log('Loaded saved fields for value:', value, savedFields);
 
             const updatedInputTexts: Record<string, string> = {};
             const updatedIsEnabled: Record<string, boolean> = {};
-            const updatedRadioStates: Record<string, { yes: boolean; no: boolean; isContentVisible: boolean }> = {};
+            const updatedRadioStates: Record<
+                string,
+                { yes: boolean; no: boolean; isContentVisible: boolean }
+            > = {};
             const updatedTmcValues: Record<string, { n: string; u: string; v: string }> = {};
             const updatedPestValues: Record<string, string> = {};
             const updatedDropdownValues: Record<string, number | null> = {};
             const updatedFieldValid: Record<string, boolean> = {};
 
             savedFields.forEach((item) => {
+                if (item?.foto) {
+                    updatedFieldValid[item.foto.name] =
+                        Array.isArray(item.foto.value) && item.foto.value.length > 0;
+                }
                 if (item?.text) {
                     updatedInputTexts[item.text.name] = item.text.value || '';
-                    updatedFieldValid[item.text.name] = tabType === 'param' ? (item.text.value?.length || 0) >= 5 : !!item.text.value;
+                    updatedFieldValid[item.text.name] = (item.text.value || '').length >= 5;
                 }
                 if (item?.checkbox) {
                     updatedIsEnabled[item.checkbox.name] = item.checkbox.checked || false;
@@ -216,22 +252,24 @@ const TabContentEdit = ({
                     updatedRadioStates[item.radio.name] = {
                         yes: item.radio.options.some((opt) => opt.value === '1' && opt.selected),
                         no: item.radio.options.some((opt) => opt.value === '0' && opt.selected),
-                        isContentVisible: item.radio.options.some((opt) => opt.selected && opt.value === '1'),
+                        isContentVisible: item.radio.options.some(
+                            (opt) => opt.selected && opt.value === '1',
+                        ),
                     };
                 }
                 if (item?.select) {
                     const options = Array.isArray(item.select.options)
                         ? item.select.options
-                        : Object.entries(item.select.options).map(([key, value]: [string, any]) => ({
-                            label: value.label || value.value.toString(),
-                            value: parseInt(key),
-                            color: value.color || '#000000',
-                        }));
+                        : item.select.options;
                     const selected = options.find((opt: any) => opt.selected);
-                    updatedDropdownValues[item.select.name] = selected ? parseInt(selected.value) : null;
-                    updatedFieldValid[item.select.name] = !!selected;
+                    updatedDropdownValues[item.select.name] = selected
+                        ? parseInt(selected.value)
+                        : item.select.value
+                            ? parseInt(item.select.value)
+                            : null;
+                    updatedFieldValid[item.select.name] = !!selected || !!item.select.value;
                 }
-                if (item?.tmc) {
+                if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
                     updatedTmcValues[item.tmc.name] = {
                         n: item.tmc.value.n?.value || '',
                         u: item.tmc.value.u?.value || '',
@@ -254,22 +292,30 @@ const TabContentEdit = ({
             setPestValues((prev) => ({ ...prev, ...updatedPestValues }));
             setSelectedDropdownValues((prev) => ({ ...prev, ...updatedDropdownValues }));
             setIsFieldValid((prev) => ({ ...prev, ...updatedFieldValid }));
+            console.log('Updated states:', {
+                inputTexts: updatedInputTexts,
+                isFieldValid: updatedFieldValid,
+                selectedDropdownValues: updatedDropdownValues,
+            });
         } else {
-            const fields = itemsTabContent[index][tabType][value]?.fields || [];
-            const TMC = tabType === 'control_points' ? itemsTabContent[index][tabType][value]?.tmc || [] : [];
-            const pests = tabType === 'control_points' ? itemsTabContent[index][tabType][value]?.pests || [] : [];
-            const isTmcUsed = tabType === 'control_points' && itemsTabContent[index][tabType][value]?.tmc_used === "1";
+            const fields = itemsTabContent[index].param[value]?.fields || [];
+            const TMC = itemsTabContent[index].param[value]?.tmc || [];
+            const pests = itemsTabContent[index].param[value]?.pests || [];
+            const isTmcUsed = itemsTabContent[index].param[value]?.tmc_used === '1';
 
             let fieldsTMC: any[] = [];
             if (isTmcUsed) {
-                if (TMC.length === 0) {
-                    fieldsTMC = [{ type: 'tmc', name: 'placeholder_tmc', label: '' }];
-                } else {
-                    fieldsTMC = Array.isArray(TMC) ? TMC.map(transformObjectToArrayTMC).flat() : [];
-                }
+                fieldsTMC =
+                    TMC.length === 0
+                        ? [{ type: 'tmc', name: 'placeholder_tmc', label: '' }]
+                        : Array.isArray(TMC)
+                            ? TMC.map(transformObjectToArrayTMC).flat()
+                            : [];
             }
 
-            const fieldsPests = Array.isArray(pests) ? pests.map(transformObjectToArrayPests).flat() : [];
+            const fieldsPests = Array.isArray(pests)
+                ? pests.map(transformObjectToArrayPests).flat()
+                : [];
             const fieldItem = Array.isArray(fields) ? fields : [];
             const combinedArray = [...fieldItem, ...fieldsTMC, ...fieldsPests];
 
@@ -280,16 +326,23 @@ const TabContentEdit = ({
 
             const initialInputTexts: Record<string, string> = {};
             const initialCheckboxStates: Record<string, boolean> = {};
-            const initialRadioStates: Record<string, { yes: boolean; no: boolean; isContentVisible: boolean }> = {};
+            const initialRadioStates: Record<
+                string,
+                { yes: boolean; no: boolean; isContentVisible: boolean }
+            > = {};
             const initialTmcValues: Record<string, { n: string; u: string; v: string }> = {};
             const initialPestValues: Record<string, string> = {};
             const initialDropdownValues: Record<string, number | null> = {};
             const initialFieldValid: Record<string, boolean> = {};
 
             transformedField.forEach((item) => {
+                if (item?.foto) {
+                    initialFieldValid[item.foto.name] =
+                        Array.isArray(item.foto.value) && item.foto.value.length > 0;
+                }
                 if (item?.text) {
                     initialInputTexts[item.text.name] = item.text.value || '';
-                    initialFieldValid[item.text.name] = tabType === 'param' ? (item.text.value?.length || 0) >= 5 : !!item.text.value;
+                    initialFieldValid[item.text.name] = (item.text.value || '').length >= 5;
                 }
                 if (item?.checkbox) {
                     initialCheckboxStates[item.checkbox.name] = item.checkbox.checked || false;
@@ -298,20 +351,22 @@ const TabContentEdit = ({
                     initialRadioStates[item.radio.name] = {
                         yes: item.radio.options.some((opt) => opt.value === '1' && opt.selected),
                         no: item.radio.options.some((opt) => opt.value === '0' && opt.selected),
-                        isContentVisible: item.radio.options.some((opt) => opt.selected && opt.value === '1'),
+                        isContentVisible: item.radio.options.some(
+                            (opt) => opt.selected && opt.value === '1',
+                        ),
                     };
                 }
                 if (item?.select) {
                     const options = Array.isArray(item.select.options)
                         ? item.select.options
-                        : Object.entries(item.select.options).map(([key, value]: [string, any]) => ({
-                            label: value.label || value.value.toString(),
-                            value: parseInt(key),
-                            color: value.color || '#000000',
-                        }));
+                        : item.select.options;
                     const selected = options.find((opt: any) => opt.selected);
-                    initialDropdownValues[item.select.name] = selected ? parseInt(selected.value) : null;
-                    initialFieldValid[item.select.name] = !!selected;
+                    initialDropdownValues[item.select.name] = selected
+                        ? parseInt(selected.value)
+                        : item.select.value
+                            ? parseInt(item.select.value)
+                            : null;
+                    initialFieldValid[item.select.name] = !!selected || !!item.select.value;
                 }
                 if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
                     initialTmcValues[item.tmc.name] = {
@@ -329,9 +384,6 @@ const TabContentEdit = ({
                 }
             });
 
-            console.log('Initial TMC values:', initialTmcValues);
-            console.log('Initial Pest values:', initialPestValues);
-
             setInputTexts((prev) => ({ ...prev, ...initialInputTexts }));
             setIsEnabled((prev) => ({ ...prev, ...initialCheckboxStates }));
             setRadioStates((prev) => ({ ...prev, ...initialRadioStates }));
@@ -339,32 +391,31 @@ const TabContentEdit = ({
             setPestValues((prev) => ({ ...prev, ...initialPestValues }));
             setSelectedDropdownValues((prev) => ({ ...prev, ...initialDropdownValues }));
             setIsFieldValid((prev) => ({ ...prev, ...initialFieldValid }));
-
             setAllFields((prev) => ({
                 ...prev,
                 [value]: transformedField,
             }));
+            console.log('Initialized fields:', transformedField, 'isFieldValid:', initialFieldValid);
         }
     };
 
     useEffect(() => {
-        if (!isLoading) {
+        if (!isLoading && isInitialized) {
             loadFields(selectedValue);
         }
-    }, [selectedValue, itemsTabContent, index, isLoading, tabType]);
+    }, [selectedValue, itemsTabContent, index, isLoading, isInitialized]);
 
+    // Валидация полей
     useEffect(() => {
         if (!isMounted) return;
 
         const updatedFieldValid: Record<string, boolean> = {};
         field.forEach((item) => {
             if (item?.text) {
-                updatedFieldValid[item.text.name] = tabType === 'param'
-                    ? (inputTexts[item.text.name]?.length || 0) >= 5
-                    : !!inputTexts[item.text.name];
+                updatedFieldValid[item.text.name] = (inputTexts[item.text.name] || '').length >= 5;
             }
             if (item?.select) {
-                updatedFieldValid[item.select.name] = selectedDropdownValues[item.select.name] !== null;
+                updatedFieldValid[item.select.name] = selectedDropdownValues[item.select.name] !== null && selectedDropdownValues[item.select.name] !== undefined;
             }
             if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
                 updatedFieldValid[`${item.tmc.name}_n`] = !!tmcValues[item.tmc.name]?.n;
@@ -374,10 +425,17 @@ const TabContentEdit = ({
             if (item?.pest) {
                 updatedFieldValid[item.pest.name] = !!pestValues[item.pest.name];
             }
+            if (item?.foto) {
+                updatedFieldValid[item.foto.name] = Array.isArray(item.foto.value) && item.foto.value.length > 0;
+            }
         });
-        setIsFieldValid((prev) => ({ ...prev, ...updatedFieldValid }));
-    }, [field, inputTexts, selectedDropdownValues, tmcValues, pestValues, isMounted, tabType]);
+        setIsFieldValid((prev) => {
+            console.log('Updated isFieldValid:', updatedFieldValid, 'Previous isFieldValid:', prev);
+            return { ...prev, ...updatedFieldValid };
+        });
+    }, [field, inputTexts, selectedDropdownValues, tmcValues, pestValues, isMounted]);
 
+    // Отправка обновлений на сервер
     const sendFieldUpdate = async (name: string, value: any, type: string) => {
         try {
             let payload;
@@ -397,15 +455,18 @@ const TabContentEdit = ({
 
             if (payload) {
                 await postData(`checklist/${idCheckList}`, { answers: [payload] });
+                console.log('Sent field update:', payload);
             }
         } catch (error) {
             console.error('Ошибка при обновлении поля:', error);
         }
     };
 
+    // Обработчики
     const handleSelect = (value: number) => {
         saveCurrentState(selectedValue);
         setSelectedValue(value);
+        console.log('Selected value changed to:', value);
     };
 
     const handlePressRadioButton = (name: string, optionIndex: number) => {
@@ -444,25 +505,28 @@ const TabContentEdit = ({
         }));
 
         sendFieldUpdate(name, selectedOption.value, 'radio');
+        console.log('Radio button pressed:', name, selectedOption.value);
     };
 
     const handleChangeInputText = (text: string, name: string) => {
         setInputTexts((prev) => ({ ...prev, [name]: text }));
         if (isMounted) {
-            setIsFieldValid((prev) => ({
-                ...prev,
-                [name]: tabType === 'param' ? text.length >= 5 : !!text,
-            }));
+            setIsFieldValid((prev) => {
+                const isValid = text.length >= 5;
+                console.log(`Text input changed: ${name}, value: ${text}, valid: ${isValid}`);
+                return { ...prev, [name]: isValid };
+            });
         }
     };
 
     const handleBlurTextInput = (name: string) => {
         const textValue = inputTexts[name] || '';
         if (isMounted) {
-            setIsFieldValid((prev) => ({
-                ...prev,
-                [name]: tabType === 'param' ? textValue.length >= 5 : !!textValue,
-            }));
+            setIsFieldValid((prev) => {
+                const isValid = textValue.length >= 5;
+                console.log(`Text input blurred: ${name}, value: ${textValue}, valid: ${isValid}`);
+                return { ...prev, [name]: isValid };
+            });
         }
 
         const updatedField = field.map((item) => {
@@ -498,27 +562,32 @@ const TabContentEdit = ({
         }));
 
         sendFieldUpdate(name, checked, 'checkbox');
+        console.log('Checkbox changed:', name, checked);
     };
 
     const handleSelectDropdown = (value: number, name: string) => {
         setSelectedDropdownValues((prev) => ({ ...prev, [name]: value }));
         if (isMounted) {
-            setIsFieldValid((prev) => ({ ...prev, [name]: true }));
+            setIsFieldValid((prev) => {
+                console.log(`Dropdown selected: ${name}, value: ${value}, valid: true`);
+                return { ...prev, [name]: true };
+            });
         }
 
         const updatedField = field.map((item) => {
             if (item.select && item.select.name === name) {
-                const options = Array.isArray(item.select.options)
-                    ? item.select.options
-                    : Object.entries(item.select.options).map(([key, value]: [string, any]) => ({
-                        label: value.label || value.value.toString(),
-                        value: parseInt(key),
-                        color: value.color || '#000000',
-                    }));
-                const updatedOptions = options.map((opt: any) => ({
-                    ...opt,
-                    selected: parseInt(opt.value) === value,
-                }));
+                const updatedOptions = Array.isArray(item.select.options)
+                    ? item.select.options.map((opt: any) => ({
+                        ...opt,
+                        selected: parseInt(opt.value) === value,
+                    }))
+                    : Object.entries(item.select.options).reduce(
+                        (acc, [key, opt]: [string, any]) => {
+                            acc[key] = { ...opt, selected: parseInt(key) === value };
+                            return acc;
+                        },
+                        {} as Record<string, any>
+                    );
                 return { ...item, select: { ...item.select, options: updatedOptions } };
             }
             return item;
@@ -542,14 +611,22 @@ const TabContentEdit = ({
             };
         });
         if (isMounted) {
-            setIsFieldValid((prev) => ({ ...prev, [`${name}_${fieldType}`]: !!text }));
+            setIsFieldValid((prev) => {
+                const isValid = !!text;
+                console.log(`TMC changed: ${name}_${fieldType}, value: ${text}, valid: ${isValid}`);
+                return { ...prev, [`${name}_${fieldType}`]: isValid };
+            });
         }
     };
 
     const handleBlurTmc = (name: string, fieldType: 'n' | 'u' | 'v') => {
         const tmcValue = tmcValues[name]?.[fieldType] || '';
         if (isMounted) {
-            setIsFieldValid((prev) => ({ ...prev, [`${name}_${fieldType}`]: !!tmcValue }));
+            setIsFieldValid((prev) => {
+                const isValid = !!tmcValue;
+                console.log(`TMC blurred: ${name}_${fieldType}, value: ${tmcValue}, valid: ${isValid}`);
+                return { ...prev, [`${name}_${fieldType}`]: isValid };
+            });
         }
 
         const updatedField = field.map((item) => {
@@ -587,14 +664,22 @@ const TabContentEdit = ({
     const handleChangePest = (text: string, name: string) => {
         setPestValues((prev) => ({ ...prev, [name]: text }));
         if (isMounted) {
-            setIsFieldValid((prev) => ({ ...prev, [name]: !!text }));
+            setIsFieldValid((prev) => {
+                const isValid = !!text;
+                console.log(`Pest changed: ${name}, value: ${text}, valid: ${isValid}`);
+                return { ...prev, [name]: isValid };
+            });
         }
     };
 
     const handleBlurPest = (name: string) => {
         const pestValue = pestValues[name] || '';
         if (isMounted) {
-            setIsFieldValid((prev) => ({ ...prev, [name]: !!pestValue }));
+            setIsFieldValid((prev) => {
+                const isValid = !!pestValue;
+                console.log(`Pest blurred: ${name}, value: ${pestValue}, valid: ${isValid}`);
+                return { ...prev, [name]: isValid };
+            });
         }
 
         const updatedField = field.map((item) => {
@@ -629,6 +714,7 @@ const TabContentEdit = ({
             ...prev,
             [selectedValue]: updatedField,
         }));
+        console.log('Image uploaded:', name, newImage);
     };
 
     const handleImageRemoved = (name: string, removedImage: { name: string; thumbUrl: string; originalUrl: string }) => {
@@ -650,22 +736,16 @@ const TabContentEdit = ({
             ...prev,
             [selectedValue]: updatedField,
         }));
+        console.log('Image removed:', name, removedImage);
     };
 
     const handleCloseModalTMC = () => {
         hideModal();
-    };
-
-    let arrayPhotos: any[] = [];
-
-    const photosCheck = (arrayPhotos: any[] = []) => {
-        const hasFotoFields = field.some(item => item?.foto !== undefined);
-        if (!hasFotoFields) return true;
-        return arrayPhotos.length > 0;
+        console.log('TMC modal closed');
     };
 
     const handleAddModalTmc = () => {
-        const controlPointId = tabType === 'control_points' ? itemsTabContent[index]?.[tabType]?.[selectedValue]?.id || '' : '';
+        const paramId = itemsTabContent[index]?.param?.[selectedValue]?.id || '';
         onReload?.();
         router.push({
             pathname: '/checklist',
@@ -675,18 +755,19 @@ const TabContentEdit = ({
                 typeCheckList: '3',
                 statusVisible: 'edit',
                 tabId: zoneId,
-                tabIdTMC: controlPointId,
+                tabIdTMC: paramId,
             },
         });
         hideModal();
+        console.log('TMC modal added, navigating with paramId:', paramId);
     };
 
     const handleLoadTMC = async () => {
-        const controlPointId = tabType === 'control_points' ? itemsTabContent[index]?.[tabType]?.[selectedValue]?.id || '' : '';
+        const paramId = itemsTabContent[index]?.param?.[selectedValue]?.id || '';
         showModal(
             <ShowSelectTMC
                 idChecklist={idCheckList}
-                idTMC={controlPointId}
+                idTMC={paramId}
                 onClosePress={handleCloseModalTMC}
                 onAddPress={handleAddModalTmc}
             />,
@@ -696,8 +777,10 @@ const TabContentEdit = ({
                 modalContent: { paddingTop: 0, paddingRight: 0 },
             }
         );
+        console.log('TMC modal opened with paramId:', paramId);
     };
 
+    // Рендеринг полей
     const transferDataVisible = (data: TransferField[] = []) => {
         if (!Array.isArray(data)) data = [];
         let isNoSelected = false;
@@ -705,7 +788,7 @@ const TabContentEdit = ({
         let isContentHidden = false;
         let isHeaderVisibleTmc = false;
         let isHeaderVisiblePest = false;
-        let selectCounter = 1000;
+        let selectCounter = 0;
 
         const renderedComponents = data.map((item, idx) => {
             if (!item) return null;
@@ -726,11 +809,8 @@ const TabContentEdit = ({
                 return null;
             }
 
-            console.log(`Rendering ${type}:`, componentData);
-
             switch (type) {
                 case 'radio':
-                    const isAnyOptionSelected = componentData.options.some((option) => option.selected);
                     return (
                         <View key={`radio-${idx}`} style={[styles.fieldContainer, { marginBottom: 17 }]}>
                             <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
@@ -743,7 +823,7 @@ const TabContentEdit = ({
                                         height={29}
                                         textSize={14}
                                         textColor={option.color}
-                                        backgroundColor={isAnyOptionSelected ? option.bgcolor : '#5D6377'}
+                                        backgroundColor={option.selected ? option.bgcolor : '#5D6377'}
                                         enabled={option.selected}
                                         onPress={() => handlePressRadioButton(componentData.name, optionIndex)}
                                     />
@@ -775,26 +855,24 @@ const TabContentEdit = ({
                             {isMounted &&
                                 !isFieldValid[componentData.name] &&
                                 inputTexts[componentData.name] !== undefined && (
-                                    <Text style={styles.errorText}>
-                                        {tabType === 'param' ? 'Минимум 5 символов' : 'Поле обязательно'}
-                                    </Text>
+                                    <Text style={styles.errorText}>Минимум 5 символов</Text>
                                 )}
                         </View>
                     );
                 case 'foto':
-                    arrayPhotos = componentData.value || [];
                     return (
-                        <ImagePickerWithCamera
-                            key={`image-${idx}`}
-                            taskId={idTask}
-                            initialImages={componentData.value || []}
-                            path={`checklist/${idCheckList}/${componentData.name}`}
-                            name={componentData.name}
-                            onImageUploaded={(newImage) => handleImageUploaded(componentData.name, newImage)}
-                            onImageRemoved={(removedImage) => handleImageRemoved(componentData.name, removedImage)}
-                            viewGallery={true}
-                            borderColor={photosCheck(componentData.value) ? '#DADADA' : 'red'}
-                        />
+                        <View key={`image-${idx}`} style={{ marginBottom: 17 }}>
+                            <ImagePickerWithCamera
+                                taskId={idTask}
+                                initialImages={componentData.value || []}
+                                path={`checklist/${idCheckList}/${componentData.name}`}
+                                name={componentData.name}
+                                onImageUploaded={(newImage) => handleImageUploaded(componentData.name, newImage)}
+                                onImageRemoved={(removedImage) => handleImageRemoved(componentData.name, removedImage)}
+                                viewGallery={true}
+                                borderColor={isMounted && !isFieldValid[componentData.name] ? 'red' : 'transparent'}
+                            />
+                        </View>
                     );
                 case 'checkbox':
                     return (
@@ -810,26 +888,34 @@ const TabContentEdit = ({
                     const selectedValue = selectedDropdownValues[componentData.name] ?? null;
                     const options = Array.isArray(componentData.options)
                         ? componentData.options.map((opt: any) => ({
-                            label: opt.label || opt.value.toString(),
+                            label: opt.text || opt.value, // Используем text или value для отображения
                             value: parseInt(opt.value),
                             color: opt.color || '#000000',
                         }))
-                        : Object.entries(componentData.options).map(([key, value]: [string, any]) => ({
-                            label: value.label || value.value.toString(),
-                            value: parseInt(key),
-                            color: value.color || '#000000',
+                        : Object.entries(componentData.options).map(([key, opt]: [string, any]) => ({
+                            label: opt.value, // Используем opt.value как текст для отображения
+                            value: parseInt(key), // Ключ объекта как значение
+                            color: opt.color || '#000000',
                         }));
                     const selectedOption = options.find((option) => option.value === selectedValue);
                     const selectedColor = selectedOption ? selectedOption.color : '#000000';
+                    selectCounter++;
+                    console.log(`Rendering Dropdown for ${componentData.name}:`, {
+                        selectedValue,
+                        options,
+                        selectedColor,
+                    });
 
                     return (
-                        <View key={`select-${idx}`} style={[styles.selectContainer]}>
+                        <View key={`select-${idx}`} style={[styles.selectContainer, { zIndex: 1000 - selectCounter }]}>
                             <Text style={[styles.label, { color: '#1C1F37' }]}>{componentData.label}</Text>
                             <Dropdown
                                 style={[
                                     styles.dropdownTMC,
-                                    { width: '50%', zIndex: selectCounter-- },
-                                    isMounted && !isFieldValid[componentData.name] && { borderColor: 'red', borderWidth: 1 },
+                                    isMounted && !isFieldValid[componentData.name] && {
+                                        borderColor: 'red',
+                                        borderWidth: 1,
+                                    },
                                 ]}
                                 data={options}
                                 labelField="label"
@@ -837,10 +923,10 @@ const TabContentEdit = ({
                                 value={selectedValue}
                                 onChange={(item) => handleSelectDropdown(item.value, componentData.name)}
                                 placeholder="Выбрать"
-                                placeholderStyle={{ color: '#000000', fontSize: 12 }}
-                                selectedTextStyle={{ color: selectedColor, fontSize: 12 }}
+                                placeholderStyle={{ color: '#000000', fontSize: 14 }}
+                                selectedTextStyle={{ color: selectedColor, fontSize: 14 }}
                                 containerStyle={{ backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' }}
-                                itemTextStyle={{ fontSize: 12 }}
+                                itemTextStyle={{ fontSize: 14 }}
                             />
                         </View>
                     );
@@ -852,7 +938,7 @@ const TabContentEdit = ({
                                     <View style={styles.tmcTitleContainer}>
                                         <Text style={styles.tmcTitle}>Наличие препаратов в ТК</Text>
                                         <Button
-                                            TouchableComponent={TouchableOpacity}
+                                            TouchableComponent={TouchableOpacity as any}
                                             icon={{
                                                 name: 'plus',
                                                 type: 'font-awesome',
@@ -892,8 +978,7 @@ const TabContentEdit = ({
                                             <TextInput
                                                 style={[
                                                     styles.tmcTextInput,
-                                                    isMounted &&
-                                                    !isFieldValid[`${componentData.name}_n`] && {
+                                                    isMounted && !isFieldValid[`${componentData.name}_n`] && {
                                                         borderColor: 'red',
                                                         borderWidth: 1,
                                                     },
@@ -908,8 +993,7 @@ const TabContentEdit = ({
                                             <TextInput
                                                 style={[
                                                     styles.tmcTextInput,
-                                                    isMounted &&
-                                                    !isFieldValid[`${componentData.name}_u`] && {
+                                                    isMounted && !isFieldValid[`${componentData.name}_u`] && {
                                                         borderColor: 'red',
                                                         borderWidth: 1,
                                                     },
@@ -924,8 +1008,7 @@ const TabContentEdit = ({
                                             <TextInput
                                                 style={[
                                                     styles.tmcTextInput,
-                                                    isMounted &&
-                                                    !isFieldValid[`${componentData.name}_v`] && {
+                                                    isMounted && !isFieldValid[`${componentData.name}_v`] && {
                                                         borderColor: 'red',
                                                         borderWidth: 1,
                                                     },
@@ -987,17 +1070,16 @@ const TabContentEdit = ({
         return { renderedComponents, isContentHidden };
     };
 
+    // Проверка валидности полей
     const areAllFieldsValid = (isContentHidden: boolean) => {
         if (!isMounted || isContentHidden) return true;
 
-        const requiredFields = field.filter((item) => item.text || item.select || item.tmc || item.pest);
-        return requiredFields.every((item) => {
-            if (item.text) {
-                return isFieldValid[item.text.name];
-            }
-            if (item.select) {
-                return isFieldValid[item.select.name];
-            }
+        const requiredFields = field.filter(
+            (item) => item.text || item.select || item.tmc || item.pest || item.foto,
+        );
+        const isValid = requiredFields.every((item) => {
+            if (item.text) return isFieldValid[item.text.name];
+            if (item.select) return isFieldValid[item.select.name];
             if (item.tmc && item.tmc.name !== 'placeholder_tmc') {
                 return (
                     isFieldValid[`${item.tmc.name}_n`] &&
@@ -1005,42 +1087,78 @@ const TabContentEdit = ({
                     isFieldValid[`${item.tmc.name}_v`]
                 );
             }
-            if (item.pest) {
-                return isFieldValid[item.pest.name];
-            }
+            if (item.pest) return isFieldValid[item.pest.name];
+            if (item.foto) return isFieldValid[item.foto.name];
             return true;
         });
+        console.log('All fields valid:', isValid, 'isFieldValid:', isFieldValid);
+        return isValid;
     };
 
+    // Навигация
     const handleNext = async () => {
         const { isContentHidden } = transferDataVisible(field);
-        if (!areAllFieldsValid(isContentHidden)) return;
+        if (!areAllFieldsValid(isContentHidden)) {
+            console.log('Validation failed, cannot proceed to next');
+            return;
+        }
 
         saveCurrentState(selectedValue);
 
         if (selectedValue < items.length - 1) {
             setSelectedValue((prev) => prev + 1);
+            console.log('Navigating to next parameter:', selectedValue + 1);
         } else if (!isLastTab) {
             onNextTab?.();
+            console.log('Navigating to next tab');
         }
     };
 
     const handlePrevious = async () => {
         const { isContentHidden } = transferDataVisible(field);
-        if (!areAllFieldsValid(isContentHidden)) return;
+        if (!areAllFieldsValid(isContentHidden)) {
+            console.log('Validation failed, cannot go back');
+            return;
+        }
 
         saveCurrentState(selectedValue);
 
         if (selectedValue > 0) {
             setSelectedValue((prev) => prev - 1);
+            console.log('Navigating to previous parameter:', selectedValue - 1);
         } else if (!isFirstTab) {
             onPreviousTab?.();
+            console.log('Navigating to previous tab');
         }
     };
 
-    const { isContentHidden } = transferDataVisible(field);
-    const isNavigationEnabled = areAllFieldsValid(isContentHidden);
+    // Кастомизация выпадающего списка
+    const renderRightIcon = () => {
+        const selectedItem = items.find((item) => item.value === selectedValue);
+        return (
+            <View style={styles.rightIconContainer}>
+                {selectedItem && (
+                    <View style={styles.dot}>
+                        <DotSolid color={selectedItem.dotColor} />
+                    </View>
+                )}
+                <Text style={styles.arrow}>▼</Text>
+            </View>
+        );
+    };
 
+    const renderItem = (item: { label: string; value: number; dotColor: string }) => {
+        return (
+            <View style={styles.item}>
+                <Text style={styles.textItem}>{item.label}</Text>
+                <View style={styles.dot}>
+                    <DotSolid color={item.dotColor} />
+                </View>
+            </View>
+        );
+    };
+
+    // Рендеринг
     return (
         <View style={styles.tab1Container}>
             {isLoading ? (
@@ -1064,6 +1182,8 @@ const TabContentEdit = ({
                             placeholderStyle={styles.dropdownText}
                             selectedTextStyle={styles.dropdownText}
                             itemTextStyle={styles.dropdownItemText}
+                            renderRightIcon={renderRightIcon}
+                            renderItem={renderItem}
                         />
                     </View>
                     <KeyboardAwareScrollView>
@@ -1079,8 +1199,8 @@ const TabContentEdit = ({
                                 textColor="#FFFFFF"
                                 backgroundColor="#5D6377"
                                 onPress={handlePrevious}
-                                enabled={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
-                                touchable={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue > 0 || !isFirstTab)}
+                                enabled={areAllFieldsValid(transferDataVisible(field).isContentHidden) && (selectedValue > 0 || !isFirstTab)}
+                                touchable={areAllFieldsValid(transferDataVisible(field).isContentHidden) && (selectedValue > 0 || !isFirstTab)}
                             />
                             <TextButton
                                 text="Далее"
@@ -1090,8 +1210,8 @@ const TabContentEdit = ({
                                 textColor="#FFFFFF"
                                 backgroundColor="#017EFA"
                                 onPress={handleNext}
-                                enabled={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
-                                touchable={photosCheck(arrayPhotos) && isNavigationEnabled && (selectedValue < items.length - 1 || !isLastTab)}
+                                enabled={areAllFieldsValid(transferDataVisible(field).isContentHidden) && (selectedValue < items.length - 1 || !isLastTab)}
+                                touchable={areAllFieldsValid(transferDataVisible(field).isContentHidden) && (selectedValue < items.length - 1 || !isLastTab)}
                             />
                         </View>
                     </Footer>
@@ -1103,6 +1223,7 @@ const TabContentEdit = ({
     );
 };
 
+// Стили
 const styles = StyleSheet.create({
     tab1Container: {
         flex: 1,
@@ -1145,6 +1266,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderBottomWidth: 1,
         borderBottomColor: '#DADADA',
+        marginBottom: 17,
     },
     tmcContainer: {
         paddingBottom: 10,
@@ -1207,13 +1329,16 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         paddingHorizontal: 8,
         backgroundColor: '#FFFFFF',
+        width: '40%',
     },
     dropdownText: {
         color: '#000000',
-        fontSize: 12,
+        fontSize: 14,
     },
     dropdownItemText: {
+        color: '#1C1F37',
         fontSize: 14,
+        fontWeight: '400',
     },
     errorText: {
         color: 'red',
@@ -1230,6 +1355,27 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         justifyContent: 'space-between',
+    },
+    rightIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    dot: {
+        marginRight: 8,
+    },
+    arrow: {
+        fontSize: 14,
+        color: '#5D6377',
+    },
+    item: {
+        padding: 17,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    textItem: {
+        flex: 1,
+        fontSize: 14,
     },
 });
 

@@ -13,6 +13,7 @@ import Tab3ContentEdit from '@/components/Tab3ContentEdit';
 import { fetchDataSaveStorage, getDataFromStorage } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { usePopup } from '@/context/PopupContext';
+import TabContentEdit from "@/components/TabContentEdit";
 
 interface TabContent {
     key: string;
@@ -159,7 +160,7 @@ const ChecklistScreen = memo(() => {
                 tabContent = <Tab3Content itemsTabContent={checkList.zones} index={index} tabId={tabIdTMC} />;
             } else if (typeCheckList === '1' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab2ContentEdit
+                    <TabContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -173,7 +174,7 @@ const ChecklistScreen = memo(() => {
                 );
             } else if (typeCheckList === '2' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab2ContentEdit
+                    <TabContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -187,7 +188,7 @@ const ChecklistScreen = memo(() => {
                 );
             } else if (typeCheckList === '3' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab3ContentEdit
+                    <TabContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}

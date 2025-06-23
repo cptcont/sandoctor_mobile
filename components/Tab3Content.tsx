@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
-import { Option, Pest, Point, TMCField, Zone } from "@/types/Checklist";
+import { Zone } from "@/types/Checklist";
 import { TextButton } from "@/components/TextButton";
 import Footer from "@/components/Footer";
 import { TransferField } from "@/types/Field";
@@ -49,9 +49,12 @@ const Tab3Content = ({
     const [isInitialized, setIsInitialized] = useState(false);
 
     // Формирование элементов выпадающего списка
-    const items: { label: string; value: string }[] = itemsTabContent[index].control_points.map((data: Point, index: number) =>
-        ({ label: data.name.toString(), value: `tab${index}` })
-    );
+    const items: { label: string; value: string }[] = itemsTabContent?.[index]?.param
+        ? itemsTabContent[index].param.map((data: Point, idx: number) => ({
+            label: data.name.toString(),
+            value: `tab${idx}`,
+        }))
+        : [];
 
     // Трансформация объекта TMC в массив
     const transformObjectToArrayTMC = (originalObject: any) => {
@@ -78,9 +81,9 @@ const Tab3Content = ({
 
     // Синхронизация значения выпадающего списка с tabId
     useEffect(() => {
-        if (tabId && items.length > 0 && !isInitialized) {
+        if (tabId && items.length > 0 && !isInitialized && itemsTabContent?.[index]?.param) {
             // Поиск индекса контрольной точки по tabId
-            const controlPointIndex = itemsTabContent[index]?.control_points?.findIndex(
+            const controlPointIndex = itemsTabContent[index].param.findIndex(
                 (cp: any) => cp.id === tabId
             );
             // Если индекс найден, устанавливаем соответствующее значение
@@ -99,9 +102,9 @@ const Tab3Content = ({
             const num = match ? Number(match[0]) : 0;
 
             // Получение данных полей, TMC и вредителей
-            const fields = itemsTabContent[index]?.control_points[num]?.fields;
-            const TMC = itemsTabContent[index]?.control_points[num]?.tmc;
-            const pests = itemsTabContent[index]?.control_points[num]?.pests;
+            const fields = itemsTabContent?.[index]?.param?.[num]?.fields || [];
+            const TMC = itemsTabContent?.[index]?.param?.[num]?.tmc || [];
+            const pests = itemsTabContent?.[index]?.param?.[num]?.pests || [];
 
             // Трансформация данных
             const fieldsTMC = Array.isArray(TMC) ? TMC.map((data: any) => transformObjectToArrayTMC(data)).flat() : [];
@@ -173,6 +176,7 @@ const Tab3Content = ({
         if (data.type === "pest") {
             return { pest: { label: data.label, name: data.name, value: data.value } };
         }
+        return {};
     });
 
     // Отображение данных
@@ -255,7 +259,7 @@ const Tab3Content = ({
                 case 'checkbox':
                     return <View key={`checkbox-${index}`} />;
                 case 'select':
-                    const selectedOption = Object.values(componentData.options || {}).find(option => option.selected === true);
+                    const selectedOption = Object.values(componentData.options || {}).find(option => option.selected === true) || { value: '', color: '#939393' };
                     return (
                         <View key={`select-${index}`} style={[styles.text, { marginBottom: 17 }]}>
                             <Text style={[styles.title, { color: '#1C1F37' }]}>{`${componentData.label}`}</Text>
