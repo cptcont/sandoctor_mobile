@@ -1,5 +1,5 @@
-import React, { useState, useMemo, memo } from 'react';
-import { View, StyleSheet, useWindowDimensions, Text, Button, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
+import { View, StyleSheet, useWindowDimensions, Text, Button, ActivityIndicator, ScrollView } from 'react-native';
 import { CustomHeaderScreen } from '@/components/CustomHeaderScreen';
 import { router, useLocalSearchParams } from 'expo-router';
 import { NavigationState, SceneMap, SceneRendererProps, TabView } from 'react-native-tab-view';
@@ -13,7 +13,6 @@ import Tab3ContentEdit from '@/components/Tab3ContentEdit';
 import { fetchDataSaveStorage, getDataFromStorage } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { usePopup } from '@/context/PopupContext';
-import TabContentEdit from "@/components/TabContentEdit";
 
 interface TabContent {
     key: string;
@@ -39,6 +38,8 @@ const ChecklistScreen = memo(() => {
     const [isLastTab, setIsLastTab] = useState(false);
     const { showPopup } = usePopup();
     const { width: screenWidth } = useWindowDimensions();
+    const scrollViewRef = useRef<ScrollView>(null);
+    const tabWidths = useRef<number[]>([]);
 
     // Загрузка данных чек-листа
     const loadChecklists = async () => {
@@ -82,7 +83,7 @@ const ChecklistScreen = memo(() => {
                 setRoutes([]);
             }
         } catch (err) {
-            setError('Не удалось загрузить данные');
+            setError('Не удалось loading данные');
             setChecklists([]);
         } finally {
             setIsLoading(false);
@@ -148,7 +149,11 @@ const ChecklistScreen = memo(() => {
     // Формирование данных для вкладок
     const tabsData = useMemo(() => {
         if (!checkList?.zones?.length) {
-            return [{ key: 'tab0', title: 'Нет данных', content: <Text>Нет данных для отображения</Text> }];
+            return [{
+                key: 'tab0',
+                title: 'Нет данных',
+                content: <Text style={styles.noDataText}>Нет данных для отображения</Text> // Исправлено: строка обёрнута в <Text>
+            }];
         }
         return checkList.zones.map((zone: Zone, key: number) => {
             let tabContent = null;
@@ -160,7 +165,7 @@ const ChecklistScreen = memo(() => {
                 tabContent = <Tab3Content itemsTabContent={checkList.zones} index={index} tabId={tabIdTMC} />;
             } else if (typeCheckList === '1' && statusVisible === 'edit') {
                 tabContent = (
-                    <TabContentEdit
+                    <Tab2ContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -174,7 +179,7 @@ const ChecklistScreen = memo(() => {
                 );
             } else if (typeCheckList === '2' && statusVisible === 'edit') {
                 tabContent = (
-                    <TabContentEdit
+                    <Tab2ContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -188,7 +193,7 @@ const ChecklistScreen = memo(() => {
                 );
             } else if (typeCheckList === '3' && statusVisible === 'edit') {
                 tabContent = (
-                    <TabContentEdit
+                    <Tab3ContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -233,22 +238,64 @@ const ChecklistScreen = memo(() => {
     }, [tabsData, isLoading]);
 
     // Кастомный рендеринг панели вкладок
-    const renderTabBar = (props: SceneRendererProps & { navigationState: NavigationState<Route> }) => (
-        <View style={styles.tabBarContainer}>
-            {props.navigationState.routes.map((route: Route, i: number) => (
-                <View key={route.key} style={styles.tabWrapper}>
-                    <Tab
-                        label={route.title ?? ''}
-                        isActive={i === index}
-                        onPress={() => handleTabChange(i)}
-                        showDot={statusVisible === 'edit'}
-                        color={route.tabColor}
-                    />
-                    <View style={styles.tabSeparator} />
-                </View>
-            ))}
-        </View>
-    );
+    const renderTabBar = (props: SceneRendererProps & { navigationState: NavigationState<Route> }) => {
+        const measureTab = (index: number, event: any) => {
+            const { width } = event.nativeEvent.layout;
+            tabWidths.current[index] = width;
+        };
+
+        useEffect(() => {
+            if (scrollViewRef.current && tabWidths.current[index]) {
+                let offsetX = 0;
+                for (let i = 0; i < index; i++) {
+                    offsetX += tabWidths.current[i] || 0;
+                }
+                const screenCenter = screenWidth / 2;
+                const tabWidth = tabWidths.current[index] || 0;
+                scrollViewRef.current.scrollTo({
+                    x: offsetX - screenCenter + tabWidth / 2,
+                    animated: true,
+                });
+            }
+        }, [index]);
+
+        return (
+            <View style={styles.tabBarContainer}>
+                <ScrollView
+                    ref={scrollViewRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.scrollContent}
+                >
+                    {props.navigationState.routes.map((route: Route, i: number) => (
+                        <View
+                            key={route.key}
+                            style={styles.tabWrapper}
+                            onLayout={(event) => measureTab(i, event)}
+                        >
+                            <Tab
+                                label={route.title ?? ''}
+                                isActive={i === index}
+                                onPress={() => handleTabChange(i)}
+                                showDot={statusVisible === 'edit'}
+                                color={route.tabColor}
+                            />
+                            <View style={styles.tabSeparator} />
+                            {/* Горизонтальная линия только для неактивных вкладок */}
+                            {i !== index && (
+                                <View style={[styles.horizontalSeparator, {
+                                    width: tabWidths.current[i] || '100%',
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: 0,
+                                }]} />
+                            )}
+                        </View>
+                    ))}
+                </ScrollView>
+            </View>
+        );
+    };
 
     if (isLoading) {
         return (
@@ -284,7 +331,7 @@ const ChecklistScreen = memo(() => {
                 onIndexChange={handleTabChange}
                 initialLayout={{ width: screenWidth }}
                 renderTabBar={renderTabBar}
-                swipeEnabled={false}
+                swipeEnabled={true}
                 lazy={false}
                 animationEnabled={false}
             />
@@ -303,20 +350,31 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     tabBarContainer: {
-        flexDirection: 'row',
         backgroundColor: '#fff',
-        height: 30,
-        borderBottomWidth: 1, // Добавляем горизонтальную полоску под панелью вкладок
-        borderBottomColor: '#ccc', // Цвет горизонтальной полоски
+    },
+    scrollContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     tabWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
+        position: 'relative', // Для позиционирования горизонтальной линии
     },
     tabSeparator: {
         width: 1,
         height: '100%',
-        backgroundColor: '#ccc', // Цвет вертикальной полоски
+        backgroundColor: '#ccc',
+    },
+    horizontalSeparator: {
+        height: 1,
+        backgroundColor: '#ccc',
+    },
+    noDataText: {
+        textAlign: 'center',
+        marginTop: 20,
+        fontSize: 16,
+        color: '#333',
     },
 });
 

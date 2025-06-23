@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
         height: 30,
         borderStyle: 'solid',
         borderWidth: 1,
-        borderColor: '#ECECEC',
+        borderColor: '#ccc',
         borderBottomWidth: 1,
         borderBottomColor: '#ECECEC',
         borderRightWidth: 0,
