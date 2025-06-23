@@ -10,6 +10,7 @@ import Tab2Content from '@/components/Tab2Content';
 import Tab3Content from '@/components/Tab3Content';
 import Tab2ContentEdit from '@/components/Tab2ContentEdit';
 import Tab3ContentEdit from '@/components/Tab3ContentEdit';
+import TabContentEdit from '@/components/TabContentEdit';
 import { fetchDataSaveStorage, getDataFromStorage } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { usePopup } from '@/context/PopupContext';
@@ -165,35 +166,41 @@ const ChecklistScreen = memo(() => {
                 tabContent = <Tab3Content itemsTabContent={checkList.zones} index={index} tabId={tabIdTMC} />;
             } else if (typeCheckList === '1' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab2ContentEdit
+                    <TabContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
                         onNextTab={handleNextTab}
                         onPreviousTab={handlePreviousTab}
                         idCheckList={idCheckList}
+                        tabId={tabIdTMC}
                         itemsTabContent={checkList.zones}
                         isFirstTab={isFirstTab}
                         isLastTab={isLastTab}
+                        zoneId={zone.id}
+                        onReload={updateCheckList}
                     />
                 );
             } else if (typeCheckList === '2' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab2ContentEdit
+                    <TabContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
                         onNextTab={handleNextTab}
                         onPreviousTab={handlePreviousTab}
                         idCheckList={idCheckList}
+                        tabId={tabIdTMC}
                         itemsTabContent={checkList.zones}
                         isFirstTab={isFirstTab}
                         isLastTab={isLastTab}
+                        zoneId={zone.id}
+                        onReload={updateCheckList}
                     />
                 );
             } else if (typeCheckList === '3' && statusVisible === 'edit') {
                 tabContent = (
-                    <Tab3ContentEdit
+                    <TabContentEdit
                         id={id}
                         index={index}
                         idTask={idCheckList}
@@ -280,16 +287,6 @@ const ChecklistScreen = memo(() => {
                                 showDot={statusVisible === 'edit'}
                                 color={route.tabColor}
                             />
-                            <View style={styles.tabSeparator} />
-                            {/* Горизонтальная линия только для неактивных вкладок */}
-                            {i !== index && (
-                                <View style={[styles.horizontalSeparator, {
-                                    width: tabWidths.current[i] || '100%',
-                                    position: 'absolute',
-                                    bottom: 0,
-                                    left: 0,
-                                }]} />
-                            )}
                         </View>
                     ))}
                 </ScrollView>
@@ -353,8 +350,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     scrollContent: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#ccc',
     },
     tabWrapper: {
         flexDirection: 'row',
