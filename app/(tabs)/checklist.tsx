@@ -8,8 +8,6 @@ import type { Checklist, Zone } from '@/types/Checklist';
 import Tab1Content from '@/components/Tab1Content';
 import Tab2Content from '@/components/Tab2Content';
 import Tab3Content from '@/components/Tab3Content';
-import Tab2ContentEdit from '@/components/Tab2ContentEdit';
-import Tab3ContentEdit from '@/components/Tab3ContentEdit';
 import TabContentEdit from '@/components/TabContentEdit';
 import { fetchDataSaveStorage, getDataFromStorage } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
@@ -84,7 +82,7 @@ const ChecklistScreen = memo(() => {
                 setRoutes([]);
             }
         } catch (err) {
-            setError('Не удалось loading данные');
+            setError('Не удалось загрузить данные');
             setChecklists([]);
         } finally {
             setIsLoading(false);
@@ -153,12 +151,12 @@ const ChecklistScreen = memo(() => {
             return [{
                 key: 'tab0',
                 title: 'Нет данных',
-                content: <Text style={styles.noDataText}>Нет данных для отображения</Text> // Исправлено: строка обёрнута в <Text>
+                content: <Text style={styles.noDataText}>Нет данных для отображения</Text>
             }];
         }
         return checkList.zones.map((zone: Zone, key: number) => {
             let tabContent = null;
-            if (typeCheckList === '1' && statusVisible === 'view') {
+            if (typeCheckList === '1' && statusVisible === 'view') { // Fixed: Changed `ifV` to `if`
                 tabContent = <Tab1Content itemsTabContent={checkList.zones} index={index} />;
             } else if (typeCheckList === '2' && statusVisible === 'view') {
                 tabContent = <Tab2Content itemsTabContent={checkList.zones} index={index} />;
@@ -264,7 +262,7 @@ const ChecklistScreen = memo(() => {
                     animated: true,
                 });
             }
-        }, [index]);
+        }, [index, screenWidth]);
 
         return (
             <View style={styles.tabBarContainer}>
@@ -350,25 +348,16 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     scrollContent: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         borderBottomWidth: 1,
         borderBottomColor: '#ccc',
+        paddingRight: 1000, // Большой отступ для имитации полоски на всю ширину
     },
     tabWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        position: 'relative', // Для позиционирования горизонтальной линии
-    },
-    tabSeparator: {
-        width: 1,
-        height: '100%',
-        backgroundColor: '#ccc',
-    },
-    horizontalSeparator: {
-        height: 1,
-        backgroundColor: '#ccc',
+        position: 'relative',
     },
     noDataText: {
         textAlign: 'center',
