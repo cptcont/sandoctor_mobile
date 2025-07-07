@@ -1,5 +1,5 @@
-import React, { useEffect, useState, memo, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, ActivityIndicator, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, memo, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, ActivityIndicator, TouchableOpacity, Keyboard } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Button } from '@rneui/themed';
@@ -14,6 +14,7 @@ import { useModal } from '@/context/ModalContext';
 import { ShowSelectTMC } from '@/components/showSelectTMC';
 import { router } from 'expo-router';
 import { DotSolid } from "@/components/icons/Icons";
+import { TextInput as NativeTextInput } from 'react-native';
 
 type TabContentEditType = {
     id: string | string[];
@@ -52,7 +53,7 @@ const TabContentEdit = ({
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [inputTexts, setInputTexts] = useState<Record<string, string>>({});
     const [isEnabled, setIsEnabled] = useState<Record<string, boolean>>({});
-    const [tmcValues, setTmcValues] = useState<Record<string, { n: string; u: string; v: string }>>({});
+    const [tmcValues, setTmcValues] = useState<Record<string, { p: string; n: string; u: string; v: string }>>({});
     const [pestValues, setPestValues] = useState<Record<string, string>>({});
     const [radioStates, setRadioStates] = useState<
         Record<string, { yes: boolean; no: boolean; isContentVisible: boolean }>
@@ -63,6 +64,9 @@ const TabContentEdit = ({
     const [isMounted, setIsMounted] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { showModal, hideModal } = useModal();
+    const [validParams, setValidParams] = useState<Record<number, boolean>>({});
+    const pestInputRefs = useRef<Record<string, NativeTextInput | null>>({});
+    const tmcInputRefs = useRef<Record<string, Record<'p' | 'n' | 'u' | 'v', NativeTextInput | null>>>({});
 
     // Инициализация isMounted
     useEffect(() => {
@@ -113,17 +117,20 @@ const TabContentEdit = ({
     const transformObjectToArrayTMC = (originalObject: any) => {
         const { name, fields, id } = originalObject;
         const fieldName = fields?.p?.name?.replace(/\[[^\]]+\]$/, '') || `tmc_${id}`;
-        return [{
+        const result = [{
             name: fieldName,
             label: name || 'Без названия',
             id: id || '',
             type: 'tmc',
             value: {
-                n: { value: fields?.n?.value || '' },
-                u: { value: fields?.u?.value || '' },
-                v: { value: fields?.v?.value || '' },
+                p: { value: fields?.p?.value !== undefined ? fields.p.value.toString() : '' },
+                n: { value: fields?.n?.value !== undefined ? fields.n.value.toString() : '' },
+                u: { value: fields?.u?.value !== undefined ? fields.u.value.toString() : '' },
+                v: { value: fields?.v?.value !== undefined ? fields.v.value.toString() : '' },
             },
         }];
+        console.log('Transformed TMC:', result); // Для отладки
+        return result;
     };
 
     // Трансформация Pests
@@ -184,18 +191,18 @@ const TabContentEdit = ({
                         },
                     };
                 }
+                if (field.type === 'pest') {
+                    return {
+                        pest: { label: field.label, name: field.name, value: field.value || '' },
+                    };
+                }
                 if (field.type === 'tmc') {
                     return {
                         tmc: {
                             label: field.label || '',
                             name: field.name,
-                            value: field.value || { n: { value: '' }, u: { value: '' }, v: { value: '' } },
+                            value: field.value || { p: { value: '' }, n: { value: '' }, u: { value: '' }, v: { value: '' } },
                         },
-                    };
-                }
-                if (field.type === 'pest') {
-                    return {
-                        pest: { label: field.label, name: field.name, value: field.value || '' },
                     };
                 }
                 return null;
@@ -209,11 +216,20 @@ const TabContentEdit = ({
             ...prev,
             [value]: field,
         }));
-        console.log('Saved state for value:', value, 'Fields:', field);
+        const isContentHidden = transferDataVisible(field).isContentHidden;
+        const isCurrentParamValid = areAllFieldsValid(isContentHidden);
+        setValidParams((prev) => ({
+            ...prev,
+            [value]: isCurrentParamValid,
+        }));
+        //console.log('Saved state for value:', value, 'Fields:', field, 'Valid:', isCurrentParamValid);
     };
 
     // Загрузка полей
     const loadFields = (value: number) => {
+        console.log('TMC data from server:', itemsTabContent[index]?.param?.[value].tmc);
+        console.log('TMC values from server:', itemsTabContent[index]?.param?.[value].tmc?.map(item => item.value));
+
         if (!itemsTabContent[index]?.param?.[value]) {
             console.log('No params found for value:', value);
             return;
@@ -223,15 +239,13 @@ const TabContentEdit = ({
 
         if (savedFields) {
             setField(savedFields);
-            console.log('Loaded saved fields for value:', value, savedFields);
-
             const updatedInputTexts: Record<string, string> = {};
             const updatedIsEnabled: Record<string, boolean> = {};
             const updatedRadioStates: Record<
                 string,
                 { yes: boolean; no: boolean; isContentVisible: boolean }
             > = {};
-            const updatedTmcValues: Record<string, { n: string; u: string; v: string }> = {};
+            const updatedTmcValues: Record<string, { p: string; n: string; u: string; v: string }> = {};
             const updatedPestValues: Record<string, string> = {};
             const updatedDropdownValues: Record<string, number | null> = {};
             const updatedFieldValid: Record<string, boolean> = {};
@@ -256,6 +270,7 @@ const TabContentEdit = ({
                             (opt) => opt.selected && opt.value === '1',
                         ),
                     };
+                    updatedFieldValid[item.radio.name] = item.radio.options.some((opt) => opt.selected);
                 }
                 if (item?.select) {
                     const options = Array.isArray(item.select.options)
@@ -271,10 +286,12 @@ const TabContentEdit = ({
                 }
                 if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
                     updatedTmcValues[item.tmc.name] = {
-                        n: item.tmc.value.n?.value || '',
-                        u: item.tmc.value.u?.value || '',
-                        v: item.tmc.value.v?.value || '',
+                        p: item.tmc.value.p?.value !== undefined ? item.tmc.value.p.value.toString() : '',
+                        n: item.tmc.value.n?.value !== undefined ? item.tmc.value.n.value.toString() : '',
+                        u: item.tmc.value.u?.value !== undefined ? item.tmc.value.u.value.toString() : '',
+                        v: item.tmc.value.v?.value !== undefined ? item.tmc.value.v.value.toString() : '',
                     };
+                    updatedFieldValid[`${item.tmc.name}_p`] = true; // p всегда валидно
                     updatedFieldValid[`${item.tmc.name}_n`] = !!item.tmc.value.n?.value;
                     updatedFieldValid[`${item.tmc.name}_u`] = !!item.tmc.value.u?.value;
                     updatedFieldValid[`${item.tmc.name}_v`] = !!item.tmc.value.v?.value;
@@ -293,9 +310,7 @@ const TabContentEdit = ({
             setSelectedDropdownValues((prev) => ({ ...prev, ...updatedDropdownValues }));
             setIsFieldValid((prev) => ({ ...prev, ...updatedFieldValid }));
             console.log('Updated states:', {
-                inputTexts: updatedInputTexts,
-                isFieldValid: updatedFieldValid,
-                selectedDropdownValues: updatedDropdownValues,
+                tmcValues: updatedTmcValues,
             });
         } else {
             const fields = itemsTabContent[index].param[value]?.fields || [];
@@ -316,10 +331,8 @@ const TabContentEdit = ({
             const fieldsPests = Array.isArray(pests)
                 ? pests.map(transformObjectToArrayPests).flat()
                 : [];
-            const fieldItem = Array.isArray(fields) ? fields : [];
-            const combinedArray = [...fieldItem, ...fieldsTMC, ...fieldsPests];
-
-            console.log('Combined array for fields:', combinedArray);
+            // Изменяем порядок: сначала fieldsPests, затем fieldsTMC
+            const combinedArray = [...fields, ...fieldsPests, ...fieldsTMC];
 
             const transformedField = transformData(combinedArray);
             setField(transformedField);
@@ -330,7 +343,7 @@ const TabContentEdit = ({
                 string,
                 { yes: boolean; no: boolean; isContentVisible: boolean }
             > = {};
-            const initialTmcValues: Record<string, { n: string; u: string; v: string }> = {};
+            const initialTmcValues: Record<string, { p: string; n: string; u: string; v: string }> = {};
             const initialPestValues: Record<string, string> = {};
             const initialDropdownValues: Record<string, number | null> = {};
             const initialFieldValid: Record<string, boolean> = {};
@@ -355,6 +368,7 @@ const TabContentEdit = ({
                             (opt) => opt.selected && opt.value === '1',
                         ),
                     };
+                    initialFieldValid[item.radio.name] = item.radio.options.some((opt) => opt.selected);
                 }
                 if (item?.select) {
                     const options = Array.isArray(item.select.options)
@@ -370,10 +384,12 @@ const TabContentEdit = ({
                 }
                 if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
                     initialTmcValues[item.tmc.name] = {
-                        n: item.tmc.value.n?.value || '',
-                        u: item.tmc.value.u?.value || '',
-                        v: item.tmc.value.v?.value || '',
+                        p: item.tmc.value.p?.value !== undefined ? item.tmc.value.p.value.toString() : '',
+                        n: item.tmc.value.n?.value !== undefined ? item.tmc.value.n.value.toString() : '',
+                        u: item.tmc.value.u?.value !== undefined ? item.tmc.value.u.value.toString() : '',
+                        v: item.tmc.value.v?.value !== undefined ? item.tmc.value.v.value.toString() : '',
                     };
+                    initialFieldValid[`${item.tmc.name}_p`] = true; // p всегда валидно
                     initialFieldValid[`${item.tmc.name}_n`] = !!item.tmc.value.n?.value;
                     initialFieldValid[`${item.tmc.name}_u`] = !!item.tmc.value.u?.value;
                     initialFieldValid[`${item.tmc.name}_v`] = !!item.tmc.value.v?.value;
@@ -395,7 +411,7 @@ const TabContentEdit = ({
                 ...prev,
                 [value]: transformedField,
             }));
-            console.log('Initialized fields:', transformedField, 'isFieldValid:', initialFieldValid);
+            console.log('Initialized tmcValues:', initialTmcValues);
         }
     };
 
@@ -418,6 +434,7 @@ const TabContentEdit = ({
                 updatedFieldValid[item.select.name] = selectedDropdownValues[item.select.name] !== null && selectedDropdownValues[item.select.name] !== undefined;
             }
             if (item?.tmc && item.tmc.name !== 'placeholder_tmc') {
+                updatedFieldValid[`${item.tmc.name}_p`] = !!tmcValues[item.tmc.name]?.p;
                 updatedFieldValid[`${item.tmc.name}_n`] = !!tmcValues[item.tmc.name]?.n;
                 updatedFieldValid[`${item.tmc.name}_u`] = !!tmcValues[item.tmc.name]?.u;
                 updatedFieldValid[`${item.tmc.name}_v`] = !!tmcValues[item.tmc.name]?.v;
@@ -428,18 +445,32 @@ const TabContentEdit = ({
             if (item?.foto) {
                 updatedFieldValid[item.foto.name] = Array.isArray(item.foto.value) && item.foto.value.length > 0;
             }
+            if (item?.radio) {
+                updatedFieldValid[item.radio.name] = item.radio.options.some((opt) => opt.selected);
+            }
         });
         setIsFieldValid((prev) => {
-            console.log('Updated isFieldValid:', updatedFieldValid, 'Previous isFieldValid:', prev);
+            //console.log('Updated isFieldValid:', updatedFieldValid, 'Previous isFieldValid:', prev);
             return { ...prev, ...updatedFieldValid };
         });
-    }, [field, inputTexts, selectedDropdownValues, tmcValues, pestValues, isMounted]);
+
+        // Проверяем валидность текущего параметра
+        const isContentHidden = transferDataVisible(field).isContentHidden;
+        const isCurrentParamValid = areAllFieldsValid(isContentHidden);
+        setValidParams((prev) => ({
+            ...prev,
+            [selectedValue]: isCurrentParamValid,
+        }));
+    }, [field, inputTexts, selectedDropdownValues, tmcValues, pestValues, radioStates, isMounted, selectedValue]);
 
     // Отправка обновлений на сервер
     const sendFieldUpdate = async (name: string, value: any, type: string) => {
         try {
             let payload;
-            if (type === 'radio') {
+            if (type === 'tmc') {
+                payload = { answer: name, value };
+                console.log('payload tmc', payload);
+            } else if (type === 'radio') {
                 payload = { answer: name, value };
             } else if (type === 'text') {
                 payload = { answer: name, value };
@@ -447,8 +478,6 @@ const TabContentEdit = ({
                 payload = { answer: name, checked: value };
             } else if (type === 'select') {
                 payload = { answer: name, value: value.toString() };
-            } else if (type === 'tmc') {
-                payload = { answer: name, value: JSON.stringify(value) };
             } else if (type === 'pest') {
                 payload = { answer: name, value };
             }
@@ -466,7 +495,7 @@ const TabContentEdit = ({
     const handleSelect = (value: number) => {
         saveCurrentState(selectedValue);
         setSelectedValue(value);
-        console.log('Selected value changed to:', value);
+        //console.log('Selected value changed to:', value);
     };
 
     const handlePressRadioButton = (name: string, optionIndex: number) => {
@@ -505,7 +534,7 @@ const TabContentEdit = ({
         }));
 
         sendFieldUpdate(name, selectedOption.value, 'radio');
-        console.log('Radio button pressed:', name, selectedOption.value);
+       // console.log('Radio button pressed:', name, selectedOption.value);
     };
 
     const handleChangeInputText = (text: string, name: string) => {
@@ -513,7 +542,7 @@ const TabContentEdit = ({
         if (isMounted) {
             setIsFieldValid((prev) => {
                 const isValid = text.length >= 5;
-                console.log(`Text input changed: ${name}, value: ${text}, valid: ${isValid}`);
+                //console.log(`Text input changed: ${name}, value: ${text}, valid: ${isValid}`);
                 return { ...prev, [name]: isValid };
             });
         }
@@ -524,7 +553,7 @@ const TabContentEdit = ({
         if (isMounted) {
             setIsFieldValid((prev) => {
                 const isValid = textValue.length >= 5;
-                console.log(`Text input blurred: ${name}, value: ${textValue}, valid: ${isValid}`);
+                //console.log(`Text input blurred: ${name}, value: ${textValue}, valid: ${isValid}`);
                 return { ...prev, [name]: isValid };
             });
         }
@@ -562,14 +591,14 @@ const TabContentEdit = ({
         }));
 
         sendFieldUpdate(name, checked, 'checkbox');
-        console.log('Checkbox changed:', name, checked);
+       // console.log('Checkbox changed:', name, checked);
     };
 
     const handleSelectDropdown = (value: number, name: string) => {
         setSelectedDropdownValues((prev) => ({ ...prev, [name]: value }));
         if (isMounted) {
             setIsFieldValid((prev) => {
-                console.log(`Dropdown selected: ${name}, value: ${value}, valid: true`);
+                //console.log(`Dropdown selected: ${name}, value: ${value}, valid: true`);
                 return { ...prev, [name]: true };
             });
         }
@@ -604,7 +633,7 @@ const TabContentEdit = ({
 
     const handleChangeTmc = (text: string, name: string, fieldType: 'n' | 'u' | 'v') => {
         setTmcValues((prev) => {
-            const current = prev[name] || { n: '', u: '', v: '' };
+            const current = prev[name] || { p: '', n: '', u: '', v: '' };
             return {
                 ...prev,
                 [name]: { ...current, [fieldType]: text },
@@ -651,14 +680,568 @@ const TabContentEdit = ({
             [selectedValue]: updatedField,
         }));
 
-        const tmcField = field.find((item) => item.tmc && item.tmc.name === name);
         const fullTmcValue = {
-            p: tmcField?.tmc?.value.p?.value || '',
+            p: tmcValues[name]?.p || '', // Используем исходное значение p
             n: tmcValues[name]?.n || '',
             u: tmcValues[name]?.u || '',
             v: tmcValues[name]?.v || '',
         };
-        sendFieldUpdate(name, fullTmcValue, 'tmc');
+
+        // Проверка для поля n при потере фокуса
+        if (fieldType === 'n') {
+            const p = parseFloat(fullTmcValue.p) || 0;
+            const n = parseFloat(tmcValue) || 0;
+
+            if (n > p) {
+                Keyboard.dismiss();
+                // Модальное окно для n > p
+                showModal(
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalText}>
+                            Предыдущий остаток ТМЦ={p}. Текущий остаток не может быть более {p}. Введите верные данные!
+                        </Text>
+                        <View style={[styles.modalButtonContainer, { justifyContent: 'center' }]}>
+                            <TextButton
+                                text="Закрыть"
+                                width={125}
+                                height={40}
+                                textSize={14}
+                                textColor="#FFFFFF"
+                                backgroundColor="#5D6377"
+                                onPress={() => {
+                                    // Устанавливаем значение n равным p и возвращаем фокус
+                                    setTmcValues((prev) => ({
+                                        ...prev,
+                                        [name]: { ...prev[name], n: p.toString() },
+                                    }));
+                                    setField((prev) =>
+                                        prev.map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, n: { value: p.toString() } },
+                                                    },
+                                                }
+                                                : item
+                                        )
+                                    );
+                                    setAllFields((prev) => ({
+                                        ...prev,
+                                        [selectedValue]: prev[selectedValue].map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, n: { value: p.toString() } },
+                                                    },
+                                                }
+                                                : item
+                                        ),
+                                    }));
+                                    setIsFieldValid((prev) => ({ ...prev, [`${name}_n`]: true }));
+                                    tmcInputRefs.current[name]?.n?.focus(); // Возвращаем фокус
+                                    hideModal();
+                                }}
+                            />
+                        </View>
+                    </View>,
+                    {
+                        overlay: { alignItems: 'center', justifyContent: 'center' },
+                        overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                        modalContent: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 10 },
+                    },
+                    () => {
+                        // Действия при клике вне модального окна
+                        setTmcValues((prev) => ({
+                            ...prev,
+                            [name]: { ...prev[name], n: p.toString() },
+                        }));
+                        setField((prev) =>
+                            prev.map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, n: { value: p.toString() } },
+                                        },
+                                    }
+                                    : item
+                            )
+                        );
+                        setAllFields((prev) => ({
+                            ...prev,
+                            [selectedValue]: prev[selectedValue].map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, n: { value: p.toString() } },
+                                        },
+                                    }
+                                    : item
+                            ),
+                        }));
+                        setIsFieldValid((prev) => ({ ...prev, [`${name}_n`]: true }));
+                        tmcInputRefs.current[name]?.n?.focus();
+                        hideModal();
+                        console.log('Модальное окно закрыто по клику вне области');
+                    }
+                );
+            } else if (n < p) {
+                Keyboard.dismiss();
+                // Модальное окно для n < p
+                showModal(
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalText}>
+                            Предыдущий остаток ТМЦ={p}, Вы подтверждаете, что {p - n} ед. препарата было съедено?
+                        </Text>
+                        <View style={styles.modalButtonContainer}>
+                            <TextButton
+                                text="Нет"
+                                width={125}
+                                height={40}
+                                textSize={14}
+                                textColor="#FFFFFF"
+                                backgroundColor="#5D6377"
+                                onPress={() => {
+                                    // Устанавливаем значение n равным p и возвращаем фокус
+                                    setTmcValues((prev) => ({
+                                        ...prev,
+                                        [name]: { ...prev[name], n: p.toString() },
+                                    }));
+                                    setField((prev) =>
+                                        prev.map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, n: { value: p.toString() } },
+                                                    },
+                                                }
+                                                : item
+                                        )
+                                    );
+                                    setAllFields((prev) => ({
+                                        ...prev,
+                                        [selectedValue]: prev[selectedValue].map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, n: { value: p.toString() } },
+                                                    },
+                                                }
+                                                : item
+                                        ),
+                                    }));
+                                    setIsFieldValid((prev) => ({ ...prev, [`${name}_n`]: true }));
+                                    tmcInputRefs.current[name]?.n?.focus(); // Возвращаем фокус
+                                    hideModal();
+                                }}
+                            />
+                            <TextButton
+                                text="Да"
+                                width={125}
+                                height={40}
+                                textSize={14}
+                                textColor="#FFFFFF"
+                                backgroundColor="#017EFA"
+                                onPress={() => {
+                                    // Отправляем данные на сервер
+                                    sendFieldUpdate(name, fullTmcValue, 'tmc');
+                                    hideModal();
+                                }}
+                            />
+                        </View>
+                    </View>,
+                    {
+                        overlay: { alignItems: 'center', justifyContent: 'center' },
+                        overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                        modalContent: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 10 },
+                    },
+                    () => {
+                        // Действия при клике вне модального окна (аналогично кнопке "Нет")
+                        setTmcValues((prev) => ({
+                            ...prev,
+                            [name]: { ...prev[name], n: p.toString() },
+                        }));
+                        setField((prev) =>
+                            prev.map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, n: { value: p.toString() } },
+                                        },
+                                    }
+                                    : item
+                            )
+                        );
+                        setAllFields((prev) => ({
+                            ...prev,
+                            [selectedValue]: prev[selectedValue].map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, n: { value: p.toString() } },
+                                        },
+                                    }
+                                    : item
+                            ),
+                        }));
+                        setIsFieldValid((prev) => ({ ...prev, [`${name}_n`]: true }));
+                        tmcInputRefs.current[name]?.n?.focus();
+                        hideModal();
+                        console.log('Модальное окно закрыто по клику вне области');
+                    }
+                );
+            } else {
+                // Если n === p, отправляем данные на сервер
+                sendFieldUpdate(name, fullTmcValue, 'tmc');
+            }
+        }
+        // Проверка для поля u при потере фокуса
+        else if (fieldType === 'u') {
+            const n = parseFloat(fullTmcValue.n) || 0;
+            const u = parseFloat(tmcValue) || 0;
+
+            if (u > n) {
+                Keyboard.dismiss();
+                // Модальное окно для u > n
+                showModal(
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalText}>
+                            Утилизировано не может превышать текущий остаток. Введите правильное значение!
+                        </Text>
+                        <View style={[styles.modalButtonContainer, { justifyContent: 'center' }]}>
+                            <TextButton
+                                text="Закрыть"
+                                width={125}
+                                height={40}
+                                textSize={14}
+                                textColor="#FFFFFF"
+                                backgroundColor="#5D6377"
+                                onPress={() => {
+                                    // Устанавливаем значение u равным 0 и возвращаем фокус
+                                    setTmcValues((prev) => ({
+                                        ...prev,
+                                        [name]: { ...prev[name], u: '0' },
+                                    }));
+                                    setField((prev) =>
+                                        prev.map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, u: { value: '0' } },
+                                                    },
+                                                }
+                                                : item
+                                        )
+                                    );
+                                    setAllFields((prev) => ({
+                                        ...prev,
+                                        [selectedValue]: prev[selectedValue].map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, u: { value: '0' } },
+                                                    },
+                                                }
+                                                : item
+                                        ),
+                                    }));
+                                    setIsFieldValid((prev) => ({ ...prev, [`${name}_u`]: true }));
+                                    tmcInputRefs.current[name]?.u?.focus(); // Возвращаем фокус
+                                    hideModal();
+                                }}
+                            />
+                        </View>
+                    </View>,
+                    {
+                        overlay: { alignItems: 'center', justifyContent: 'center' },
+                        overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                        modalContent: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 10 },
+                    },
+                    () => {
+                        // Действия при клике вне модального окна
+                        setTmcValues((prev) => ({
+                            ...prev,
+                            [name]: { ...prev[name], u: '0' },
+                        }));
+                        setField((prev) =>
+                            prev.map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, u: { value: '0' } },
+                                        },
+                                    }
+                                    : item
+                            )
+                        );
+                        setAllFields((prev) => ({
+                            ...prev,
+                            [selectedValue]: prev[selectedValue].map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, u: { value: '0' } },
+                                        },
+                                    }
+                                    : item
+                            ),
+                        }));
+                        setIsFieldValid((prev) => ({ ...prev, [`${name}_u`]: true }));
+                        tmcInputRefs.current[name]?.u?.focus();
+                        hideModal();
+                        console.log('Модальное окно закрыто по клику вне области');
+                    }
+                );
+            } else {
+                // Если u <= n, отправляем данные на сервер
+                sendFieldUpdate(name, fullTmcValue, 'tmc');
+            }
+        }
+        // Проверка для поля v при потере фокуса
+        else if (fieldType === 'v') {
+            const p = parseFloat(fullTmcValue.p) || 0;
+            const n = parseFloat(fullTmcValue.n) || 0;
+            const u = parseFloat(fullTmcValue.u) || 0;
+            const v = parseFloat(tmcValue) || 0;
+            const total = n - u + v;
+
+            if (total === 0) {
+                Keyboard.dismiss();
+                // Модальное окно для нулевого остатка
+                showModal(
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalText}>Сейчас в ККТ нет ТМЦ. Вы подтверждаете это?</Text>
+                        <View style={styles.modalButtonContainer}>
+                            <TextButton
+                                text="Нет"
+                                width={125}
+                                height={40}
+                                textSize={14}
+                                textColor="#FFFFFF"
+                                backgroundColor="#5D6377"
+                                onPress={() => {
+                                    // Устанавливаем значение v равным 0 и возвращаем фокус
+                                    setTmcValues((prev) => ({
+                                        ...prev,
+                                        [name]: { ...prev[name], v: '0' },
+                                    }));
+                                    setField((prev) =>
+                                        prev.map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, v: { value: '0' } },
+                                                    },
+                                                }
+                                                : item
+                                        )
+                                    );
+                                    setAllFields((prev) => ({
+                                        ...prev,
+                                        [selectedValue]: prev[selectedValue].map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, v: { value: '0' } },
+                                                    },
+                                                }
+                                                : item
+                                        ),
+                                    }));
+                                    setIsFieldValid((prev) => ({ ...prev, [`${name}_v`]: true }));
+                                    tmcInputRefs.current[name]?.v?.focus(); // Возвращаем фокус
+                                    hideModal();
+                                }}
+                            />
+                            <TextButton
+                                text="Да"
+                                width={125}
+                                height={40}
+                                textSize={14}
+                                textColor="#FFFFFF"
+                                backgroundColor="#017EFA"
+                                onPress={() => {
+                                    // Отправляем данные на сервер с исходным p
+                                    sendFieldUpdate(name, fullTmcValue, 'tmc');
+                                    hideModal();
+                                }}
+                            />
+                        </View>
+                    </View>,
+                    {
+                        overlay: { alignItems: 'center', justifyContent: 'center' },
+                        overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                        modalContent: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 10 },
+                    },
+                    () => {
+                        // Действия при клике вне модального окна (аналогично кнопке "Нет")
+                        setTmcValues((prev) => ({
+                            ...prev,
+                            [name]: { ...prev[name], v: '0' },
+                        }));
+                        setField((prev) =>
+                            prev.map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, v: { value: '0' } },
+                                        },
+                                    }
+                                    : item
+                            )
+                        );
+                        setAllFields((prev) => ({
+                            ...prev,
+                            [selectedValue]: prev[selectedValue].map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, v: { value: '0' } },
+                                        },
+                                    }
+                                    : item
+                            ),
+                        }));
+                        setIsFieldValid((prev) => ({ ...prev, [`${name}_v`]: true }));
+                        tmcInputRefs.current[name]?.v?.focus();
+                        hideModal();
+                        console.log('Модальное окно закрыто по клику вне области');
+                    }
+                );
+            } else if (total < 0) {
+                Keyboard.dismiss();
+                // Модальное окно для отрицательного остатка
+                showModal(
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalText}>Остаток препарата не может быть меньше 0, введите правильное значение</Text>
+                        <View style={[styles.modalButtonContainer, { justifyContent: 'center' }]}>
+                            <TextButton
+                                text="Закрыть"
+                                width={125}
+                                height={40}
+                                textSize={14}
+                                textColor="#FFFFFF"
+                                backgroundColor="#5D6377"
+                                onPress={() => {
+                                    // Устанавливаем значение v равным 0 и возвращаем фокус
+                                    setTmcValues((prev) => ({
+                                        ...prev,
+                                        [name]: { ...prev[name], v: '0' },
+                                    }));
+                                    setField((prev) =>
+                                        prev.map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, v: { value: '0' } },
+                                                    },
+                                                }
+                                                : item
+                                        )
+                                    );
+                                    setAllFields((prev) => ({
+                                        ...prev,
+                                        [selectedValue]: prev[selectedValue].map((item) =>
+                                            item.tmc && item.tmc.name === name
+                                                ? {
+                                                    ...item,
+                                                    tmc: {
+                                                        ...item.tmc,
+                                                        value: { ...item.tmc.value, v: { value: '0' } },
+                                                    },
+                                                }
+                                                : item
+                                        ),
+                                    }));
+                                    setIsFieldValid((prev) => ({ ...prev, [`${name}_v`]: true }));
+                                    tmcInputRefs.current[name]?.v?.focus(); // Возвращаем фокус
+                                    hideModal();
+                                }}
+                            />
+                        </View>
+                    </View>,
+                    {
+                        overlay: { alignItems: 'center', justifyContent: 'center' },
+                        overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                        modalContent: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 10 },
+                    },
+                    () => {
+                        // Действия при клике вне модального окна
+                        setTmcValues((prev) => ({
+                            ...prev,
+                            [name]: { ...prev[name], v: '0' },
+                        }));
+                        setField((prev) =>
+                            prev.map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, v: { value: '0' } },
+                                        },
+                                    }
+                                    : item
+                            )
+                        );
+                        setAllFields((prev) => ({
+                            ...prev,
+                            [selectedValue]: prev[selectedValue].map((item) =>
+                                item.tmc && item.tmc.name === name
+                                    ? {
+                                        ...item,
+                                        tmc: {
+                                            ...item.tmc,
+                                            value: { ...item.tmc.value, v: { value: '0' } },
+                                        },
+                                    }
+                                    : item
+                            ),
+                        }));
+                        setIsFieldValid((prev) => ({ ...prev, [`${name}_v`]: true }));
+                        tmcInputRefs.current[name]?.v?.focus();
+                        hideModal();
+                        console.log('Модальное окно закрыто по клику вне области');
+                    }
+                );
+            } else {
+                // Если остаток положительный, отправляем данные на сервер с исходным p
+                sendFieldUpdate(name, fullTmcValue, 'tmc');
+            }
+        }
     };
 
     const handleChangePest = (text: string, name: string) => {
@@ -666,7 +1249,7 @@ const TabContentEdit = ({
         if (isMounted) {
             setIsFieldValid((prev) => {
                 const isValid = !!text;
-                console.log(`Pest changed: ${name}, value: ${text}, valid: ${isValid}`);
+               // console.log(`Pest changed: ${name}, value: ${text}, valid: ${isValid}`);
                 return { ...prev, [name]: isValid };
             });
         }
@@ -674,6 +1257,8 @@ const TabContentEdit = ({
 
     const handleBlurPest = (name: string) => {
         const pestValue = pestValues[name] || '';
+        const numericValue = parseInt(pestValue, 10);
+
         if (isMounted) {
             setIsFieldValid((prev) => {
                 const isValid = !!pestValue;
@@ -682,20 +1267,112 @@ const TabContentEdit = ({
             });
         }
 
-        const updatedField = field.map((item) => {
-            if (item.pest && item.pest.name === name) {
-                return { ...item, pest: { ...item.pest, value: pestValue } };
-            }
-            return item;
-        });
-
-        setField(updatedField);
-        setAllFields((prev) => ({
-            ...prev,
-            [selectedValue]: updatedField,
-        }));
-
-        sendFieldUpdate(name, pestValue, 'pest');
+        // Проверка, если значение больше 0
+        if (numericValue > 0) {
+            Keyboard.dismiss();
+            showModal(
+                <View style={styles.modalContainer}>
+                    <Text style={styles.modalText}>Вы уверены, что в ККТ обнаружены вредители?</Text>
+                    <View style={styles.modalButtonContainer}>
+                        <TextButton
+                            text="Нет"
+                            width={125}
+                            height={40}
+                            textSize={14}
+                            textColor="#FFFFFF"
+                            backgroundColor="#5D6377"
+                            onPress={() => {
+                                // Устанавливаем значение 0 и возвращаем фокус
+                                setPestValues((prev) => ({ ...prev, [name]: '0' }));
+                                setField((prev) =>
+                                    prev.map((item) =>
+                                        item.pest && item.pest.name === name
+                                            ? { ...item, pest: { ...item.pest, value: '0' } }
+                                            : item
+                                    )
+                                );
+                                setAllFields((prev) => ({
+                                    ...prev,
+                                    [selectedValue]: field.map((item) =>
+                                        item.pest && item.pest.name === name
+                                            ? { ...item, pest: { ...item.pest, value: '0' } }
+                                            : item
+                                    ),
+                                }));
+                                setIsFieldValid((prev) => ({ ...prev, [name]: true }));
+                                pestInputRefs.current[name]?.focus(); // Возвращаем фокус
+                                hideModal();
+                            }}
+                        />
+                        <TextButton
+                            text="Да"
+                            width={125}
+                            height={40}
+                            textSize={14}
+                            textColor="#FFFFFF"
+                            backgroundColor="#017EFA"
+                            onPress={() => {
+                                // Отправляем данные на сервер
+                                const updatedField = field.map((item) => {
+                                    if (item.pest && item.pest.name === name) {
+                                        return { ...item, pest: { ...item.pest, value: pestValue } };
+                                    }
+                                    return item;
+                                });
+                                setField(updatedField);
+                                setAllFields((prev) => ({
+                                    ...prev,
+                                    [selectedValue]: updatedField,
+                                }));
+                                sendFieldUpdate(name, pestValue, 'pest');
+                                hideModal();
+                            }}
+                        />
+                    </View>
+                </View>,
+                {
+                    overlay: { alignItems: 'center', justifyContent: 'center' },
+                    overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                    modalContent: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 10 },
+                },
+                () => {
+                    // Устанавливаем значение 0 и возвращаем фокус
+                    setPestValues((prev) => ({ ...prev, [name]: '0' }));
+                    setField((prev) =>
+                        prev.map((item) =>
+                            item.pest && item.pest.name === name
+                                ? { ...item, pest: { ...item.pest, value: '0' } }
+                                : item
+                        )
+                    );
+                    setAllFields((prev) => ({
+                        ...prev,
+                        [selectedValue]: field.map((item) =>
+                            item.pest && item.pest.name === name
+                                ? { ...item, pest: { ...item.pest, value: '0' } }
+                                : item
+                        ),
+                    }));
+                    setIsFieldValid((prev) => ({ ...prev, [name]: true }));
+                    pestInputRefs.current[name]?.focus(); // Возвращаем фокус
+                    hideModal();
+                }
+            );
+        } else {
+            // Если значение не больше 0, обновляем поле и отправляем данные
+            const updatedField = field.map((item) => {
+                if (item.pest && item.pest.name === name) {
+                    return { ...item, pest: { ...item.pest, value: pestValue } };
+                }
+                return item;
+            });
+            setField(updatedField);
+            setAllFields((prev) => ({
+                ...prev,
+                [selectedValue]: updatedField,
+            }));
+            sendFieldUpdate(name, pestValue, 'pest');
+        }
     };
 
     const handleImageUploaded = (name: string, newImage: { url: string; thumbUrl: string; name: string }) => {
@@ -714,7 +1391,7 @@ const TabContentEdit = ({
             ...prev,
             [selectedValue]: updatedField,
         }));
-        console.log('Image uploaded:', name, newImage);
+       // console.log('Image uploaded:', name, newImage);
     };
 
     const handleImageRemoved = (name: string, removedImage: { name: string; thumbUrl: string; originalUrl: string }) => {
@@ -736,12 +1413,12 @@ const TabContentEdit = ({
             ...prev,
             [selectedValue]: updatedField,
         }));
-        console.log('Image removed:', name, removedImage);
+        //console.log('Image removed:', name, removedImage);
     };
 
     const handleCloseModalTMC = () => {
         hideModal();
-        console.log('TMC modal closed');
+       // console.log('TMC modal closed');
     };
 
     const handleAddModalTmc = () => {
@@ -777,7 +1454,7 @@ const TabContentEdit = ({
                 modalContent: { paddingTop: 0, paddingRight: 0 },
             }
         );
-        console.log('TMC modal opened with paramId:', paramId);
+       // console.log('TMC modal opened with paramId:', paramId);
     };
 
     // Рендеринг полей
@@ -900,11 +1577,11 @@ const TabContentEdit = ({
                     const selectedOption = options.find((option) => option.value === selectedValue);
                     const selectedColor = selectedOption ? selectedOption.color : '#000000';
                     selectCounter++;
-                    console.log(`Rendering Dropdown for ${componentData.name}:`, {
-                        selectedValue,
-                        options,
-                        selectedColor,
-                    });
+                    //console.log(`Rendering Dropdown for ${componentData.name}:`, {
+                    //    selectedValue,
+                    //    options,
+                    //    selectedColor,
+                    //});
 
                     return (
                         <View key={`select-${idx}`} style={[styles.selectContainer, { zIndex: 1000 - selectCounter }]}>
@@ -928,6 +1605,51 @@ const TabContentEdit = ({
                                 containerStyle={{ backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' }}
                                 itemTextStyle={{ fontSize: 14 }}
                             />
+                        </View>
+                    );
+                case 'pest':
+                    return (
+                        <View key={`pest-${idx}`}>
+                            {!isHeaderVisiblePest && (
+                                <>
+                                    <Text style={styles.tmcTitle}>Поймано вредителей</Text>
+                                    <View style={styles.tmcHeaderContainer}>
+                                        <Text style={styles.tmcHeaderText}>Наименование</Text>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                            <Text style={styles.tmcHeaderText}>Количество</Text>
+                                        </View>
+                                    </View>
+                                </>
+                            )}
+                            {!isHeaderVisiblePest && (isHeaderVisiblePest = true)}
+                            <View style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
+                                <Text style={[styles.tmcText, { width: '50%' }]}>{componentData.label}</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginRight: 20 }}>
+                                    <View>
+                                        <TextInput
+                                            style={[
+                                                styles.tmcTextInput,
+                                                isMounted &&
+                                                !isFieldValid[componentData.name] && {
+                                                    borderColor: 'red',
+                                                    borderWidth: 1,
+                                                },
+                                            ]}
+                                            onChangeText={(text) => handleChangePest(text, componentData.name)}
+                                            value={pestValues[componentData.name] || ''}
+                                            onBlur={() => handleBlurPest(componentData.name)}
+                                            keyboardType="numeric"
+                                            selectTextOnFocus={true}
+                                            onFocus={() => {
+                                                if (!pestValues[componentData.name]) {
+                                                    handleChangePest('0', componentData.name);
+                                                }
+                                            }}
+                                            ref={(ref) => (pestInputRefs.current[componentData.name] = ref)}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
                         </View>
                     );
                 case 'tmc':
@@ -987,6 +1709,18 @@ const TabContentEdit = ({
                                                 value={tmcValues[componentData.name]?.n || ''}
                                                 onBlur={() => handleBlurTmc(componentData.name, 'n')}
                                                 keyboardType="numeric"
+                                                selectTextOnFocus={true}
+                                                onFocus={() => {
+                                                    if (!tmcValues[componentData.name]?.n) {
+                                                        handleChangeTmc('0', componentData.name, 'n');
+                                                    }
+                                                }}
+                                                ref={(ref) => {
+                                                    if (!tmcInputRefs.current[componentData.name]) {
+                                                        tmcInputRefs.current[componentData.name] = { p: null, n: null, u: null, v: null };
+                                                    }
+                                                    tmcInputRefs.current[componentData.name]!.n = ref;
+                                                }}
                                             />
                                         </View>
                                         <View>
@@ -1002,6 +1736,18 @@ const TabContentEdit = ({
                                                 value={tmcValues[componentData.name]?.u || ''}
                                                 onBlur={() => handleBlurTmc(componentData.name, 'u')}
                                                 keyboardType="numeric"
+                                                selectTextOnFocus={true}
+                                                onFocus={() => {
+                                                    if (!tmcValues[componentData.name]?.u) {
+                                                        handleChangeTmc('0', componentData.name, 'u');
+                                                    }
+                                                }}
+                                                ref={(ref) => {
+                                                    if (!tmcInputRefs.current[componentData.name]) {
+                                                        tmcInputRefs.current[componentData.name] = { p: null, n: null, u: null, v: null };
+                                                    }
+                                                    tmcInputRefs.current[componentData.name]!.u = ref;
+                                                }}
                                             />
                                         </View>
                                         <View>
@@ -1017,49 +1763,23 @@ const TabContentEdit = ({
                                                 value={tmcValues[componentData.name]?.v || ''}
                                                 onBlur={() => handleBlurTmc(componentData.name, 'v')}
                                                 keyboardType="numeric"
+                                                selectTextOnFocus={true}
+                                                onFocus={() => {
+                                                    if (!tmcValues[componentData.name]?.v) {
+                                                        handleChangeTmc('0', componentData.name, 'v');
+                                                    }
+                                                }}
+                                                ref={(ref) => {
+                                                    if (!tmcInputRefs.current[componentData.name]) {
+                                                        tmcInputRefs.current[componentData.name] = { p: null, n: null, u: null, v: null };
+                                                    }
+                                                    tmcInputRefs.current[componentData.name]!.v = ref;
+                                                }}
                                             />
                                         </View>
                                     </View>
                                 </View>
                             )}
-                        </View>
-                    );
-                case 'pest':
-                    return (
-                        <View key={`pest-${idx}`}>
-                            {!isHeaderVisiblePest && (
-                                <>
-                                    <Text style={styles.tmcTitle}>Поймано вредителей</Text>
-                                    <View style={styles.tmcHeaderContainer}>
-                                        <Text style={styles.tmcHeaderText}>Наименование</Text>
-                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                            <Text style={styles.tmcHeaderText}>Количество</Text>
-                                        </View>
-                                    </View>
-                                </>
-                            )}
-                            {!isHeaderVisiblePest && (isHeaderVisiblePest = true)}
-                            <View style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
-                                <Text style={[styles.tmcText, { width: '50%' }]}>{componentData.label}</Text>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginRight: 20 }}>
-                                    <View>
-                                        <TextInput
-                                            style={[
-                                                styles.tmcTextInput,
-                                                isMounted &&
-                                                !isFieldValid[componentData.name] && {
-                                                    borderColor: 'red',
-                                                    borderWidth: 1,
-                                                },
-                                            ]}
-                                            onChangeText={(text) => handleChangePest(text, componentData.name)}
-                                            value={pestValues[componentData.name] || ''}
-                                            onBlur={() => handleBlurPest(componentData.name)}
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
-                                </View>
-                            </View>
                         </View>
                     );
                 default:
@@ -1072,11 +1792,20 @@ const TabContentEdit = ({
 
     // Проверка валидности полей
     const areAllFieldsValid = (isContentHidden: boolean) => {
-        if (!isMounted || isContentHidden) return true;
+        if (!isMounted) return false;
+
+        // Если контент скрыт из-за выбора "Нет" в радио-кнопке, считаем валидным
+        if (isContentHidden) {
+            const radioFields = field.filter((item) => item.radio);
+            return radioFields.every((item) => isFieldValid[item.radio.name]);
+        }
 
         const requiredFields = field.filter(
-            (item) => item.text || item.select || item.tmc || item.pest || item.foto,
+            (item) => item.text || item.select || item.tmc || item.pest || item.foto || item.radio,
         );
+
+        if (requiredFields.length === 0) return false;
+
         const isValid = requiredFields.every((item) => {
             if (item.text) return isFieldValid[item.text.name];
             if (item.select) return isFieldValid[item.select.name];
@@ -1089,20 +1818,15 @@ const TabContentEdit = ({
             }
             if (item.pest) return isFieldValid[item.pest.name];
             if (item.foto) return isFieldValid[item.foto.name];
+            if (item.radio) return isFieldValid[item.radio.name];
             return true;
         });
-        console.log('All fields valid:', isValid, 'isFieldValid:', isFieldValid);
+        //console.log('All fields valid:', isValid, 'isFieldValid:', isFieldValid);
         return isValid;
     };
 
     // Навигация
     const handleNext = async () => {
-        const { isContentHidden } = transferDataVisible(field);
-        if (!areAllFieldsValid(isContentHidden)) {
-            console.log('Validation failed, cannot proceed to next');
-            return;
-        }
-
         saveCurrentState(selectedValue);
 
         if (selectedValue < items.length - 1) {
@@ -1115,12 +1839,6 @@ const TabContentEdit = ({
     };
 
     const handlePrevious = async () => {
-        const { isContentHidden } = transferDataVisible(field);
-        if (!areAllFieldsValid(isContentHidden)) {
-            console.log('Validation failed, cannot go back');
-            return;
-        }
-
         saveCurrentState(selectedValue);
 
         if (selectedValue > 0) {
@@ -1132,6 +1850,86 @@ const TabContentEdit = ({
         }
     };
 
+// Новые обработчики для кнопок
+// Новые обработчики для кнопок
+    const onPressNext = async () => {
+        const { isContentHidden } = transferDataVisible(field);
+        if (!areAllFieldsValid(isContentHidden)) {
+            showModal(
+                <View style={styles.modalContainer}>
+                    <Text style={styles.modalText}>Необходимо заполнить все поля</Text>
+                    <View style={[styles.modalButtonContainer, { justifyContent: 'center' }]}>
+                        <TextButton
+                            text="Закрыть"
+                            width={125}
+                            height={40}
+                            textSize={14}
+                            textColor="#FFFFFF"
+                            backgroundColor="#5D6377"
+                            onPress={() => {
+                                hideModal();
+                                handleNext(); // Выполняем переход после закрытия
+                            }}
+                        />
+                    </View>
+                </View>,
+                {
+                    overlay: { alignItems: 'center', justifyContent: 'center' },
+                    overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                    modalContent: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 10 },
+                },
+                () => {
+                    // Действия при клике вне модального окна
+                    hideModal();
+                    handleNext();
+                    console.log('Модальное окно закрыто по клику вне области');
+                }
+            );
+            console.log('Validation failed, showing modal');
+            return;
+        }
+        await handleNext();
+    };
+
+    const onPressPrevious = async () => {
+        const { isContentHidden } = transferDataVisible(field);
+        if (!areAllFieldsValid(isContentHidden)) {
+            showModal(
+                <View style={styles.modalContainer}>
+                    <Text style={styles.modalText}>Необходимо заполнить все поля</Text>
+                    <View style={[styles.modalButtonContainer, { justifyContent: 'center' }]}>
+                        <TextButton
+                            text="Закрыть"
+                            width={125}
+                            height={40}
+                            textSize={14}
+                            textColor="#FFFFFF"
+                            backgroundColor="#5D6377"
+                            onPress={() => {
+                                hideModal();
+                                handlePrevious(); // Выполняем переход после закрытия
+                            }}
+                        />
+                    </View>
+                </View>,
+                {
+                    overlay: { alignItems: 'center', justifyContent: 'center' },
+                    overlayBackground: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+                    modalContent: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 10 },
+                },
+                () => {
+                    // Действия при клике вне модального окна
+                    hideModal();
+                    handlePrevious();
+                    console.log('Модальное окно закрыто по клику вне области');
+                }
+            );
+            console.log('Validation failed, showing modal');
+            return;
+        }
+        await handlePrevious();
+    };
+
     // Кастомизация выпадающего списка
     const renderRightIcon = () => {
         const selectedItem = items.find((item) => item.value === selectedValue);
@@ -1139,7 +1937,7 @@ const TabContentEdit = ({
             <View style={styles.rightIconContainer}>
                 {selectedItem && (
                     <View style={styles.dot}>
-                        <DotSolid color={selectedItem.dotColor} />
+                        <DotSolid color={validParams[selectedValue] ? '#30DA88' : selectedItem.dotColor} />
                     </View>
                 )}
                 <Text style={styles.arrow}>▼</Text>
@@ -1152,7 +1950,7 @@ const TabContentEdit = ({
             <View style={styles.item}>
                 <Text style={styles.textItem}>{item.label}</Text>
                 <View style={styles.dot}>
-                    <DotSolid color={item.dotColor} />
+                    <DotSolid color={validParams[item.value] ? '#30DA88' : item.dotColor} />
                 </View>
             </View>
         );
@@ -1190,29 +1988,45 @@ const TabContentEdit = ({
                         {transferDataVisible(field).renderedComponents}
                     </KeyboardAwareScrollView>
                     <Footer>
-                        <View style={styles.footerContainer}>
-                            <TextButton
-                                text="Назад"
-                                width={125}
-                                height={40}
-                                textSize={14}
-                                textColor="#FFFFFF"
-                                backgroundColor="#5D6377"
-                                onPress={handlePrevious}
-                                enabled={areAllFieldsValid(transferDataVisible(field).isContentHidden) && (selectedValue > 0 || !isFirstTab)}
-                                touchable={areAllFieldsValid(transferDataVisible(field).isContentHidden) && (selectedValue > 0 || !isFirstTab)}
-                            />
-                            <TextButton
-                                text="Далее"
-                                width={125}
-                                height={40}
-                                textSize={14}
-                                textColor="#FFFFFF"
-                                backgroundColor="#017EFA"
-                                onPress={handleNext}
-                                enabled={areAllFieldsValid(transferDataVisible(field).isContentHidden) && (selectedValue < items.length - 1 || !isLastTab)}
-                                touchable={areAllFieldsValid(transferDataVisible(field).isContentHidden) && (selectedValue < items.length - 1 || !isLastTab)}
-                            />
+                        <View
+                            style={[
+                                styles.footerContainer,
+                                {
+                                    justifyContent:
+                                        isFirstTab && selectedValue === 0
+                                            ? 'flex-end' // Только "Далее"
+                                            : isLastTab && selectedValue === items.length - 1
+                                                ? 'flex-start' // Только "Назад"
+                                                : 'space-between', // Обе кнопки
+                                },
+                            ]}
+                        >
+                            {!(isFirstTab && selectedValue === 0) && (
+                                <TextButton
+                                    text="Назад"
+                                    width={125}
+                                    height={40}
+                                    textSize={14}
+                                    textColor="#FFFFFF"
+                                    backgroundColor="#5D6377"
+                                    onPress={onPressPrevious}
+                                    enabled={true}
+                                    touchable={true}
+                                />
+                            )}
+                            {!(isLastTab && selectedValue === items.length - 1) && (
+                                <TextButton
+                                    text="Далее"
+                                    width={125}
+                                    height={40}
+                                    textSize={14}
+                                    textColor="#FFFFFF"
+                                    backgroundColor="#017EFA"
+                                    onPress={onPressNext}
+                                    enabled={true}
+                                    touchable={true}
+                                />
+                            )}
                         </View>
                     </Footer>
                 </>
@@ -1376,6 +2190,21 @@ const styles = StyleSheet.create({
     textItem: {
         flex: 1,
         fontSize: 14,
+    },
+    modalContainer: {
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalText: {
+        fontSize: 16,
+        marginBottom: 20,
+        textAlign: 'center',
+        color: '#1C1F37',
+    },
+    modalButtonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between', // По умолчанию для двух кнопок
+        width: '100%',
     },
 });
 

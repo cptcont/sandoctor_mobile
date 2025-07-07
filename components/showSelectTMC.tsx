@@ -98,6 +98,15 @@ export const ShowSelectTMC: React.FC<ShowSelectTMCProps> = ({ idChecklist, idTMC
                 <Footer>
                     <View style={styles.footerContainer}>
                         <TextButton
+                            text="Выйти"
+                            width={125}
+                            height={40}
+                            textSize={14}
+                            textColor="#FFFFFF"
+                            backgroundColor="#5D6377"
+                            onPress={onClosePress}
+                        />
+                        <TextButton
                             text="Добавить"
                             width={125}
                             height={40}
@@ -107,15 +116,6 @@ export const ShowSelectTMC: React.FC<ShowSelectTMCProps> = ({ idChecklist, idTMC
                             enabled={TMC.length > 0 && selectedIds.length > 0}
                             touchable={TMC.length > 0 && selectedIds.length > 0}
                             onPress={handleAdd}
-                        />
-                        <TextButton
-                            text="Выйти"
-                            width={125}
-                            height={40}
-                            textSize={14}
-                            textColor="#FFFFFF"
-                            backgroundColor="#5D6377"
-                            onPress={onClosePress}
                         />
                     </View>
                 </Footer>

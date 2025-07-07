@@ -241,7 +241,7 @@ const StartTaskScreen = () => {
                         textColor={"#FFFFFF"}
                         backgroundColor={"#017EFA"}
                         enabled={isFormValid()}
-                        touchable={true}
+                        touchable={isFormValid()}
                         onPress={handleSubmit}
                     />
                 </Footer>
