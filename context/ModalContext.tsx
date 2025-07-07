@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { ViewStyle } from 'react-native';
+import { View, TouchableWithoutFeedback, ViewStyle } from 'react-native';
 
 type ModalContextType = {
     isModalVisible: boolean;
@@ -7,7 +7,15 @@ type ModalContextType = {
     overlayStyle?: ViewStyle;
     overlayBackgroundStyle?: ViewStyle;
     modalContentStyle?: ViewStyle;
-    showModal: (content: React.ReactNode, styles?: { overlay?: ViewStyle; overlayBackground?: ViewStyle; modalContent?: ViewStyle }) => void;
+    showModal: (
+        content: React.ReactNode,
+        styles?: {
+            overlay?: ViewStyle;
+            overlayBackground?: ViewStyle;
+            modalContent?: ViewStyle;
+        },
+        onOverlayPress?: () => void // Добавляем callback для обработки нажатия на оверлей
+    ) => void;
     hideModal: () => void;
 };
 
@@ -19,8 +27,17 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [overlayStyle, setOverlayStyle] = useState<ViewStyle | undefined>(undefined);
     const [overlayBackgroundStyle, setOverlayBackgroundStyle] = useState<ViewStyle | undefined>(undefined);
     const [modalContentStyle, setModalContentStyle] = useState<ViewStyle | undefined>(undefined);
+    const [onOverlayPressCallback, setOnOverlayPressCallback] = useState<(() => void) | undefined>(undefined);
 
-    const showModal = (content: React.ReactNode, styles?: { overlay?: ViewStyle; overlayBackground?: ViewStyle; modalContent?: ViewStyle }) => {
+    const showModal = (
+        content: React.ReactNode,
+        styles?: {
+            overlay?: ViewStyle;
+            overlayBackground?: ViewStyle;
+            modalContent?: ViewStyle;
+        },
+        onOverlayPress?: () => void // Callback для обработки нажатия на оверлей
+    ) => {
         setModalContent(content);
         setIsModalVisible(true);
         if (styles) {
@@ -28,6 +45,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             setOverlayBackgroundStyle(styles.overlayBackground);
             setModalContentStyle(styles.modalContent);
         }
+        setOnOverlayPressCallback(() => onOverlayPress); // Сохраняем callback
     };
 
     const hideModal = () => {
@@ -36,11 +54,31 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setOverlayStyle(undefined);
         setOverlayBackgroundStyle(undefined);
         setModalContentStyle(undefined);
+        setOnOverlayPressCallback(undefined);
+    };
+
+    const handleOverlayPress = () => {
+        if (onOverlayPressCallback) {
+            onOverlayPressCallback(); // Вызываем callback, если он есть
+        }
+        hideModal();
     };
 
     return (
-        <ModalContext.Provider value={{ isModalVisible, modalContent, overlayStyle, overlayBackgroundStyle, modalContentStyle, showModal, hideModal }}>
+        <ModalContext.Provider
+            value={{ isModalVisible, modalContent, overlayStyle, overlayBackgroundStyle, modalContentStyle, showModal, hideModal }}
+        >
             {children}
+            {isModalVisible && (
+                <View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }, overlayBackgroundStyle]}>
+                    <TouchableWithoutFeedback onPress={handleOverlayPress}>
+                        <View style={[{ flex: 1 }, overlayStyle]} />
+                    </TouchableWithoutFeedback>
+                    <View style={[{ position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }, overlayStyle]}>
+                        <View style={modalContentStyle}>{modalContent}</View>
+                    </View>
+                </View>
+            )}
         </ModalContext.Provider>
     );
 };
