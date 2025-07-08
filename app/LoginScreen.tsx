@@ -67,7 +67,7 @@ const LoginScreen = () => {
                         try {
                             await login(values.username, values.password);
                         } catch (error) {
-                            showPopup('Неверный логин или пароль', 'red', 2000);
+                            showPopup(`${error}`, 'red', 2000);
                         } finally {
                             setSubmitting(false);
                         }

@@ -4,9 +4,9 @@ import { Buffer } from 'buffer';
 
 type AuthContextType = {
     isAuthenticated: boolean;
-    isAppUsageExpired: boolean; // Добавляем новое поле
-    userData: any; // Данные пользователя из JSON-ответа
-    token: string | null; // Токен
+    isAppUsageExpired: boolean;
+    userData: any;
+    token: string | null;
     login: (username: string, password: string) => Promise<void>;
     logout: () => void;
     updateUserDataNow: () => Promise<void>;
@@ -30,110 +30,104 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-// Универсальная функция для кодирования в Base64
 const encodeBase64 = (str: string): string => {
-    return Buffer.from(str).toString('base64'); // Используем Buffer для React Native
+    return Buffer.from(str).toString('base64');
 };
 
-// Универсальная функция для получения токена
 const getToken = async (): Promise<string | null> => {
     return await SecureStore.getItemAsync('authToken');
 };
 
-// Универсальная функция для сохранения токена
 const setToken = async (token: string): Promise<void> => {
     await SecureStore.setItemAsync('authToken', token);
 };
 
-// Универсальная функция для удаления токена
 const deleteToken = async (): Promise<void> => {
     await SecureStore.deleteItemAsync('authToken');
 };
 
-// Универсальная функция для сохранения данных пользователя
 const setUserDataStorage = async (data: any): Promise<void> => {
     await deleteUserDataStorage();
-    await SecureStore.setItemAsync('userData', JSON.stringify(data)); // Сохраняем как JSON
+    await SecureStore.setItemAsync('userData', JSON.stringify(data));
 };
 
-// Универсальная функция для получения данных пользователя
 const getUserDataStorage = async (): Promise<any> => {
     const data = await SecureStore.getItemAsync('userData');
     return data ? JSON.parse(data) : null;
 };
 
-// Универсальная функция для удаления данных пользователя
 const deleteUserDataStorage = async (): Promise<void> => {
     await SecureStore.deleteItemAsync('userData');
 };
 
-// Универсальная функция для обновления данных на сервере
 const updateUserDataOnServer = async (userId: string, data: any): Promise<any> => {
     try {
-        // Получаем токен из хранилища
         const token = await getToken();
         if (!token) {
-            throw new Error('Токен не найден');
+            throw 'Токен авторизации отсутствует';
         }
 
         console.log('Data', data);
         console.log('UserId', userId);
         console.log('token', token);
 
-        // Отправляем данные на сервер
         const response = await fetch(`https://sandoctor.ru/api/v1/user/${userId}/`, {
-            method: 'POST', // Используем POST для обновления данных
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': token, // Используем токен для авторизации
+                'Authorization': token,
             },
-            body: JSON.stringify(data), // Отправляем данные пользователя в формате JSON
+            body: JSON.stringify(data),
         });
 
-        // Проверяем статус ответа
         if (!response.ok) {
-            throw new Error('Ошибка при обновлении данных на сервере');
+            throw 'Не удалось обновить данные на сервере';
         }
 
-        // Возвращаем обновленные данные с сервера
         return await response.json();
-    } catch (error) {
-        console.error('Ошибка при отправке данных на сервер:', error);
-        throw error;
+    } catch (error: any) {
+        const errorMessage = error.message?.includes('Network request failed')
+            ? 'Ошибка подключения к серверу'
+            : typeof error === 'string' ? error : error.message.replace(/^Error:\s*/, '');
+        console.error('Ошибка:', errorMessage);
+        throw errorMessage;
     }
 };
 
-// Универсальная функция для сохранения даты первого запуска
 const setFirstLaunchDate = async (date: string): Promise<void> => {
     await SecureStore.setItemAsync('firstLaunchDate', date);
 };
 
-// Универсальная функция для получения даты первого запуска
 const getFirstLaunchDate = async (): Promise<string | null> => {
     return await SecureStore.getItemAsync('firstLaunchDate');
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [userData, setUserData] = useState<any>(null); // Данные пользователя
-    const [token, setTokenState] = useState<string | null>(null); // Токен
-    const [isAppUsageExpired, setIsAppUsageExpired] = useState(false); // Состояние для отслеживания истечения времени использования
+    const [userData, setUserData] = useState<any>(null);
+    const [token, setTokenState] = useState<string | null>(null);
+    const [isAppUsageExpired, setIsAppUsageExpired] = useState(false);
 
     useEffect(() => {
         const checkAuthAndUsage = async () => {
-            const token = await getToken();
-            const userData = await getUserDataStorage();
-            const isExpired = await checkAppUsageExpiry();
+            try {
+                const token = await getToken();
+                const userData = await getUserDataStorage();
+                const isExpired = await checkAppUsageExpiry();
 
-            if (isExpired) {
-                setIsAppUsageExpired(true);
-                return;
-            }
+                if (isExpired) {
+                    setIsAppUsageExpired(true);
+                    return;
+                }
 
-            if (token && userData) {
-                setIsAuthenticated(true);
-                setTokenState(token);
-                setUserData(userData);
+                if (token && userData) {
+                    setIsAuthenticated(true);
+                    setTokenState(token);
+                    setUserData(userData);
+                }
+            } catch (error: any) {
+                const errorMessage = typeof error === 'string' ? error : error.message.replace(/^Error:\s*/, '');
+                console.error('Ошибка при проверке авторизации:', errorMessage);
             }
         };
         checkAuthAndUsage();
@@ -150,56 +144,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
 
             if (response.ok) {
-                const data = await response.json(); // Получаем JSON-ответ
+                const data = await response.json();
                 console.log('Data', data);
-                await setToken(token); // Сохраняем токен
-                await setUserDataStorage(data); // Сохраняем данные пользователя
-                setTokenState(token); // Обновляем состояние токена
-                setUserData(data); // Обновляем данные пользователя
+                await setToken(token);
+                await setUserDataStorage(data);
+                setTokenState(token);
+                setUserData(data);
                 setIsAuthenticated(true);
             } else {
-                throw new Error('Ошибка авторизации');
+                throw 'Не удалось авторизоваться';
             }
-        } catch (error) {
-            console.error('Ошибка:', error);
-            throw error;
+        } catch (error: any) {
+            const errorMessage = error.message?.includes('Network request failed')
+                ? 'Ошибка подключения к серверу'
+                : typeof error === 'string' ? error : error.message.replace(/^Error:\s*/, '');
+            console.error('Ошибка:', errorMessage);
+            throw errorMessage;
         }
     };
 
     const logout = async () => {
-        await deleteToken(); // Удаляем токен
-        await deleteUserDataStorage(); // Удаляем данные пользователя
-        setTokenState(null); // Очищаем состояние токена
-        setUserData(null); // Очищаем данные пользователя
-        setIsAuthenticated(false);
+        try {
+            await deleteToken();
+            await deleteUserDataStorage();
+            setTokenState(null);
+            setUserData(null);
+            setIsAuthenticated(false);
+        } catch (error: any) {
+            const errorMessage = typeof error === 'string' ? error : error.message.replace(/^Error:\s*/, '');
+            console.error('Ошибка при выходе из системы:', errorMessage);
+            throw 'Не удалось выйти из системы';
+        }
     };
 
-    // Функция для проверки, истекло ли время использования приложения
     const checkAppUsageExpiry = async (): Promise<boolean> => {
-        const firstLaunchDate = await getFirstLaunchDate();
-        if (!firstLaunchDate) {
-            // Если дата первого запуска не сохранена, сохраняем текущую дату
-            await setFirstLaunchDate(new Date().toISOString());
-            return false;
+        try {
+            const firstLaunchDate = await getFirstLaunchDate();
+            if (!firstLaunchDate) {
+                await setFirstLaunchDate(new Date().toISOString());
+                return false;
+            }
+
+            const currentDate = new Date();
+            const launchDate = new Date(firstLaunchDate);
+            const diffTime = Math.abs(currentDate.getTime() - launchDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            return diffDays > 7;
+        } catch (error: any) {
+            const errorMessage = typeof error === 'string' ? error : error.message.replace(/^Error:\s*/, '');
+            console.error('Ошибка при проверке срока использования:', errorMessage);
+            throw 'Не удалось проверить срок использования приложения';
         }
-
-        const currentDate = new Date();
-        const launchDate = new Date(firstLaunchDate);
-        const diffTime = Math.abs(currentDate.getTime() - launchDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        return diffDays > 7; // Возвращаем true, если прошло больше 7 дней
     };
 
     const updateUserDataNow = async () => {
-        const storedData = await getUserDataStorage();
-        setUserData(storedData); // Синхронизируем userData с SecureStore
+        try {
+            const storedData = await getUserDataStorage();
+            setUserData(storedData);
+        } catch (error: any) {
+            const errorMessage = typeof error === 'string' ? error : error.message.replace(/^Error:\s*/, '');
+            console.error('Ошибка при обновлении данных:', errorMessage);
+            throw 'Не удалось обновить данные пользователя';
+        }
     };
 
     return (
         <AuthContext.Provider value={{
             isAuthenticated,
-            isAppUsageExpired, // Добавляем isAppUsageExpired в контекст
+            isAppUsageExpired,
             userData,
             token,
             login,
