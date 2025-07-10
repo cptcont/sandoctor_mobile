@@ -2194,6 +2194,9 @@ const styles = StyleSheet.create({
     modalContainer: {
         alignItems: 'center',
         padding: 20,
+        width: 300, // Задаём фиксированную ширину
+        backgroundColor: '#FFFFFF', // Переносим backgroundColor сюда, чтобы не зависеть от modalContentStyle
+        borderRadius: 10, // Переносим borderRadius сюда
     },
     modalText: {
         fontSize: 16,
@@ -2203,7 +2206,7 @@ const styles = StyleSheet.create({
     },
     modalButtonContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between', // По умолчанию для двух кнопок
+        justifyContent: 'space-between',
         width: '100%',
     },
 });
