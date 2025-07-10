@@ -74,7 +74,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     <TouchableWithoutFeedback onPress={handleOverlayPress}>
                         <View style={[{ flex: 1 }, overlayStyle]} />
                     </TouchableWithoutFeedback>
-                    <View style={[{ position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }, overlayStyle]}>
+                    <View style={[{ position: 'absolute', width: '100%', height: '100%' }, overlayStyle]}>
                         <View style={modalContentStyle}>{modalContent}</View>
                     </View>
                 </View>

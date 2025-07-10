@@ -73,9 +73,15 @@ export function CustomHeader() {
     const toggleAvatarMenu = () => {
         showModal(
             <AvatarMenu
-                onClose={() => {}}
-                onProfilePress={handleProfilePress}
-                onLogoutPress={handleLogoutPress}
+                onClose={hideModal} // Передаем hideModal
+                onProfilePress={() => {
+                    handleProfilePress();
+                    hideModal(); // Закрываем модалку после выбора
+                }}
+                onLogoutPress={() => {
+                    handleLogoutPress();
+                    hideModal(); // Закрываем модалку после выбора
+                }}
             />,
             {
                 overlay: { alignItems: 'flex-end' },

@@ -8,14 +8,14 @@ type AvatarMenuProps = {
     onLogoutPress: () => void;
 };
 
-export const AvatarMenu: React.FC<AvatarMenuProps> = ({ onProfilePress, onLogoutPress }) => {
+export const AvatarMenu: React.FC<AvatarMenuProps> = ({ onClose, onProfilePress, onLogoutPress }) => {
     return (
         <View style={styles.menu}>
-            <TouchableOpacity style={styles.menuItem} onPress={onProfilePress}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => { onProfilePress(); onClose(); }}>
                 <UserCircleIcon />
                 <Text style={styles.menuText}>{'Мой профиль'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItemEnd} onPress={onLogoutPress}>
+            <TouchableOpacity style={styles.menuItemEnd} onPress={() => { onLogoutPress(); onClose(); }}>
                 <SignOutIcon />
                 <Text style={styles.menuText}>{'Выйти'}</Text>
             </TouchableOpacity>
