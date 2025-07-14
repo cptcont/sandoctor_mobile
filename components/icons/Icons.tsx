@@ -130,6 +130,15 @@ export const XMarkSolid = ({color = "#FD1F9B"}) => (
     </Svg>
 );
 
+export const StopSolid = ({ color = "#FD1F9B" }) => (
+    <Svg viewBox="0 0 384 512" width="14" height="14" fill="none">
+        <Path
+            d="M0 128C0 92.7 28.7 64 64 64H320c35.3 0 64 28.7 64 64V384c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V128z"
+            fill={color}
+        />
+    </Svg>
+);
+
 export const Document = () => (
     <Svg width="14" height="18" viewBox="0 0 14 18" fill="none">
         <Path
