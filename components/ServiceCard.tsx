@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CheckSolid, XMarkSolid, Document } from "@/components/icons/Icons";
+import {CheckSolid, XMarkSolid, Document, StopSolid} from "@/components/icons/Icons";
 import { postData, } from '@/services/api'
 
 
@@ -138,7 +138,7 @@ const ServiceCard = ({
                             onPress={handleXMarkPress}
                             style={[styles.iconButton, { backgroundColor: xMarkBgColor }]}
                         >
-                            <XMarkSolid color={xMarkColor} />
+                            <StopSolid color={xMarkColor} />
                         </TouchableOpacity>
                     </View>
                 </View>
