@@ -116,7 +116,7 @@ const ServiceCard = ({
                         {statusId === '1' && <CheckSolid color={color} />}
                         {statusId === '2' && <CheckSolid color={color} />}
                         {statusId === '3' && <CheckSolid color={color} />}
-                        {statusId === '4' && <XMarkSolid />}
+                        {statusId === '4' && <StopSolid />}
                     </View>
                 </View>
             )}
