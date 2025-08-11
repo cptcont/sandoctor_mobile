@@ -18,17 +18,10 @@
     "android": {
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
-
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon-1.5.png",
         "backgroundColor": "#ffffff"
       },
-
-      "notification": {
-        "icon": "./assets/images/notification-icon-1.5.png",
-        "color": "#081A51"
-      },
-
       "package": "com.andrewandersonorg.sandoctor",
       "permissions": [
         "CAMERA",
@@ -53,7 +46,8 @@
           "color": "#081A51"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

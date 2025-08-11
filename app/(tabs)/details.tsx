@@ -225,7 +225,7 @@ const DetailsScreen = () => {
                             </View>
                             {task.condition.id !== '3' && task.condition.id !== '4' && (
                                 <View style={{ marginBottom: 15 }}>
-                                    <ContactCard contacts={task.contacts} />
+                                    <ContactCard contacts={task.contacts} securityPhone={task.security} />
                                 </View>
                             )}
                             <View>

@@ -1609,7 +1609,7 @@ const TabContentEdit = ({
                     );
                 case 'pest':
                     return (
-                        <View key={`pest-${idx}`}>
+                        <View key={`pest-${idx}`} style={{ marginTop: 10 }}>
                             {!isHeaderVisiblePest && (
                                 <>
                                     <Text style={styles.tmcTitle}>Поймано вредителей</Text>
@@ -1622,7 +1622,7 @@ const TabContentEdit = ({
                                 </>
                             )}
                             {!isHeaderVisiblePest && (isHeaderVisiblePest = true)}
-                            <View style={[styles.tmcContainer, { marginBottom: 17, alignItems: 'center' }]}>
+                            <View style={[styles.tmcContainer, { marginBottom: 0, alignItems: 'center' }]}>
                                 <Text style={[styles.tmcText, { width: '50%' }]}>{componentData.label}</Text>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginRight: 20 }}>
                                     <View>
@@ -1968,7 +1968,7 @@ const TabContentEdit = ({
                     <View style={styles.fieldContainer}>
                         <Text style={styles.label}>Параметр</Text>
                     </View>
-                    <View style={{ marginBottom: 23 }}>
+                    <View style={{ marginBottom: 10 }}>
                         <Dropdown
                             style={styles.dropdown}
                             data={items}
@@ -2072,7 +2072,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         width: '100%',
-        marginBottom: 30,
+        marginBottom: 10,
     },
     selectContainer: {
         flexDirection: 'row',
@@ -2080,7 +2080,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderBottomWidth: 1,
         borderBottomColor: '#DADADA',
-        marginBottom: 17,
+        marginBottom: 0,
     },
     tmcContainer: {
         paddingBottom: 10,
@@ -2095,7 +2095,7 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
     },
     tmcTitle: {
-        marginTop: 10,
+        marginTop: 0,
         marginBottom: 12,
         fontSize: 12,
         fontWeight: 'bold',

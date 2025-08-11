@@ -159,6 +159,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     textContainer: {
+        width: '70%',
         paddingLeft: 10,
     },
     title: {

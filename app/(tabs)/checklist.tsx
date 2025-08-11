@@ -156,7 +156,7 @@ const ChecklistScreen = memo(() => {
         }
         return checkList.zones.map((zone: Zone, key: number) => {
             let tabContent = null;
-            if (typeCheckList === '1' && statusVisible === 'view') { // Fixed: Changed `ifV` to `if`
+            if (typeCheckList === '1' && statusVisible === 'view') {
                 tabContent = <Tab1Content itemsTabContent={checkList.zones} index={index} />;
             } else if (typeCheckList === '2' && statusVisible === 'view') {
                 tabContent = <Tab2Content itemsTabContent={checkList.zones} index={index} />;
@@ -264,6 +264,14 @@ const ChecklistScreen = memo(() => {
             }
         }, [index, screenWidth]);
 
+        // Обработка прокрутки для предотвращения ухода влево
+        const handleScroll = (event: any) => {
+            const offsetX = event.nativeEvent.contentOffset.x;
+            if (offsetX < 0) {
+                scrollViewRef.current?.scrollTo({ x: 0, animated: false });
+            }
+        };
+
         return (
             <View style={styles.tabBarContainer}>
                 <ScrollView
@@ -271,6 +279,9 @@ const ChecklistScreen = memo(() => {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
+                    onScroll={handleScroll}
+                    scrollEventThrottle={16}
+                    bounces={false} // Отключаем эффект отскока
                 >
                     {props.navigationState.routes.map((route: Route, i: number) => (
                         <View

@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, PermissionsAndroid, Platform, Alert } from 'react-native';
+import { PhoneIncoming } from "lucide-react-native"
+import { Button, ButtonText, ButtonIcon } from "@/components/ui/button"
 
 type Contact = {
     id: string;
@@ -12,9 +14,10 @@ type Contact = {
 
 type ContactCardProps = {
     contacts: Contact[];
+    securityPhone?: boolean;
 };
 
-const ContactCard = ({ contacts }: ContactCardProps) => {
+const ContactCard = ({ contacts, securityPhone = false }: ContactCardProps) => {
     const cleanPhoneNumber = (phone: string) => {
         return phone.replace(/[^\d+]/g, '');
     };
@@ -92,6 +95,8 @@ const ContactCard = ({ contacts }: ContactCardProps) => {
         }
     };
 
+
+
     const handleEmailPress = async (email: string) => {
         const emailUrl = `mailto:${email}`;
 
@@ -123,22 +128,37 @@ const ContactCard = ({ contacts }: ContactCardProps) => {
                             <Text style={styles.name}>{contact.fio}</Text>
                             <Text style={styles.post}>{contact.position}</Text>
                             {contact.email ? (
-                                <TouchableOpacity onPress={() => handleEmailPress(contact.email)}>
+                                <TouchableOpacity onPress={() => handleEmailPress(contact.email || '')}>
                                     <Text style={[styles.email, styles.clickable]}>{contact.email}</Text>
                                 </TouchableOpacity>
                             ) : null}
                         </View>
                         <View style={{ width: '50%' }}>
-                            {contact.phone_1 ? (
-                                <TouchableOpacity onPress={() => handlePhonePress(contact.phone_1)}>
-                                    <Text style={[styles.tel, styles.clickable]}>{contact.phone_1}</Text>
-                                </TouchableOpacity>
-                            ) : null}
-                            {contact.phone_2 ? (
-                                <TouchableOpacity onPress={() => handlePhonePress(contact.phone_2)}>
-                                    <Text style={[styles.tel, styles.clickable]}>{contact.phone_2}</Text>
-                                </TouchableOpacity>
-                            ) : null}
+                            {securityPhone ? (
+                                // Показываем только кнопку "Перезвонить"
+                                <Button
+                                    size='xs'
+                                    style={{ backgroundColor: '#017EFA', width: '80%' }}
+                                    onPress={() => handlePhonePress(contact.phone_1)}
+                                >
+                                    <ButtonIcon as={PhoneIncoming}/>
+                                    <ButtonText className="p-1">Перезвонить</ButtonText>
+                                </Button>
+                            ) : (
+                                // Показываем номера телефонов
+                                <>
+                                    {contact.phone_1 ? (
+                                        <TouchableOpacity onPress={() => handlePhonePress(contact.phone_1)}>
+                                            <Text style={[styles.tel, styles.clickable]}>{contact.phone_1}</Text>
+                                        </TouchableOpacity>
+                                    ) : null}
+                                    {contact.phone_2 ? (
+                                        <TouchableOpacity onPress={() => handlePhonePress(contact.phone_2 || '')}>
+                                            <Text style={[styles.tel, styles.clickable]}>{contact.phone_2}</Text>
+                                        </TouchableOpacity>
+                                    ) : null}
+                                </>
+                            )}
                         </View>
                     </View>
                 </View>
